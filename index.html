@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Study Apps</title>
+<link rel="icon" type="image/png" href="icons/calc-192.png">
+<style>
+:root{--bg:#EEF2F7;--surface:#fff;--ink:#18202F;--soft:#465169;--line:#D5DDE8}
+@media (prefers-color-scheme:dark){:root{--bg:#0C0F15;--surface:#141923;--ink:#E8ECF3;--soft:#AAB4C6;--line:#262E3D}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:640px;margin:0 auto;padding:40px 16px}h1{font-size:26px;margin:0 0 6px}p{color:var(--soft);margin:0 0 24px}
+a.app{display:flex;gap:16px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px;color:inherit;text-decoration:none}
+a.app:hover{border-color:var(--soft)}a.app img{width:56px;height:56px;border-radius:12px}a.app b{display:block;font-size:18px}a.app span{color:var(--soft);font-size:14px}
+</style></head><body><main>
+<h1>Study Apps</h1><p>Open one, then install it so it gets its own icon and window.</p>
+<a class="app" href="calc.html"><img src="icons/calc-192.png" alt=""><div><b>Calc 1 Catch-Up</b><span>Running alongside Calc 2</span></div></a>
+<a class="app" href="precalc.html"><img src="icons/precalc-192.png" alt=""><div><b>Precalc Companion</b><span>MATH 2412 &middot; Sec 2801</span></div></a>
+</main>
+<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});</script>
+</body></html>

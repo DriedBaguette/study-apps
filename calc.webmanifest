@@ -1,0 +1,28 @@
+{
+ "id": "./calc.html",
+ "name": "Calc 1 Catch-Up",
+ "short_name": "Calc 1",
+ "start_url": "./calc.html",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#EEF2F7",
+ "theme_color": "#C24E1A",
+ "icons": [
+  {
+   "src": "icons/calc-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icons/calc-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "icons/calc-maskable.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}
