@@ -1664,6 +1664,283 @@ var FLASH = {
   ] }
 };
 
+/* ===== Handwriting reader (web build only): the last line written on a scratch pad -> a typed answer =====
+   Runs in the browser, so nothing the user writes leaves the device.
+   Model: Pix2Text MFR (breezedeus/pix2text-mfr, MIT), fetched once from Hugging Face and kept in the browser.
+   Runtime: ONNX Runtime Web 1.19.2 (MIT), served from vendor/ next to the app. */
+var Reader = (function () {
+  var ORT_DIR = "vendor/ort-1.19.2/";
+  // pinned to one commit, and each file is checked against its SHA-256 before use
+  var MODEL = "https://huggingface.co/breezedeus/pix2text-mfr/resolve/bea257edb2653f2ae413b084f2ac0e8299d08df0/";
+  var FILES = [
+    { name: "tokenizer.json", size: 39161, sha: "" },
+    { name: "encoder_model.onnx", size: 87496990, sha: "bd8d5c322792e9ec45793af5569e9748f82a3d728a9e00213dbfc56c1486f37d" },
+    { name: "decoder_model.onnx", size: 30114937, sha: "fd0f92d7a012f3dae41e1ac79421aea0ea888b5a66cb3f9a004e424f82f3daed" }
+  ];
+  var TOTAL = FILES.reduce(function (n, f) { return n + f.size; }, 0);
+  var CACHE = "study-reader-v1", SIDE = 384, START = 2, EOS = 2, MAX_TOKENS = 96;
+
+  /* ---------- which strokes are the answer: the line the last stroke belongs to ---------- */
+  function bbox(s) {
+    var b = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9 };
+    s.pts.forEach(function (p) { b.x0 = Math.min(b.x0, p[0]); b.y0 = Math.min(b.y0, p[1]); b.x1 = Math.max(b.x1, p[0]); b.y1 = Math.max(b.y1, p[1]); });
+    b.w = b.x1 - b.x0; b.h = b.y1 - b.y0; b.cx = (b.x0 + b.x1) / 2;
+    return b;
+  }
+  function gap(a0, a1, b0, b1) { return a1 < b0 ? b0 - a1 : b1 < a0 ? a0 - b1 : 0; }
+  // Returns { idx: [stroke indexes], box: [x0, y0, x1, y1] }, or null when there is nothing to read.
+  // Strokes join a line when they overlap vertically or nearly touch. A fraction bar also pulls in what is
+  // written right above and below it, so a stacked fraction stays in one piece.
+  function lastLine(strokes) {
+    var bs = strokes.filter(function (s) { return s.pts && s.pts.length; }).map(bbox), n = bs.length;
+    if (!n) return null;
+    var hs = bs.filter(function (b) { return b.h >= 8 && b.h >= b.w * 0.4; }).map(function (b) { return b.h; }).sort(function (a, b) { return a - b; });
+    var H = Math.max(16, Math.min(90, hs.length ? hs[hs.length >> 1] : 30));
+    var bar = bs.map(function (b, i) {
+      if (!(b.w >= 2.5 * Math.max(b.h, 1) && b.w >= 0.8 * H)) return false;
+      var above = false, below = false;
+      bs.forEach(function (o, j) {
+        if (j === i || o.cx < b.x0 - 0.2 * H || o.cx > b.x1 + 0.2 * H) return;
+        if (o.y1 <= b.y0 + 2 && b.y0 - o.y1 <= 0.9 * H) above = true;
+        if (o.y0 >= b.y1 - 2 && o.y0 - b.y1 <= 0.9 * H) below = true;
+      });
+      return above && below;
+    });
+    function joined(i, j) {
+      var a = bs[i], b = bs[j], vg = gap(a.y0, a.y1, b.y0, b.y1), hg = gap(a.x0, a.x1, b.x0, b.x1);
+      if (!vg && Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) >= 0.3 * Math.max(4, Math.min(a.h, b.h))) return true;
+      if (vg <= 0.25 * H && hg <= 1.5 * H) return true;
+      if (bar[i] && b.cx >= a.x0 - 0.2 * H && b.cx <= a.x1 + 0.2 * H && vg <= 0.9 * H) return true;
+      if (bar[j] && a.cx >= b.x0 - 0.2 * H && a.cx <= b.x1 + 0.2 * H && vg <= 0.9 * H) return true;
+      return false;
+    }
+    var inLine = [], todo = [n - 1]; inLine[n - 1] = true;
+    while (todo.length) { var k = todo.pop(); for (var m = 0; m < n; m++) if (!inLine[m] && joined(k, m)) { inLine[m] = true; todo.push(m); } }
+    var idx = [], box = [1e9, 1e9, -1e9, -1e9];
+    for (var q = 0; q < n; q++) if (inLine[q]) { idx.push(q); box[0] = Math.min(box[0], bs[q].x0); box[1] = Math.min(box[1], bs[q].y0); box[2] = Math.max(box[2], bs[q].x1); box[3] = Math.max(box[3], bs[q].y1); }
+    return { idx: idx, box: box };
+  }
+
+  /* ---------- the model's LaTeX -> the typed form the answer checker reads ---------- */
+  var FN = ["arcsin", "arccos", "arctan", "sin", "cos", "tan", "sec", "csc", "cot", "exp", "log", "ln"];
+  var IS_FN = {}; FN.forEach(function (f) { IS_FN["\\" + f] = f; });
+  var PLAIN = { "\\mathrm": 1, "\\text": 1, "\\operatorname": 1, "\\mathbf": 1, "\\mathit": 1, "\\mathcal": 1, "\\mathbb": 1, "\\boldsymbol": 1, "\\textbf": 1, "\\mathsf": 1, "\\textrm": 1 };
+  var DROP = { "\\left": 1, "\\right": 1, "\\displaystyle": 1, "\\limits": 1, "\\nolimits": 1, "\\quad": 1, "\\qquad": 1, "\\,": 1, "\\;": 1, "\\:": 1, "\\!": 1, "\\ ": 1, "\\big": 1, "\\Big": 1, "\\bigg": 1, "\\Bigg": 1, "\\bigl": 1, "\\bigr": 1, "\\Bigl": 1, "\\Bigr": 1, "&": 1, "$": 1 };
+  var SWAP = { "\\cdot": "*", "\\times": "*", "\\ast": "*", "\\div": "/", "\\pi": "pi", "\\lvert": "|", "\\rvert": "|", "\\vert": "|", "\\mid": "|", "\\{": "(", "\\}": ")", "\\lbrack": "(", "\\rbrack": ")", "\\pm": "±", "\\infty": "∞", "\\int": "∫", "\\prime": "'", "\\le": "<=", "\\leq": "<=", "\\ge": ">=", "\\geq": ">=" };
+  var OPS = "+-*/=,<>±";
+  function lex(s) {
+    var raw = s.match(/\\[a-zA-Z]+|\\.|\d*\.?\d+|\S/g) || [], out = [], i = 0;
+    // letters the model spelled out one by one ("s i n") become the function they spell
+    while (i < raw.length) {
+      if (!/^[a-zA-Z]$/.test(raw[i])) { out.push(raw[i++]); continue; }
+      var j = i, run = ""; while (j < raw.length && /^[a-zA-Z]$/.test(raw[j])) run += raw[j++];
+      var k = 0;
+      while (k < run.length) {
+        var hit = "";
+        for (var f = 0; f < FN.length; f++) if (run.substr(k, FN[f].length).toLowerCase() === FN[f] && FN[f].length > hit.length) hit = FN[f];
+        if (hit) { out.push("\\" + hit); k += hit.length; } else out.push(run[k++]);
+      }
+      i = j;
+    }
+    return out;
+  }
+  function isAtom(s) { return /^(\d+\.?\d*|\.\d+|[a-zA-Z]|pi)$/.test(s); }
+  function closed(s) { // true when s is one parenthesized group, like "(x+1)" but not "(x)(y)"
+    if (s[0] !== "(" || s[s.length - 1] !== ")") return false;
+    for (var i = 0, d = 0; i < s.length - 1; i++) { if (s[i] === "(") d++; else if (s[i] === ")") d--; if (!d) return false; }
+    return true;
+  }
+  function wrap(s) { return !s || isAtom(s) || closed(s) ? s : "(" + s + ")"; }
+  function bare(s, chars) { // true when one of chars sits outside every parenthesis (after the first character)
+    for (var i = 1, d = 0; i < s.length; i++) { var c = s[i]; if (c === "(") d++; else if (c === ")") d--; else if (!d && chars.indexOf(c) >= 0) return true; }
+    return false;
+  }
+  function toTyped(latex) {
+    var s = String(latex).replace(/([\d.])\s+(?=[\d.])/g, "$1");
+    var rows = s.split("\\\\").filter(function (r) { return r.replace(/[\s&]|\\end\{[a-z*]*\}/g, ""); });
+    s = (rows.length ? rows[rows.length - 1] : "").replace(/\\(begin|end)\s*\{[a-z*]*\}(\s*\{[a-z|]*\})?/g, " ");
+    s = s.replace(/\\(mathrm|text|operatorname|textrm)\s*\{([a-zA-Z\s]*)\}/g, " $2 "); // \mathrm{sin} x is sin x
+    var t = lex(s), p = 0;
+    for (var q = 0, inRoot = false; q < t.length; q++) { // square brackets are parentheses, except the root index in \sqrt[3]{x}
+      if (t[q] === "[" && t[q - 1] === "\\sqrt") inRoot = true;
+      else if (t[q] === "]" && inRoot) inRoot = false;
+      else if (t[q] === "[") t[q] = "("; else if (t[q] === "]") t[q] = ")";
+      else if (SWAP[t[q]]) t[q] = SWAP[t[q]];
+    }
+    function arg() {
+      while (DROP[t[p]]) p++;
+      if (t[p] === "{") { p++; var r = seq("}"); if (t[p] === "}") p++; return r; }
+      var it = item(); return it ? it.s : "";
+    }
+    function seq(stop, stopAtOp) { // items up to `stop`; with stopAtOp, also stops before + - = , or another function
+      var items = [];
+      while (p < t.length && t[p] !== stop) {
+        if (stopAtOp && (OPS.indexOf(t[p]) >= 0 || t[p] === ")" || t[p] === "}" || t[p] === "|" || IS_FN[t[p]])) break;
+        var it = item(); if (it) items.push(it);
+      }
+      var out = "";
+      items.forEach(function (it, i) {
+        var prev = items[i - 1], next = items[i + 1], piece = it.s;
+        if (it.k === "frac" && ((prev && prev.k !== "op") || (next && next.k !== "op"))) piece = "(" + piece + ")";
+        if (prev && /\d$/.test(out) && /^\d/.test(piece)) out += "*";
+        out += piece;
+      });
+      return out;
+    }
+    function item() {
+      var x = t[p++], it;
+      if (x === undefined || DROP[x] || x === "}") return null;
+      if (x === "{") { var g = seq("}"); if (t[p] === "}") p++; it = { s: wrap(g), k: "atom" }; }
+      else if (x === "(") { var inner = seq(")"); while (DROP[t[p]]) p++; if (t[p] === ")") p++; it = { s: "(" + inner + ")", k: "atom" }; }
+      else if (x === "|" && t.indexOf("|", p) >= 0) { var ab = seq("|"); p++; it = { s: "|" + ab + "|", k: "atom" }; }
+      else if (x === "\\frac" || x === "\\dfrac" || x === "\\tfrac") {
+        var a = arg(), b = arg();
+        it = { s: (bare(a, "+-") ? "(" + a + ")" : a) + "/" + (/^[a-zA-Z]\^\d+$/.test(b) ? b : wrap(b)), k: "frac" };
+      }
+      else if (x === "\\sqrt") {
+        var root = "";
+        if (t[p] === "[") { p++; while (p < t.length && t[p] !== "]") root += t[p++]; p++; }
+        var rad = arg();
+        it = { s: root === "3" ? "cbrt(" + rad + ")" : root && root !== "2" ? "(" + rad + ")^(1/" + root + ")" : "sqrt(" + rad + ")", k: "atom" };
+      }
+      else if (IS_FN[x]) {
+        var name = IS_FN[x], pw = "", sub = "";
+        for (;;) {
+          while (DROP[t[p]]) p++;
+          if (t[p] === "^") { p++; pw = "^" + wrap(arg()); } else if (t[p] === "_") { p++; sub = "_" + wrap(arg()); } else break;
+        }
+        var fa;
+        if (t[p] === "(" || t[p] === "|") { var one = item(); fa = one ? one.s : ""; }
+        else { fa = seq(null, true); if (fa && !closed(fa)) fa = "(" + fa + ")"; }
+        return { s: name + sub + pw + fa, k: "atom" };
+      }
+      else if (PLAIN[x]) { if (t[p] === "{") { p++; var pl = seq("}"); if (t[p] === "}") p++; it = { s: pl, k: "atom" }; } else return null; }
+      else if (x.length === 1 && OPS.indexOf(x) >= 0 || x === "<=" || x === ">=") return { s: x, k: "op" };
+      else if (x === "^" || x === "_") { p--; it = { s: "", k: "atom" }; }
+      else it = { s: x[0] === "\\" ? x.slice(1) : x, k: "atom" };
+      for (;;) { // powers and subscripts attach to what they follow
+        while (DROP[t[p]]) p++;
+        if (t[p] === "^") { p++; var e = arg(); it = { s: (it.k === "frac" ? "(" + it.s + ")" : it.s) + "^" + wrap(e), k: "atom" }; }
+        else if (t[p] === "_") { p++; it = { s: it.s + "_" + wrap(arg()), k: it.k }; }
+        else break;
+      }
+      return it;
+    }
+    var out = seq(null);
+    if (out.indexOf("=") >= 0) { var sides = out.split("=").filter(Boolean); out = sides.length ? sides[sides.length - 1] : ""; }
+    out = out.replace(/^∫/, "").replace(/[.,]$/, "");
+    var spaced = "";
+    for (var i = 0, d = 0; i < out.length; i++) {
+      var c = out[i];
+      if (c === "(") d++; else if (c === ")") d--;
+      spaced += !d && (c === "+" || c === "-") && i && /[\w)|.]/.test(out[i - 1]) ? " " + c + " " : c;
+    }
+    return spaced.replace(/\+ c$/, "+ C");
+  }
+
+  /* ---------- running the model ---------- */
+  var st = { loading: null, enc: null, dec: null, vocab: null };
+  function script(src) {
+    return new Promise(function (res, rej) { var s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = function () { rej(new Error("runtime")); }; document.head.appendChild(s); });
+  }
+  function hex(buf) { return Array.prototype.map.call(new Uint8Array(buf), function (b) { return (b < 16 ? "0" : "") + b.toString(16); }).join(""); }
+  function verify(f, buf) {
+    if (buf.byteLength !== f.size) return Promise.reject(new Error("download"));
+    if (!f.sha || !window.crypto || !crypto.subtle) return Promise.resolve(buf);
+    return crypto.subtle.digest("SHA-256", buf).then(function (h) { if (hex(h) !== f.sha) throw new Error("download"); return buf; });
+  }
+  function fetchFile(f, onBytes) {
+    var url = MODEL + f.name;
+    var store = window.caches ? caches.open(CACHE).catch(function () { return null; }) : Promise.resolve(null);
+    return store.then(function (c) {
+      return (c ? c.match(url) : Promise.resolve(null)).then(function (hit) {
+        if (hit) return hit.arrayBuffer().then(function (b) { return verify(f, b); }).then(function (b) { onBytes(f.size); return b; }, function () { return c.delete(url).then(function () { return download(); }); });
+        return download();
+        function download() {
+          return fetch(url).then(function (r) {
+            if (!r.ok) throw new Error("download");
+            if (!r.body || !r.body.getReader) return r.arrayBuffer().then(function (b) { onBytes(b.byteLength); return b; });
+            var rd = r.body.getReader(), chunks = [], got = 0;
+            function pump() { return rd.read().then(function (x) { if (x.done) return; chunks.push(x.value); got += x.value.length; onBytes(x.value.length); return pump(); }); }
+            return pump().then(function () { var all = new Uint8Array(got), o = 0; chunks.forEach(function (ch) { all.set(ch, o); o += ch.length; }); return all.buffer; });
+          }).then(function (b) { return verify(f, b); }).then(function (b) {
+            if (c) c.put(url, new Response(b.slice(0), { headers: { "Content-Type": "application/octet-stream" } })).catch(function () {});
+            return b;
+          });
+        }
+      });
+    });
+  }
+  // true once the model is in this browser, so the one-time download question can be skipped
+  function stored() {
+    if (st.enc) return Promise.resolve(true);
+    if (!window.caches) return Promise.resolve(false);
+    return caches.open(CACHE).then(function (c) { return Promise.all(FILES.map(function (f) { return c.match(MODEL + f.name); })); }).then(function (r) { return r.every(Boolean); }, function () { return false; });
+  }
+  // onProgress(fraction 0..1) is called while the model downloads
+  function load(onProgress) {
+    if (st.loading) return st.loading;
+    var got = 0;
+    function bytes(n) { got += n; if (onProgress) onProgress(Math.min(1, got / TOTAL)); }
+    st.loading = (window.ort ? Promise.resolve() : script(ORT_DIR + "ort.wasm.min.js")).then(function () {
+      ort.env.wasm.wasmPaths = new URL(ORT_DIR, document.baseURI).href; ort.env.wasm.numThreads = 1;
+      return Promise.all(FILES.map(function (f) { return fetchFile(f, bytes); }));
+    }).then(function (bufs) {
+      var tok = JSON.parse(new TextDecoder().decode(bufs[0]));
+      st.vocab = []; for (var k in tok.model.vocab) st.vocab[tok.model.vocab[k]] = k;
+      return ort.InferenceSession.create(bufs[1], { executionProviders: ["wasm"] }).then(function (enc) {
+        return ort.InferenceSession.create(bufs[2], { executionProviders: ["wasm"] }).then(function (dec) { st.enc = enc; st.dec = dec; });
+      });
+    }).catch(function (e) { st.loading = null; throw e; });
+    return st.loading;
+  }
+  // the chosen strokes, drawn black on white and stretched to the square the model expects
+  function picture(strokes, line) {
+    var pad = 16, k = 2, b = line.box, c = document.createElement("canvas");
+    c.width = Math.ceil((b[2] - b[0] + 2 * pad) * k); c.height = Math.ceil((b[3] - b[1] + 2 * pad) * k);
+    var g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+    g.strokeStyle = "#000"; g.lineWidth = 3 * k; g.lineCap = "round"; g.lineJoin = "round";
+    line.idx.forEach(function (i) {
+      var pts = strokes[i].pts; g.beginPath();
+      pts.forEach(function (q, n) { var x = (q[0] - b[0] + pad) * k, y = (q[1] - b[1] + pad) * k; if (n) g.lineTo(x, y); else g.moveTo(x, y); });
+      if (pts.length === 1) g.lineTo((pts[0][0] - b[0] + pad) * k + 0.1, (pts[0][1] - b[1] + pad) * k);
+      g.stroke();
+    });
+    var o = document.createElement("canvas"); o.width = SIDE; o.height = SIDE;
+    var og = o.getContext("2d"); og.imageSmoothingEnabled = true; og.imageSmoothingQuality = "high";
+    og.fillStyle = "#fff"; og.fillRect(0, 0, SIDE, SIDE); og.drawImage(c, 0, 0, SIDE, SIDE);
+    var d = og.getImageData(0, 0, SIDE, SIDE).data, n = SIDE * SIDE, px = new Float32Array(3 * n);
+    for (var i = 0; i < n; i++) for (var ch = 0; ch < 3; ch++) px[ch * n + i] = d[i * 4 + ch] / 127.5 - 1;
+    return px;
+  }
+  // strokes: [{ pts: [[x, y, pressure], ...] }, ...] -> Promise of { text, latex, box }, or null when there is nothing to read
+  function read(strokes) {
+    strokes = strokes.filter(function (s) { return s.pts && s.pts.length; });
+    var line = lastLine(strokes);
+    if (!line) return Promise.resolve(null);
+    return load().then(function () {
+      return st.enc.run({ pixel_values: new ort.Tensor("float32", picture(strokes, line), [1, 3, SIDE, SIDE]) });
+    }).then(function (eo) {
+      var hs = eo.last_hidden_state, ids = [START];
+      function step() {
+        if (ids.length > MAX_TOKENS) return ids;
+        return st.dec.run({ input_ids: new ort.Tensor("int64", BigInt64Array.from(ids.map(function (v) { return BigInt(v); })), [1, ids.length]), encoder_hidden_states: hs }).then(function (o) {
+          var lg = o.logits, V = lg.dims[2], off = (ids.length - 1) * V, best = 0;
+          for (var v = 1; v < V; v++) if (lg.data[off + v] > lg.data[off + best]) best = v;
+          if (best === EOS) return ids;
+          ids.push(best); return step();
+        });
+      }
+      return step();
+    }).then(function (ids) {
+      var latex = ids.slice(1).map(function (id) { return st.vocab[id] || ""; }).join("").replace(/Ġ/g, " ").trim();
+      return { text: toTyped(latex), latex: latex, box: line.box };
+    });
+  }
+
+  return { read: read, load: load, stored: stored, lastLine: lastLine, toTyped: toTyped, megabytes: Math.round(TOTAL / 1e6) };
+})();
+
 CONFIG.hosted = true;
 CONFIG.web = true;
 /* ===== App ===== */
@@ -1949,6 +2226,7 @@ CONFIG.web = true;
       else if (CLOUD.db && !CLOUD.readOnly) CLOUD.db.doc("scratch/" + scratchDocId(pid)).set(enc).catch(function () {});
     }, 1200);
   }
+  var READ_LABEL = "Read my answer";
   function scratchHTML(p) {
     var open = SCR_OPEN[p.pid] !== undefined ? SCR_OPEN[p.pid] : COARSE;
     return '<div class="scratch-wrap" data-pid="' + p.pid + '"><button class="link-btn scratch-toggle" data-act="scratch-toggle" data-pid="' + p.pid + '">' + (open ? "Hide scratch pad" : "✎ Work it out by hand") + "</button>" +
@@ -1956,7 +2234,8 @@ CONFIG.web = true;
         '<div class="seg"><button class="on" data-act="scr-tool" data-tool="pen" aria-label="Pen">✎ Pen</button><button data-act="scr-tool" data-tool="erase" aria-label="Eraser">Eraser</button></div>' +
         '<button class="btn small ghost" data-act="scr-undo">Undo</button><button class="btn small ghost" data-act="scr-clear">Clear</button><button class="btn small ghost" data-act="scr-taller">More room</button>' +
         (COARSE ? '<label class="row scr-finger" style="gap:6px;font-size:13px"><input type="checkbox" class="ck" data-act="scr-finger"> Finger draws</label>' : "") +
-        '<span class="spacer"></span><button class="btn small" data-act="scr-ask" data-pid="' + p.pid + '"' + (CONFIG.web ? "" : " hidden") + ">" + (CONFIG.web ? "Ask Claude to check" : "Check my work") + '</button></div>' +
+        '<span class="spacer"></span>' + (CONFIG.web && typeof Reader !== "undefined" && p.type !== "choice" ? '<button class="btn small" data-act="scr-read" data-pid="' + p.pid + '" title="Types the last line you wrote into the answer box">' + READ_LABEL + "</button>" : "") +
+        '<button class="btn small" data-act="scr-ask" data-pid="' + p.pid + '"' + (CONFIG.web ? "" : " hidden") + ">" + (CONFIG.web ? "Ask Claude to check" : "Check my work") + '</button></div>' +
         '<div class="scr-canvas"><canvas></canvas></div><div class="scr-fb" hidden></div></div>' : "") + "</div>";
   }
   function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#000"; }
@@ -1964,7 +2243,7 @@ CONFIG.web = true;
     $$(".scratch").forEach(function (el) {
       if (el.__mounted) return; el.__mounted = true;
       var pid = el.dataset.pid, cv = $("canvas", el), box = $(".scr-canvas", el), ctx = cv.getContext("2d");
-      var tool = "pen", finger = false, cur = null, undo = [], sc = { h: 420, strokes: [] };
+      var tool = "pen", finger = false, cur = null, undo = [], sc = { h: 420, strokes: [] }, readBox = null, readT = null;
       function scale() { return box.clientWidth / 1000; }
       function size() {
         var w = box.clientWidth, dpr = window.devicePixelRatio || 1, hpx = Math.round(sc.h * scale());
@@ -1991,6 +2270,10 @@ CONFIG.web = true;
         var ink = cssVar("--ink");
         sc.strokes.forEach(function (s) { drawStroke(ctx, s, ink); });
         if (cur) drawStroke(ctx, cur, ink);
+        if (readBox) { // what "Read my answer" just read
+          ctx.save(); ctx.setLineDash([7, 5]); ctx.lineWidth = 1.5; ctx.strokeStyle = cssVar("--accent");
+          ctx.strokeRect(readBox[0] - 10, readBox[1] - 10, readBox[2] - readBox[0] + 20, readBox[3] - readBox[1] + 20); ctx.restore();
+        }
       }
       function pt(e) { var r = cv.getBoundingClientRect(), k = 1000 / r.width; return [(e.clientX - r.left) * k, (e.clientY - r.top) * k, e.pointerType === "pen" ? (e.pressure || 0.5) : 0.5]; }
       function eraseAt(q) { var hit = false; sc.strokes = sc.strokes.filter(function (s) { var near = s.pts.some(function (p) { return Math.abs(p[0] - q[0]) < 14 && Math.abs(p[1] - q[1]) < 14; }); if (near) hit = true; return !near; }); return hit; }
@@ -2025,6 +2308,8 @@ CONFIG.web = true;
         taller: function () { sc.h = Math.min(sc.h + 260, 2400); SCR[pid] = sc; size(); saveScratch(pid); },
         finger: function (on) { finger = on; },
         isEmpty: function () { return !sc.strokes.length; },
+        strokes: function () { return sc.strokes; },
+        flash: function (b) { readBox = b; draw(); clearTimeout(readT); readT = setTimeout(function () { readBox = null; draw(); }, 3500); },
         reload: function (d) { sc = d; SCR[pid] = sc; undo = []; size(); },
         dataURL: function () {
           var off = document.createElement("canvas"), W = 1000, H = Math.max(200, Math.min(sc.h, Math.ceil(sc.strokes.reduce(function (m, s) { return Math.max(m, s.pts.reduce(function (mm, p) { return Math.max(mm, p[1]); }, 0)); }, 0) + 40)));
@@ -2278,6 +2563,39 @@ CONFIG.web = true;
       '<div class="row" style="margin-bottom:14px"><input class="ans" id="ghToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…" style="flex:1;min-width:200px">' +
       '<button class="btn small primary" data-act="gh-connect"' + (GH.state === "connecting" ? " disabled" : "") + ">" + (GH.state === "connecting" ? "Connecting…" : "Turn on sync") + "</button></div>" +
       '<p class="muted" style="margin:0 0 10px;font-size:13px">The token only lets this app read and write your gists. It stays on this device and is sent only to GitHub.</p>';
+  }
+
+  /* ---------- "Read my answer": the last handwritten line -> the answer box (web version, see reader.js) ---------- */
+  function readAnswer(pid, btn) {
+    var el = btn.closest(".scratch"), inp = $(".ans", btn.closest(".prob"));
+    if (!el || !el.__api || !inp || btn.disabled) return;
+    if (el.__api.isEmpty()) { toast("Write your answer on the scratch pad first."); return; }
+    function reset() { btn.disabled = false; btn.textContent = READ_LABEL; btn.dataset.confirm = ""; }
+    Reader.stored().then(function (have) {
+      if (!have && !btn.dataset.confirm) { // first time on this device: ask before the big download
+        btn.dataset.confirm = "1"; btn.textContent = "Download the reader (" + Reader.megabytes + " MB)";
+        toast("Reading handwriting needs a one-time " + Reader.megabytes + " MB download on this device. Click the button again to start.", 9000);
+        setTimeout(function () { if (btn.isConnected && btn.dataset.confirm && !btn.disabled) reset(); }, 9000);
+        return;
+      }
+      btn.disabled = true; btn.textContent = have ? "Reading…" : "Downloading… 0%";
+      return Reader.load(function (f) { btn.textContent = have || f >= 1 ? "Reading…" : "Downloading… " + Math.round(f * 100) + "%"; }).then(function () {
+        btn.textContent = "Reading…";
+        return new Promise(function (res) { setTimeout(res, 60); }); // let "Reading…" show: the reader holds the page for a second or two
+      }).then(function () {
+        return Reader.read(el.__api.strokes());
+      }).then(function (r) {
+        reset();
+        if (!r || !r.text) { toast("I couldn’t read that. Try writing the answer again, a little larger."); return; }
+        el.__api.flash(r.box);
+        inp.value = r.text; preview(inp); inp.focus({ preventScroll: true });
+        toast("I read “" + r.text + "”. Fix anything I got wrong, then press Check.", 8000);
+        mark();
+      });
+    }).catch(function (e) {
+      reset();
+      toast(e && e.message === "download" ? "Couldn’t download the handwriting reader. Check your internet connection and try again." : "The handwriting reader couldn’t start in this browser. Type your answer instead.", 8000);
+    });
   }
 
   /* ---------- "Check my work" hand-off to Claude (web version) ---------- */
@@ -3017,6 +3335,7 @@ CONFIG.web = true;
       case "scr-undo": t.closest(".scratch").__api.undo(); break;
       case "scr-clear": t.closest(".scratch").__api.clear(); break;
       case "scr-taller": t.closest(".scratch").__api.taller(); break;
+      case "scr-read": readAnswer(t.dataset.pid, t); break;
       case "scr-ask": if (CONFIG.web) handoff(t.dataset.pid, t); else askClaude(t.dataset.pid, t); break;
       case "gh-connect": ghConnect(($("#ghToken") || {}).value); break;
       case "gh-off": ghDisconnect(); break;
