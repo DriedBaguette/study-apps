@@ -10,5 +10,5 @@ The three files are unmodified copies from the `onnxruntime-web@1.19.2` npm pack
 | `ort-wasm-simd-threaded.wasm` | `1bf0b9ed7ad025cf9ca88ce6da29e54df3f128a169f8241d71823e81f078d578` |
 
 The study apps use it to run the handwriting reader ("Read my answer") in the browser.
-The reader's model is Pix2Text MFR (MIT License, https://huggingface.co/breezedeus/pix2text-mfr). It isn't stored here;
+The reader's model is Pix2Text MFR 1.5 (MIT License, https://huggingface.co/breezedeus/pix2text-mfr-1.5). It isn't stored here;
 the app downloads it from Hugging Face the first time the reader is used.

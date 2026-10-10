@@ -1666,19 +1666,20 @@ var FLASH = {
 
 /* ===== Handwriting reader (web build only): the last line written on a scratch pad -> a typed answer =====
    Runs in the browser, so nothing the user writes leaves the device.
-   Model: Pix2Text MFR (breezedeus/pix2text-mfr, MIT), fetched once from Hugging Face and kept in the browser.
+   Model: Pix2Text MFR 1.5 (breezedeus/pix2text-mfr-1.5, MIT), fetched once from Hugging Face and kept in the browser.
    Runtime: ONNX Runtime Web 1.19.2 (MIT), served from vendor/ next to the app. */
 var Reader = (function () {
   var ORT_DIR = "vendor/ort-1.19.2/";
   // pinned to one commit, and each file is checked against its SHA-256 before use
-  var MODEL = "https://huggingface.co/breezedeus/pix2text-mfr/resolve/bea257edb2653f2ae413b084f2ac0e8299d08df0/";
+  var MODEL = "https://huggingface.co/breezedeus/pix2text-mfr-1.5/resolve/1cef9f0bdcd6a4c63df7de1311fb0894593340cc/";
   var FILES = [
-    { name: "tokenizer.json", size: 39161, sha: "" },
-    { name: "encoder_model.onnx", size: 87496990, sha: "bd8d5c322792e9ec45793af5569e9748f82a3d728a9e00213dbfc56c1486f37d" },
-    { name: "decoder_model.onnx", size: 30114937, sha: "fd0f92d7a012f3dae41e1ac79421aea0ea888b5a66cb3f9a004e424f82f3daed" }
+    { name: "tokenizer.json", size: 113168, sha: "" },
+    { name: "encoder_model.onnx", size: 87510770, sha: "080a3f660f08bc9ebcacdd96e34be6b6400f8c7e62d7cd0dd8251badc37f610b" },
+    { name: "decoder_model.onnx", size: 32026253, sha: "917deb98e91a0453c5f234f58a0f32f9fb037de8527c7eb4ed394daf9e692f2a" }
   ];
   var TOTAL = FILES.reduce(function (n, f) { return n + f.size; }, 0);
-  var CACHE = "study-reader-v1", SIDE = 384, START = 2, EOS = 2, MAX_TOKENS = 96;
+  // a new model means a new cache name; OLD_CACHES are deleted so a device doesn't keep both
+  var CACHE = "study-reader-v2", OLD_CACHES = ["study-reader-v1"], SIDE = 384, PAD = 16, START = 1, EOS = 2, MAX_TOKENS = 96;
 
   /* ---------- which strokes are the answer: the line the last stroke belongs to ---------- */
   function bbox(s) {
@@ -1720,27 +1721,72 @@ var Reader = (function () {
     for (var q = 0; q < n; q++) if (inLine[q]) { idx.push(q); box[0] = Math.min(box[0], bs[q].x0); box[1] = Math.min(box[1], bs[q].y0); box[2] = Math.max(box[2], bs[q].x1); box[3] = Math.max(box[3], bs[q].y1); }
     return { idx: idx, box: box };
   }
+  // The model stretches every picture to a square, so a long line loses its letter shapes ("sec" came out as
+  // "sin"). A line wider than WIDE (width / height, margins included) is cut at its widest gap near the middle
+  // and read in pieces, left to right. Returns a list of { idx, box }.
+  var WIDE = 5;
+  function pieces(strokes, line) {
+    var bs = strokes.map(bbox);
+    function box(idx) { var b = [1e9, 1e9, -1e9, -1e9]; idx.forEach(function (i) { b[0] = Math.min(b[0], bs[i].x0); b[1] = Math.min(b[1], bs[i].y0); b[2] = Math.max(b[2], bs[i].x1); b[3] = Math.max(b[3], bs[i].y1); }); return b; }
+    function cut(idx) {
+      var b = box(idx), w = b[2] - b[0], h = b[3] - b[1];
+      if (idx.length < 2 || (w + 2 * PAD) / (h + 2 * PAD) <= WIDE) return [{ idx: idx, box: b }];
+      var cols = []; // strokes that share a column (a letter, or a whole stacked fraction)
+      idx.slice().sort(function (p, q) { return bs[p].x0 - bs[q].x0; }).forEach(function (i) {
+        var c = cols[cols.length - 1], s = bs[i];
+        if (c && s.x0 <= c.x1 + 1) { c.x1 = Math.max(c.x1, s.x1); c.y0 = Math.min(c.y0, s.y0); c.y1 = Math.max(c.y1, s.y1); c.idx.push(i); }
+        else cols.push({ x0: s.x0, x1: s.x1, y0: s.y0, y1: s.y1, idx: [i] });
+      });
+      var at = 0, widest = 0.25 * h;
+      for (var k = 1; k < cols.length; k++) {
+        var L = cols[k - 1], R = cols[k], where = ((L.x1 + R.x0) / 2 - b[0]) / w;
+        if (where < 0.25 || where > 0.75) continue;
+        if (R.y1 < (L.y0 + L.y1) / 2 && R.y1 - R.y0 < 0.75 * (L.y1 - L.y0)) continue; // never between a base and its exponent
+        if (R.x0 - L.x1 > widest) { widest = R.x0 - L.x1; at = k; }
+      }
+      if (!at) return [{ idx: idx, box: b }];
+      var left = [], right = [];
+      cols.forEach(function (c, k) { Array.prototype.push.apply(k < at ? left : right, c.idx); });
+      return cut(left).concat(cut(right));
+    }
+    return cut(line.idx);
+  }
 
   /* ---------- the model's LaTeX -> the typed form the answer checker reads ---------- */
   var FN = ["arcsin", "arccos", "arctan", "sin", "cos", "tan", "sec", "csc", "cot", "exp", "log", "ln"];
   var IS_FN = {}; FN.forEach(function (f) { IS_FN["\\" + f] = f; });
   var PLAIN = { "\\mathrm": 1, "\\text": 1, "\\operatorname": 1, "\\mathbf": 1, "\\mathit": 1, "\\mathcal": 1, "\\mathbb": 1, "\\boldsymbol": 1, "\\textbf": 1, "\\mathsf": 1, "\\textrm": 1 };
   var DROP = { "\\left": 1, "\\right": 1, "\\displaystyle": 1, "\\limits": 1, "\\nolimits": 1, "\\quad": 1, "\\qquad": 1, "\\,": 1, "\\;": 1, "\\:": 1, "\\!": 1, "\\ ": 1, "\\big": 1, "\\Big": 1, "\\bigg": 1, "\\Bigg": 1, "\\bigl": 1, "\\bigr": 1, "\\Bigl": 1, "\\Bigr": 1, "&": 1, "$": 1 };
-  var SWAP = { "\\cdot": "*", "\\times": "*", "\\ast": "*", "\\div": "/", "\\pi": "pi", "\\lvert": "|", "\\rvert": "|", "\\vert": "|", "\\mid": "|", "\\{": "(", "\\}": ")", "\\lbrack": "(", "\\rbrack": ")", "\\pm": "±", "\\infty": "∞", "\\int": "∫", "\\prime": "'", "\\le": "<=", "\\leq": "<=", "\\ge": ">=", "\\geq": ">=" };
+  // \times is almost always a handwritten x: nobody writes a times sign in a calculus answer
+  var SWAP = { "\\cdot": "*", "\\times": "x", "\\ast": "*", "\\div": "/", "\\pi": "pi", "\\lvert": "|", "\\rvert": "|", "\\vert": "|", "\\mid": "|", "\\{": "(", "\\}": ")", "\\lbrack": "(", "\\rbrack": ")", "\\pm": "±", "\\infty": "∞", "\\int": "∫", "\\prime": "'", "\\le": "<=", "\\leq": "<=", "\\ge": ">=", "\\geq": ">=" };
   var OPS = "+-*/=,<>±";
-  function lex(s) {
-    var raw = s.match(/\\[a-zA-Z]+|\\.|\d*\.?\d+|\S/g) || [], out = [], i = 0;
-    // letters the model spelled out one by one ("s i n") become the function they spell
-    while (i < raw.length) {
-      if (!/^[a-zA-Z]$/.test(raw[i])) { out.push(raw[i++]); continue; }
-      var j = i, run = ""; while (j < raw.length && /^[a-zA-Z]$/.test(raw[j])) run += raw[j++];
-      var k = 0;
-      while (k < run.length) {
-        var hit = "";
-        for (var f = 0; f < FN.length; f++) if (run.substr(k, FN[f].length).toLowerCase() === FN[f] && FN[f].length > hit.length) hit = FN[f];
-        if (hit) { out.push("\\" + hit); k += hit.length; } else out.push(run[k++]);
+  // what a misread letter of a function name tends to come out as
+  var LIKE = { s: "53", t: "+", l: "1I|", o: "0", i: "1l" };
+  // The function name spelled by the tokens starting at i ("s i n"), or null. One misread letter is allowed
+  // ("+ a n" is tan, "5 e c x" is sec x) as long as the plain reading wouldn't be math the checker accepts:
+  // it has a letter other than x, e and c, or it would be a product like 5·e·c right before a variable.
+  function fnAt(raw, i) {
+    for (var f = 0; f < FN.length; f++) {
+      var name = FN[f], exact = 0, odd = 0, plain = true, n = 0;
+      for (; n < name.length; n++) {
+        var tk = raw[i + n];
+        if (!tk || tk.length !== 1) break;
+        if (/[a-zA-Z]/.test(tk) && tk.toLowerCase() === name[n]) { exact++; if ("xec".indexOf(name[n]) < 0) plain = false; }
+        else if ((LIKE[name[n]] || "").indexOf(tk) >= 0) odd++;
+        else break;
       }
-      i = j;
+      if (n < name.length || odd > 1 || !exact) continue;
+      if (!odd || !plain || /^([a-zA-Z(^]|\\[a-zA-Z]+)$/.test(raw[i + n] || "")) return { name: name, n: n };
+    }
+    return null;
+  }
+  function lex(s) {
+    var raw = s.match(/\\[a-zA-Z]+|\\.|\S/g) || [], out = [], i = 0;
+    while (i < raw.length) {
+      var fn = fnAt(raw, i), last = out[out.length - 1];
+      if (fn) { out.push("\\" + fn.name); i += fn.n; }
+      else if (/^[\d.]$/.test(raw[i]) && last && /^[\d.]+$/.test(last) && /^[\d.]$/.test(raw[i - 1])) out[out.length - 1] += raw[i++]; // "1 2" is 12
+      else out.push(raw[i++]);
     }
     return out;
   }
@@ -1756,7 +1802,7 @@ var Reader = (function () {
     return false;
   }
   function toTyped(latex) {
-    var s = String(latex).replace(/([\d.])\s+(?=[\d.])/g, "$1");
+    var s = String(latex);
     var rows = s.split("\\\\").filter(function (r) { return r.replace(/[\s&]|\\end\{[a-z*]*\}/g, ""); });
     s = (rows.length ? rows[rows.length - 1] : "").replace(/\\(begin|end)\s*\{[a-z*]*\}(\s*\{[a-z|]*\})?/g, " ");
     s = s.replace(/\\(mathrm|text|operatorname|textrm)\s*\{([a-zA-Z\s]*)\}/g, " $2 "); // \mathrm{sin} x is sin x
@@ -1839,7 +1885,12 @@ var Reader = (function () {
   }
 
   /* ---------- running the model ---------- */
-  var st = { loading: null, enc: null, dec: null, vocab: null };
+  var st = { loading: null, enc: null, dec: null, vocab: null, ok: null, cmd: null, slash: null };
+  // The model may only write what an answer can contain: these characters, and after a backslash these
+  // commands. Left free, it drifts into symbols like \tau or \binom on messy handwriting.
+  var CHARS = "0123456789.+-*/=()[]|{}^_,\\abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  var WORDS = ["frac", "sqrt", "sin", "cos", "tan", "sec", "csc", "cot", "ln", "log", "exp", "arcsin", "arccos", "arctan", "pi", "left", "right", "times", "int"];
+  var SPACE = /Ġ/g; // the tokenizer's mark for "a space comes before this"
   function script(src) {
     return new Promise(function (res, rej) { var s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = function () { rej(new Error("runtime")); }; document.head.appendChild(s); });
   }
@@ -1886,8 +1937,15 @@ var Reader = (function () {
       ort.env.wasm.wasmPaths = new URL(ORT_DIR, document.baseURI).href; ort.env.wasm.numThreads = 1;
       return Promise.all(FILES.map(function (f) { return fetchFile(f, bytes); }));
     }).then(function (bufs) {
+      if (window.caches) OLD_CACHES.forEach(function (name) { caches.delete(name).catch(function () {}); });
       var tok = JSON.parse(new TextDecoder().decode(bufs[0]));
-      st.vocab = []; for (var k in tok.model.vocab) st.vocab[tok.model.vocab[k]] = k;
+      st.vocab = []; st.ok = [EOS]; st.cmd = []; st.slash = {};
+      for (var k in tok.model.vocab) {
+        var id = tok.model.vocab[k], word = k.replace(SPACE, "");
+        st.vocab[id] = k;
+        if (word === "\\") st.slash[id] = true;
+        if (word.length === 1 && CHARS.indexOf(word) >= 0) st.ok.push(id); else if (WORDS.indexOf(word) >= 0) st.cmd.push(id);
+      }
       return ort.InferenceSession.create(bufs[1], { executionProviders: ["wasm"] }).then(function (enc) {
         return ort.InferenceSession.create(bufs[2], { executionProviders: ["wasm"] }).then(function (dec) { st.enc = enc; st.dec = dec; });
       });
@@ -1896,7 +1954,7 @@ var Reader = (function () {
   }
   // the chosen strokes, drawn black on white and stretched to the square the model expects
   function picture(strokes, line) {
-    var pad = 16, k = 2, b = line.box, c = document.createElement("canvas");
+    var pad = PAD, k = 2, b = line.box, c = document.createElement("canvas");
     c.width = Math.ceil((b[2] - b[0] + 2 * pad) * k); c.height = Math.ceil((b[3] - b[1] + 2 * pad) * k);
     var g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
     g.strokeStyle = "#000"; g.lineWidth = 3 * k; g.lineCap = "round"; g.lineJoin = "round";
@@ -1918,27 +1976,32 @@ var Reader = (function () {
     strokes = strokes.filter(function (s) { return s.pts && s.pts.length; });
     var line = lastLine(strokes);
     if (!line) return Promise.resolve(null);
+    function readPiece(piece) { // -> Promise of that piece's LaTeX
+      return st.enc.run({ pixel_values: new ort.Tensor("float32", picture(strokes, piece), [1, 3, SIDE, SIDE]) }).then(function (eo) {
+        var hs = eo.last_hidden_state, ids = [START];
+        function step() {
+          if (ids.length > MAX_TOKENS) return ids;
+          return st.dec.run({ input_ids: new ort.Tensor("int64", BigInt64Array.from(ids.map(function (v) { return BigInt(v); })), [1, ids.length]), encoder_hidden_states: hs }).then(function (o) {
+            var lg = o.logits, off = (ids.length - 1) * lg.dims[2], pool = ids.length > 1 && st.slash[ids[ids.length - 1]] ? st.cmd : st.ok, best = pool[0];
+            for (var v = 1; v < pool.length; v++) if (lg.data[off + pool[v]] > lg.data[off + best]) best = pool[v];
+            if (best === EOS) return ids;
+            ids.push(best); return step();
+          });
+        }
+        return step();
+      }).then(function (ids) { return ids.slice(1).map(function (id) { return st.vocab[id] || ""; }).join("").replace(SPACE, " ").trim(); });
+    }
     return load().then(function () {
-      return st.enc.run({ pixel_values: new ort.Tensor("float32", picture(strokes, line), [1, 3, SIDE, SIDE]) });
-    }).then(function (eo) {
-      var hs = eo.last_hidden_state, ids = [START];
-      function step() {
-        if (ids.length > MAX_TOKENS) return ids;
-        return st.dec.run({ input_ids: new ort.Tensor("int64", BigInt64Array.from(ids.map(function (v) { return BigInt(v); })), [1, ids.length]), encoder_hidden_states: hs }).then(function (o) {
-          var lg = o.logits, V = lg.dims[2], off = (ids.length - 1) * V, best = 0;
-          for (var v = 1; v < V; v++) if (lg.data[off + v] > lg.data[off + best]) best = v;
-          if (best === EOS) return ids;
-          ids.push(best); return step();
-        });
-      }
-      return step();
-    }).then(function (ids) {
-      var latex = ids.slice(1).map(function (id) { return st.vocab[id] || ""; }).join("").replace(/Ġ/g, " ").trim();
+      var parts = pieces(strokes, line), out = [];
+      function next(i) { return i < parts.length ? readPiece(parts[i]).then(function (l) { out.push(l); return next(i + 1); }) : out; }
+      return next(0);
+    }).then(function (out) {
+      var latex = out.join(" ");
       return { text: toTyped(latex), latex: latex, box: line.box };
     });
   }
 
-  return { read: read, load: load, stored: stored, lastLine: lastLine, toTyped: toTyped, megabytes: Math.round(TOTAL / 1e6) };
+  return { read: read, load: load, stored: stored, lastLine: lastLine, pieces: pieces, toTyped: toTyped, megabytes: Math.round(TOTAL / 1e6) };
 })();
 
 CONFIG.hosted = true;
