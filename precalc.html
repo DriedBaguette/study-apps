@@ -1692,11 +1692,14 @@ var Reader = (function () {
   // Returns { idx: [stroke indexes], box: [x0, y0, x1, y1] }, or null when there is nothing to read.
   // Strokes join a line when they overlap vertically or nearly touch. A fraction bar also pulls in what is
   // written right above and below it, so a stacked fraction stays in one piece.
-  function lastLine(strokes) {
-    var bs = strokes.filter(function (s) { return s.pts && s.pts.length; }).map(bbox), n = bs.length;
-    if (!n) return null;
-    var hs = bs.filter(function (b) { return b.h >= 8 && b.h >= b.w * 0.4; }).map(function (b) { return b.h; }).sort(function (a, b) { return a - b; });
-    var H = Math.max(16, Math.min(90, hs.length ? hs[hs.length >> 1] : 30));
+  // the usual height of a written symbol: the median stroke height, leaving out dots and flat strokes
+  function letterHeight(boxes) {
+    var hs = boxes.filter(function (b) { return b.h >= 8 && b.h >= b.w * 0.4; }).map(function (b) { return b.h; }).sort(function (a, b) { return a - b; });
+    return hs.length ? hs[hs.length >> 1] : 30;
+  }
+  // every stroke's box, the letter height H, and which strokes are fraction bars (flat, with writing right above and below)
+  function shape(strokes) {
+    var bs = strokes.map(bbox), H = Math.max(16, Math.min(90, letterHeight(bs)));
     var bar = bs.map(function (b, i) {
       if (!(b.w >= 2.5 * Math.max(b.h, 1) && b.w >= 0.8 * H)) return false;
       var above = false, below = false;
@@ -1707,6 +1710,12 @@ var Reader = (function () {
       });
       return above && below;
     });
+    return { bs: bs, H: H, bar: bar };
+  }
+  function lastLine(strokes) {
+    strokes = strokes.filter(function (s) { return s.pts && s.pts.length; });
+    var sh = shape(strokes), bs = sh.bs, H = sh.H, bar = sh.bar, n = bs.length;
+    if (!n) return null;
     function joined(i, j) {
       var a = bs[i], b = bs[j], vg = gap(a.y0, a.y1, b.y0, b.y1), hg = gap(a.x0, a.x1, b.x0, b.x1);
       if (!vg && Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) >= 0.3 * Math.max(4, Math.min(a.h, b.h))) return true;
@@ -1721,16 +1730,27 @@ var Reader = (function () {
     for (var q = 0; q < n; q++) if (inLine[q]) { idx.push(q); box[0] = Math.min(box[0], bs[q].x0); box[1] = Math.min(box[1], bs[q].y0); box[2] = Math.max(box[2], bs[q].x1); box[3] = Math.max(box[3], bs[q].y1); }
     return { idx: idx, box: box };
   }
-  // The model stretches every picture to a square, so a long line loses its letter shapes ("sec" came out as
-  // "sin"). A line wider than WIDE (width / height, margins included) is cut at its widest gap near the middle
-  // and read in pieces, left to right. Returns a list of { idx, box }.
-  var WIDE = 5;
-  function pieces(strokes, line) {
-    var bs = strokes.map(bbox);
-    function box(idx) { var b = [1e9, 1e9, -1e9, -1e9]; idx.forEach(function (i) { b[0] = Math.min(b[0], bs[i].x0); b[1] = Math.min(b[1], bs[i].y0); b[2] = Math.max(b[2], bs[i].x1); b[3] = Math.max(b[3], bs[i].y1); }); return b; }
+  // The line is read in pieces, left to right. Returns a list of { idx, box, pen }; pen is the line width to
+  // draw the piece with. No one way of cutting reads every sample right, so there are three, and read() goes
+  // down MODES until the result is something the answer checker can parse:
+  // - "plain": the whole line with a full-width pen. The model stretches every picture to a square, so a long
+  //   line loses its letter shapes ("sec" came out as "sin"): a run wider than WIDE (width / height, margins
+  //   included) is cut at its widest gap near the middle. This applies in every mode.
+  // - "apart": a stacked fraction becomes its own piece, and each piece gets a pen fitted to its writing
+  //   size. Small writing on a fraction, next to full-size writing, is misread in "plain" ("10x^5" over 5
+  //   came out as "log^5" over 5). On its own this mode misreads short leftovers ("+ c" came out as "tan").
+  // - "thin": like "plain" with the fitted pen.
+  var WIDE = 5, MODES = ["plain", "apart", "thin"];
+  function pieces(strokes, line, mode) {
+    var sh = shape(strokes), bs = sh.bs;
+    function piece(idx) {
+      var b = [1e9, 1e9, -1e9, -1e9];
+      idx.forEach(function (i) { b[0] = Math.min(b[0], bs[i].x0); b[1] = Math.min(b[1], bs[i].y0); b[2] = Math.max(b[2], bs[i].x1); b[3] = Math.max(b[3], bs[i].y1); });
+      return { idx: idx, box: b, pen: mode === "apart" || mode === "thin" ? Math.max(1.4, Math.min(3, letterHeight(idx.map(function (i) { return bs[i]; })) / 10)) : 3 };
+    }
     function cut(idx) {
-      var b = box(idx), w = b[2] - b[0], h = b[3] - b[1];
-      if (idx.length < 2 || (w + 2 * PAD) / (h + 2 * PAD) <= WIDE) return [{ idx: idx, box: b }];
+      var one = piece(idx), b = one.box, w = b[2] - b[0], h = b[3] - b[1];
+      if (idx.length < 2 || (w + 2 * PAD) / (h + 2 * PAD) <= WIDE) return [one];
       var cols = []; // strokes that share a column (a letter, or a whole stacked fraction)
       idx.slice().sort(function (p, q) { return bs[p].x0 - bs[q].x0; }).forEach(function (i) {
         var c = cols[cols.length - 1], s = bs[i];
@@ -1744,12 +1764,29 @@ var Reader = (function () {
         if (R.y1 < (L.y0 + L.y1) / 2 && R.y1 - R.y0 < 0.75 * (L.y1 - L.y0)) continue; // never between a base and its exponent
         if (R.x0 - L.x1 > widest) { widest = R.x0 - L.x1; at = k; }
       }
-      if (!at) return [{ idx: idx, box: b }];
+      if (!at) return [one];
       var left = [], right = [];
       cols.forEach(function (c, k) { Array.prototype.push.apply(k < at ? left : right, c.idx); });
       return cut(left).concat(cut(right));
     }
-    return cut(line.idx);
+    if (mode !== "apart") return cut(line.idx);
+    // fractions first, widest bar first so a fraction inside a fraction stays with the outer one
+    var frac = {}, count = 0;
+    line.idx.filter(function (i) { return sh.bar[i]; }).sort(function (p, q) { return bs[q].w - bs[p].w; }).forEach(function (i) {
+      if (frac[i]) return;
+      count++;
+      line.idx.forEach(function (j) { if (!frac[j] && (j === i || (bs[j].cx >= bs[i].x0 - 0.2 * sh.H && bs[j].cx <= bs[i].x1 + 0.2 * sh.H))) frac[j] = count; });
+    });
+    var out = [], run = [], done = {};
+    function flush() { if (run.length) out = out.concat(cut(run)); run = []; }
+    line.idx.slice().sort(function (p, q) { return bs[p].x0 - bs[q].x0; }).forEach(function (i) {
+      if (!frac[i]) { run.push(i); return; }
+      if (done[frac[i]]) return;
+      done[frac[i]] = true; flush();
+      out.push(piece(line.idx.filter(function (j) { return frac[j] === frac[i]; })));
+    });
+    flush();
+    return out;
   }
 
   /* ---------- the model's LaTeX -> the typed form the answer checker reads ---------- */
@@ -1782,8 +1819,13 @@ var Reader = (function () {
   }
   function lex(s) {
     var raw = s.match(/\\[a-zA-Z]+|\\.|\S/g) || [], out = [], i = 0;
+    // a plain downstroke is a 1, but the model also writes it as |, I or l: an absolute-value bar without
+    // a partner, and an I or l that isn't part of a function name, can only be a 1
+    var bars = raw.filter(function (x) { return x === "|"; }).length;
+    if (bars % 2) raw[raw.lastIndexOf("|")] = "1";
     while (i < raw.length) {
       var fn = fnAt(raw, i), last = out[out.length - 1];
+      if (!fn && (raw[i] === "I" || raw[i] === "l")) raw[i] = "1";
       if (fn) { out.push("\\" + fn.name); i += fn.n; }
       else if (/^[\d.]$/.test(raw[i]) && last && /^[\d.]+$/.test(last) && /^[\d.]$/.test(raw[i - 1])) out[out.length - 1] += raw[i++]; // "1 2" is 12
       else out.push(raw[i++]);
@@ -1953,11 +1995,11 @@ var Reader = (function () {
     return st.loading;
   }
   // the chosen strokes, drawn black on white and stretched to the square the model expects
-  function picture(strokes, line) {
+  function picture(strokes, line, opt) {
     var pad = PAD, k = 2, b = line.box, c = document.createElement("canvas");
     c.width = Math.ceil((b[2] - b[0] + 2 * pad) * k); c.height = Math.ceil((b[3] - b[1] + 2 * pad) * k);
     var g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
-    g.strokeStyle = "#000"; g.lineWidth = 3 * k; g.lineCap = "round"; g.lineJoin = "round";
+    g.strokeStyle = "#000"; g.lineWidth = (opt && opt.pen || line.pen || 3) * k; g.lineCap = "round"; g.lineJoin = "round";
     line.idx.forEach(function (i) {
       var pts = strokes[i].pts; g.beginPath();
       pts.forEach(function (q, n) { var x = (q[0] - b[0] + pad) * k, y = (q[1] - b[1] + pad) * k; if (n) g.lineTo(x, y); else g.moveTo(x, y); });
@@ -1971,13 +2013,15 @@ var Reader = (function () {
     for (var i = 0; i < n; i++) for (var ch = 0; ch < 3; ch++) px[ch * n + i] = d[i * 4 + ch] / 127.5 - 1;
     return px;
   }
-  // strokes: [{ pts: [[x, y, pressure], ...] }, ...] -> Promise of { text, latex, box }, or null when there is nothing to read
-  function read(strokes) {
+  // strokes: [{ pts: [[x, y, pressure], ...] }, ...] -> Promise of { text, latex, box, mode, sure }, or null when there is nothing to read
+  // opt.valid(text) tells whether the answer checker can parse a reading; without it the first reading is kept.
+  // The result's `sure` is false when no reading passed. opt.modes and opt.pen are for experiments.
+  function read(strokes, opt) {
     strokes = strokes.filter(function (s) { return s.pts && s.pts.length; });
     var line = lastLine(strokes);
     if (!line) return Promise.resolve(null);
     function readPiece(piece) { // -> Promise of that piece's LaTeX
-      return st.enc.run({ pixel_values: new ort.Tensor("float32", picture(strokes, piece), [1, 3, SIDE, SIDE]) }).then(function (eo) {
+      return st.enc.run({ pixel_values: new ort.Tensor("float32", picture(strokes, piece, opt), [1, 3, SIDE, SIDE]) }).then(function (eo) {
         var hs = eo.last_hidden_state, ids = [START];
         function step() {
           if (ids.length > MAX_TOKENS) return ids;
@@ -1991,13 +2035,24 @@ var Reader = (function () {
         return step();
       }).then(function (ids) { return ids.slice(1).map(function (id) { return st.vocab[id] || ""; }).join("").replace(SPACE, " ").trim(); });
     }
+    var ok = function (text) { return !!text && (!opt || !opt.valid || opt.valid(text)); };
     return load().then(function () {
-      var parts = pieces(strokes, line), out = [];
-      function next(i) { return i < parts.length ? readPiece(parts[i]).then(function (l) { out.push(l); return next(i + 1); }) : out; }
-      return next(0);
-    }).then(function (out) {
-      var latex = out.join(" ");
-      return { text: toTyped(latex), latex: latex, box: line.box };
+      var modes = opt && opt.modes || MODES, tried = {}, first = null;
+      function attempt(m) { // go down the modes until a reading passes opt.valid; if none does, keep the first
+        if (m >= modes.length) return first;
+        var parts = pieces(strokes, line, modes[m]), out = [];
+        var key = parts.map(function (p) { return p.idx.join(",") + "@" + p.pen.toFixed(1); }).join("|");
+        if (tried[key]) return attempt(m + 1);
+        tried[key] = true;
+        function next(i) { return i < parts.length ? readPiece(parts[i]).then(function (l) { out.push(l); return next(i + 1); }) : null; }
+        return new Promise(function (res) { setTimeout(res, m ? 30 : 0); }).then(function () { return next(0); }).then(function () {
+          var latex = out.join(" "), res = { text: toTyped(latex), latex: latex, box: line.box, mode: modes[m], sure: false };
+          if (!first) first = res;
+          if (ok(res.text)) { res.sure = true; return res; }
+          return attempt(m + 1);
+        });
+      }
+      return attempt(0);
     });
   }
 
@@ -2629,6 +2684,15 @@ CONFIG.web = true;
   }
 
   /* ---------- "Read my answer": the last handwritten line -> the answer box (web version, see reader.js) ---------- */
+  function readable(pid, text) { // can Check parse this? Same rules as the "Reads as" preview
+    var pp = PROB[pid], v = text;
+    try {
+      if (pp && pp.v) v = E.subVar(v, pp.v);
+      if (pp && pp.type === "set") v.split(/,|\bor\b|\band\b|;/).map(function (x) { return x.trim(); }).filter(Boolean).forEach(function (x) { E.parse(x); });
+      else E.parse(v);
+      return true;
+    } catch (e) { return false; }
+  }
   function readAnswer(pid, btn) {
     var el = btn.closest(".scratch"), inp = $(".ans", btn.closest(".prob"));
     if (!el || !el.__api || !inp || btn.disabled) return;
@@ -2646,13 +2710,14 @@ CONFIG.web = true;
         btn.textContent = "Reading…";
         return new Promise(function (res) { setTimeout(res, 60); }); // let "Reading…" show: the reader holds the page for a second or two
       }).then(function () {
-        return Reader.read(el.__api.strokes());
+        // the reader tries another way of reading when the result isn't something Check can parse
+        return Reader.read(el.__api.strokes(), { valid: function (text) { return readable(pid, text); } });
       }).then(function (r) {
         reset();
         if (!r || !r.text) { toast("I couldn’t read that. Try writing the answer again, a little larger."); return; }
         el.__api.flash(r.box);
         inp.value = r.text; preview(inp); inp.focus({ preventScroll: true });
-        toast("I read “" + r.text + "”. Fix anything I got wrong, then press Check.", 8000);
+        toast(r.sure ? "I read “" + r.text + "”. Fix anything I got wrong, then press Check." : "I’m not sure I read that right: “" + r.text + "”. Fix it, or write it again a little larger.", 8000);
         mark();
       });
     }).catch(function (e) {
