@@ -2286,13 +2286,19 @@ CONFIG.web = true;
     for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
     return new Blob([arr], { type: "image/png" });
   }
-  function tutorPrompt(pid, forHandoff) {
+  // brief: 0 = everything, 1 = leave out the reference solution, 2 = also shorten the instructions (for app links, which have a length limit)
+  function tutorPrompt(pid, forHandoff, brief) {
     var p = PROB[pid], el = document.querySelector('.scratch[data-pid="' + pid + '"]');
     var typed = (S.ans[pid] && S.ans[pid].val) || (el && $(".ans", el.closest(".prob")) || {}).value || "";
+    if (brief === 2) return "Be a kind math tutor and check my handwritten work (I'll paste a picture). I have ADHD: reply in 2 to 5 short sentences.\n" +
+      "PROBLEM: " + plainText(prompt(p)) + "\n" +
+      "CORRECT ANSWER (don't tell me): " + plainText(ansHTML(p)) + "\n" +
+      (typed ? "I TYPED: " + typed + "\n" : "") +
+      "If my work is right, say so. If not, point to the first wrong step and give one hint, not the answer. Say if you can't read part of it.";
     return "You are a patient, encouraging math tutor. I have ADHD, so keep it short, concrete and kind.\n\n" +
       "PROBLEM: " + plainText(prompt(p)) + "\n" +
       "CORRECT FINAL ANSWER (don't tell me unless my work already reaches it): " + plainText(ansHTML(p)) + "\n" +
-      (p.sol ? "A REFERENCE SOLUTION: " + plainText(steps(p.sol)) + "\n" : "") +
+      (p.sol && !brief ? "A REFERENCE SOLUTION: " + plainText(steps(p.sol)) + "\n" : "") +
       (typed ? "THE ANSWER I TYPED: " + typed + "\n" : "") +
       "\n" + (forHandoff ? "I'm attaching a picture of my handwritten work for this problem (I'll paste it in).\n" : "The attached image is my handwritten work for this problem.\n") +
       "Reply in 2 to 5 short sentences, no headings:\n" +
@@ -2316,26 +2322,42 @@ CONFIG.web = true;
       });
       return;
     }
-    desktopHandoff(blob, msg);
+    desktopHandoff(blob, msg, pid);
   }
-  function desktopHandoff(blob, msg) {
+  // Browsers on Windows won't hand an app a link longer than 2048 characters, so the app link carries
+  // the fullest prompt that fits. "" means none fits (or the app is turned off): use the website.
+  var APP_LINK_MAX = 2000;
+  function appLink(pid) {
+    if (!pid || COARSE || S.prefs.claudeApp === false) return "";
+    for (var brief = 0; brief < 3; brief++) {
+      var u = "claude://claude.ai/new?q=" + encodeURIComponent(tutorPrompt(pid, true, brief));
+      if (u.length <= APP_LINK_MAX) return u;
+    }
+    return "";
+  }
+  function desktopHandoff(blob, msg, pid) {
     var copied = null;
     try {
       if (navigator.clipboard && window.ClipboardItem) copied = navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
     } catch (e) {}
     if (!copied) copied = Promise.reject(new Error("no clipboard"));
-    var url = "https://claude.ai/new?q=" + encodeURIComponent(msg);
-    var w = window.open(url, "_blank"); try { if (w) w.opener = null; } catch (e) {}
+    var app = appLink(pid), w = null;
+    if (!app) { w = window.open("https://claude.ai/new?q=" + encodeURIComponent(msg), "_blank"); try { if (w) w.opener = null; } catch (e) {} }
+    // the app opens after the copy settles: it takes focus, and a page that isn't focused can't write to the clipboard
+    function openApp() { if (!app) return; var a = document.createElement("a"); a.href = app; document.body.appendChild(a); a.click(); a.remove(); }
+    var opening = (app ? "The Claude app" : "Claude") + " is opening with the question filled in. ";
     copied.then(function () {
-      toast("Claude is opening with the question filled in. Paste (Ctrl+V or ⌘V) to add your handwriting, then send.", 9000);
+      openApp();
+      toast(opening + "Paste (Ctrl+V or ⌘V) to add your handwriting, then send.", 9000);
     }, function () {
       // clipboard blocked: save the picture so it can be attached instead
       var u = URL.createObjectURL(blob), a = document.createElement("a");
       a.href = u; a.download = "my-work.png"; document.body.appendChild(a); a.click(); a.remove();
       setTimeout(function () { URL.revokeObjectURL(u); }, 2000);
-      toast("Claude is opening with the question filled in. Your handwriting was saved as my-work.png: attach it, then send.", 9000);
+      openApp();
+      toast(opening + "Your handwriting was saved as my-work.png: attach it, then send.", 9000);
     });
-    if (!w) toast("Your browser blocked the new tab. Allow pop-ups for this site and try again.");
+    if (!app && !w) toast("Your browser blocked the new tab. Allow pop-ups for this site and try again.");
     mark();
   }
 
@@ -2571,6 +2593,7 @@ CONFIG.web = true;
       "<li><b>Phone in another room</b> during a sprint, and take the 5-minute break when the timer says so, even if you feel fine.</li></ul></details>";
     h += '<section class="card"><div class="card-h"><h2>Settings &amp; backup</h2></div><div class="row">' +
       '<label class="row" style="gap:8px"><input type="checkbox" class="ck" data-act="pref-sound"' + (S.prefs.sound ? " checked" : "") + "> Chime when a timer ends</label></div>" +
+      (CONFIG.web && !COARSE ? '<div class="row" style="margin-top:8px"><label class="row" style="gap:8px"><input type="checkbox" class="ck" data-act="pref-claude-app"' + (S.prefs.claudeApp === false ? "" : " checked") + "> “Ask Claude to check” opens the Claude app (untick to use the Claude website)</label></div>" : "") +
       (CONFIG.web ? ghSettingsHTML() : CONFIG.hosted ? '<h3 style="font-size:15px;margin:16px 0 6px">Your progress</h3><p class="muted" style="margin:0 0 10px">Saved to your Claude account automatically. Open this page on your PC, MacBook or iPad and it\u2019s already up to date. Handwriting on the scratch pads saves too.</p>' : '<h3 style="font-size:15px;margin:16px 0 6px">Take your progress to another device</h3>') +
       (CONFIG.hosted ? "" : (EXT.on ? '<p class="muted" style="margin:0 0 10px"><b style="color:var(--good)">Study Sync is on.</b> Your progress syncs through your Firefox account to any computer where you\u2019re signed in to Firefox with the Study Sync extension installed. Firefox syncs about every 10 minutes, or right away with <b>Sync Now</b> in the Firefox menu.</p>' : "") +
       (FILE.ok ? '<p class="muted" style="margin:0 0 10px"><b style="color:var(--good)">Auto-save is on.</b> Your progress is saved inside this file as you go. Copy the file to another computer and it opens where you left off.</p>'
@@ -3047,6 +3070,7 @@ CONFIG.web = true;
     else if (a === "resolve") { var m = S.mistakes.filter(function (x) { return x.id === t.dataset.id; })[0]; if (m) { m.resolved = t.checked; m.auto = false; save(); render(); } }
     else if (a === "reason") { var m2 = S.mistakes.filter(function (x) { return x.id === t.dataset.id; })[0]; if (m2) { m2.reason = t.value; save(); render(); } }
     else if (a === "pref-sound") { S.prefs.sound = t.checked; save(); }
+    else if (a === "pref-claude-app") { S.prefs.claudeApp = t.checked; save(); }
     else if (a === "scr-finger") { var sc = t.closest(".scratch"); if (sc && sc.__api) sc.__api.finger(t.checked); }
     else if (a === "import" && t.files && t.files[0]) {
       var fr = new FileReader();
