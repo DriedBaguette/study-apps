@@ -1856,7 +1856,7 @@ var Reader = (function () {
   function bbox(s) {
     var b = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9 };
     s.pts.forEach(function (p) { b.x0 = Math.min(b.x0, p[0]); b.y0 = Math.min(b.y0, p[1]); b.x1 = Math.max(b.x1, p[0]); b.y1 = Math.max(b.y1, p[1]); });
-    b.w = b.x1 - b.x0; b.h = b.y1 - b.y0; b.cx = (b.x0 + b.x1) / 2;
+    b.w = b.x1 - b.x0; b.h = b.y1 - b.y0; b.cx = (b.x0 + b.x1) / 2; b.cy = (b.y0 + b.y1) / 2;
     return b;
   }
   function gap(a0, a1, b0, b1) { return a1 < b0 ? b0 - a1 : b1 < a0 ? a0 - b1 : 0; }
@@ -1868,20 +1868,33 @@ var Reader = (function () {
     var hs = boxes.filter(function (b) { return b.h >= 8 && b.h >= b.w * 0.4; }).map(function (b) { return b.h; }).sort(function (a, b) { return a - b; });
     return hs.length ? hs[hs.length >> 1] : 30;
   }
-  // every stroke's box, the letter height H, and which strokes are fraction bars (flat, with writing right above and below)
+  // Every stroke's box, the letter height H, and the fraction bars: flat strokes with ink right over and
+  // right under them. (The crossbars of + and t and the two strokes of = are flat too, but nothing sits
+  // cleanly on both sides of them.) side(i, box) tells whether a box sits over (-1) or under (1) flat stroke
+  // i closely enough to belong to it, 0 when neither. "Closely" scales with the bar, so the small fraction
+  // in an exponent like x^(4/3) counts, and is capped so a long bar can't reach into another line.
   function shape(strokes) {
     var bs = strokes.map(bbox), H = Math.max(16, Math.min(90, letterHeight(bs)));
+    function flat(i) { return bs[i].w >= 8 && bs[i].w >= 2.5 * Math.max(bs[i].h, 1); }
+    function barY(i, x) { // the height of the bar at x: bars are often drawn slanted
+      var p = strokes[i].pts, a = p[0], z = p[p.length - 1];
+      return a[0] === z[0] ? a[1] : a[1] + (z[1] - a[1]) * Math.max(0, Math.min(1, (x - a[0]) / (z[0] - a[0])));
+    }
+    function side(i, o, anyDistance) { // anyDistance: within one line, everything over a bar is its numerator
+      var b = bs[i], reach = anyDistance ? 1e9 : Math.min(1.2 * b.w, 1.5 * H);
+      if (o.cx < b.x0 - 0.15 * b.w || o.cx > b.x1 + 0.15 * b.w) return 0;
+      var y = barY(i, o.cx), slack = 0.2 * Math.max(o.y1 - o.y0, 4);
+      if (o.y1 <= y + slack && y - o.y1 <= reach) return -1;
+      if (o.y0 >= y - slack && o.y0 - y <= reach) return 1;
+      return 0;
+    }
     var bar = bs.map(function (b, i) {
-      if (!(b.w >= 2.5 * Math.max(b.h, 1) && b.w >= 0.8 * H)) return false;
-      var above = false, below = false;
-      bs.forEach(function (o, j) {
-        if (j === i || o.cx < b.x0 - 0.2 * H || o.cx > b.x1 + 0.2 * H) return;
-        if (o.y1 <= b.y0 + 2 && b.y0 - o.y1 <= 0.9 * H) above = true;
-        if (o.y0 >= b.y1 - 2 && o.y0 - b.y1 <= 0.9 * H) below = true;
-      });
-      return above && below;
+      if (!flat(i)) return false;
+      var over = false, under = false;
+      bs.forEach(function (o, j) { if (j === i) return; var s = side(i, o); if (s < 0) over = true; if (s > 0) under = true; });
+      return over && under;
     });
-    return { bs: bs, H: H, bar: bar };
+    return { bs: bs, H: H, bar: bar, flat: flat, side: side };
   }
   function lastLine(strokes) {
     strokes = strokes.filter(function (s) { return s.pts && s.pts.length; });
@@ -1891,9 +1904,7 @@ var Reader = (function () {
       var a = bs[i], b = bs[j], vg = gap(a.y0, a.y1, b.y0, b.y1), hg = gap(a.x0, a.x1, b.x0, b.x1);
       if (!vg && Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) >= 0.3 * Math.max(4, Math.min(a.h, b.h))) return true;
       if (vg <= 0.25 * H && hg <= 1.5 * H) return true;
-      if (bar[i] && b.cx >= a.x0 - 0.2 * H && b.cx <= a.x1 + 0.2 * H && vg <= 0.9 * H) return true;
-      if (bar[j] && a.cx >= b.x0 - 0.2 * H && a.cx <= b.x1 + 0.2 * H && vg <= 0.9 * H) return true;
-      return false;
+      return !!(bar[i] && sh.side(i, b)) || !!(bar[j] && sh.side(j, a));
     }
     var inLine = [], todo = [n - 1]; inLine[n - 1] = true;
     while (todo.length) { var k = todo.pop(); for (var m = 0; m < n; m++) if (!inLine[m] && joined(k, m)) { inLine[m] = true; todo.push(m); } }
@@ -1943,7 +1954,8 @@ var Reader = (function () {
     if (mode !== "apart") return cut(line.idx);
     // fractions first, widest bar first so a fraction inside a fraction stays with the outer one
     var frac = {}, count = 0;
-    line.idx.filter(function (i) { return sh.bar[i]; }).sort(function (p, q) { return bs[q].w - bs[p].w; }).forEach(function (i) {
+    // (only full-size bars: the small fraction of an exponent has to stay with its base)
+    line.idx.filter(function (i) { return sh.bar[i] && bs[i].w >= 0.8 * sh.H; }).sort(function (p, q) { return bs[q].w - bs[p].w; }).forEach(function (i) {
       if (frac[i]) return;
       count++;
       line.idx.forEach(function (j) { if (!frac[j] && (j === i || (bs[j].cx >= bs[i].x0 - 0.2 * sh.H && bs[j].cx <= bs[i].x1 + 0.2 * sh.H))) frac[j] = count; });
@@ -1988,19 +2000,27 @@ var Reader = (function () {
     }
     return null;
   }
-  function lex(s) {
+  // A letter that isn't part of a function name and isn't a variable can't be in an answer: it is the
+  // digit or sign it resembles (a plain downstroke gets read as l or I, a 5 as s, a plus as t).
+  var UNLIKE = { l: "1", I: "1", s: "5", S: "5", o: "0", O: "0", z: "2", Z: "2", t: "+" };
+  function lex(s, vars) {
     var raw = s.match(/\\[a-zA-Z]+|\\.|\S/g) || [], out = [], i = 0;
-    // a plain downstroke is a 1, but the model also writes it as |, I or l: an absolute-value bar without
-    // a partner, and an I or l that isn't part of a function name, can only be a 1
+    // an absolute-value bar without a partner can only be a 1 too
     var bars = raw.filter(function (x) { return x === "|"; }).length;
     if (bars % 2) raw[raw.lastIndexOf("|")] = "1";
     while (i < raw.length) {
       var fn = fnAt(raw, i), last = out[out.length - 1];
-      if (!fn && (raw[i] === "I" || raw[i] === "l")) raw[i] = "1";
+      if (!fn && UNLIKE[raw[i]] && vars.indexOf(raw[i].toLowerCase()) < 0) raw[i] = UNLIKE[raw[i]];
       if (fn) { out.push("\\" + fn.name); i += fn.n; }
       else if (/^[\d.]$/.test(raw[i]) && last && /^[\d.]+$/.test(last) && /^[\d.]$/.test(raw[i - 1])) out[out.length - 1] += raw[i++]; // "1 2" is 12
       else out.push(raw[i++]);
     }
+    // ln|x|: the bars are downstrokes too, so they arrive as 1s. A 1 right after a function name with
+    // another 1 further along the same term is a pair of bars.
+    out.forEach(function (tk, k) {
+      if (!IS_FN[tk] || (out[k + 1] !== "1" && out[k + 1] !== "|")) return;
+      for (var j = k + 3; j < out.length && "+-=".indexOf(out[j]) < 0; j++) if (out[j] === "1" || out[j] === "|") { out[k + 1] = out[j] = "|"; return; }
+    });
     return out;
   }
   function isAtom(s) { return /^(\d+\.?\d*|\.\d+|[a-zA-Z]|pi)$/.test(s); }
@@ -2014,12 +2034,13 @@ var Reader = (function () {
     for (var i = 1, d = 0; i < s.length; i++) { var c = s[i]; if (c === "(") d++; else if (c === ")") d--; else if (!d && chars.indexOf(c) >= 0) return true; }
     return false;
   }
-  function toTyped(latex) {
+  // vars: the letters this problem uses as variables (default "x"), so they aren't mistaken for look-alikes
+  function toTyped(latex, vars) {
     var s = String(latex);
     var rows = s.split("\\\\").filter(function (r) { return r.replace(/[\s&]|\\end\{[a-z*]*\}/g, ""); });
     s = (rows.length ? rows[rows.length - 1] : "").replace(/\\(begin|end)\s*\{[a-z*]*\}(\s*\{[a-z|]*\})?/g, " ");
     s = s.replace(/\\(mathrm|text|operatorname|textrm)\s*\{([a-zA-Z\s]*)\}/g, " $2 "); // \mathrm{sin} x is sin x
-    var t = lex(s), p = 0;
+    var t = lex(s, (vars || "x").toLowerCase()), p = 0;
     for (var q = 0, inRoot = false; q < t.length; q++) { // square brackets are parentheses, except the root index in \sqrt[3]{x}
       if (t[q] === "[" && t[q - 1] === "\\sqrt") inRoot = true;
       else if (t[q] === "]" && inRoot) inRoot = false;
@@ -2097,6 +2118,266 @@ var Reader = (function () {
     return spaced.replace(/\+ c$/, "+ C");
   }
 
+  /* ---------- the personal reader: the user's own symbols, learned from answers they got right ----------
+     The model below was trained on printed formulas and is shaky on mouse handwriting (it read a lone "3"
+     as pi). This reader uses no model. It splits the line into symbols, finds fractions and exponents by
+     geometry, and names each symbol by its nearest match among the symbols it has seen this user write.
+     It knows nothing until learn() has run on a few answers, so the model stays as the fallback. */
+  var NPTS = 24, KEEP = 6;
+  // A symbol counts as recognized when it is within SURE of a learned one and the nearest different-looking
+  // label is at least CLEAR further away. On the user's first repeated symbols, two drawings of the same
+  // symbol were typically 2.0 apart (2.7 at worst) and different symbols at least 3.7. Deliberately strict:
+  // an unsure symbol only costs a few seconds (the model reads instead), a wrong one costs trust.
+  var SURE = 3.0, CLEAR = 0.6;
+  var hw = [];      // what has been learned: [{ l: label, p: [x, y, ...] }], oldest first
+
+  function inkLength(s) { for (var i = 1, n = 0; i < s.pts.length; i++) n += Math.hypot(s.pts[i][0] - s.pts[i - 1][0], s.pts[i][1] - s.pts[i - 1][1]); return n; }
+  function along(s, m) { // m points evenly spaced along one stroke (its middle when m is 1)
+    var p = s.pts, L = inkLength(s), out = [], acc = 0, i = 1, k = 0;
+    while (k < m) {
+      var want = m === 1 ? L / 2 : L * k / (m - 1);
+      if (i >= p.length) { out.push(p[p.length - 1][0], p[p.length - 1][1]); k++; continue; }
+      var d = Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]);
+      if (acc + d < want) { acc += d; i++; continue; }
+      var t = d ? (want - acc) / d : 0;
+      out.push(p[i - 1][0] + t * (p[i][0] - p[i - 1][0]), p[i - 1][1] + t * (p[i][1] - p[i - 1][1])); k++;
+    }
+    return out;
+  }
+  // One symbol as NPTS points spread over its strokes by ink length, centered, scaled so its longer side is 1.
+  function glyph(strokes) {
+    var lens = strokes.map(inkLength), total = lens.reduce(function (a, b) { return a + b; }, 0);
+    var share = lens.map(function (l) { return Math.max(1, Math.round(total ? NPTS * l / total : NPTS / lens.length)); });
+    for (var sum = share.reduce(function (a, b) { return a + b; }, 0); sum !== NPTS; sum += sum < NPTS ? 1 : -1) {
+      var big = share.indexOf(Math.max.apply(null, share)); share[big] += sum < NPTS ? 1 : -1;
+    }
+    var pts = []; strokes.forEach(function (s, i) { if (share[i] > 0) pts = pts.concat(along(s, share[i])); });
+    var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (var i = 0; i < pts.length; i += 2) { x0 = Math.min(x0, pts[i]); x1 = Math.max(x1, pts[i]); y0 = Math.min(y0, pts[i + 1]); y1 = Math.max(y1, pts[i + 1]); }
+    var size = Math.max(x1 - x0, y1 - y0, 1), cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    return pts.map(function (v, j) { return Math.round((j % 2 ? v - cy : v - cx) / size * 1000) / 1000; });
+  }
+  // How different two glyphs are: point k against point k (how far apart, and how differently the pen was
+  // heading there), with the second glyph also tried backwards. One person draws a symbol the same way each
+  // time, so comparing in drawing order tells symbols apart much better than comparing shapes alone: on the
+  // user's first 24 repeated symbols it put the right one nearest every time, where an order-free match
+  // (the $P recognizer) managed 18.
+  function differ(a, b) {
+    var n = a.length / 2, best = 1e9;
+    for (var back = 0; back < 2; back++) {
+      var far = 0, turn = 0;
+      for (var i = 0; i < n; i++) {
+        var j = back ? n - 1 - i : i, j0 = back ? j + 1 : j - 1;
+        far += Math.hypot(a[2 * i] - b[2 * j], a[2 * i + 1] - b[2 * j + 1]);
+        if (i) {
+          var d = Math.abs(Math.atan2(a[2 * i + 1] - a[2 * i - 1], a[2 * i] - a[2 * i - 2]) - Math.atan2(b[2 * j + 1] - b[2 * j0 + 1], b[2 * j] - b[2 * j0]));
+          turn += d > Math.PI ? 2 * Math.PI - d : d;
+        }
+      }
+      best = Math.min(best, far / n * 10 + turn / (n - 1) * 2);
+    }
+    return best;
+  }
+  // symbols that are drawn alike; toTyped() tells them apart by where they stand ("1 n" is ln, "+ a n" is tan)
+  var ALIKE = ["1l|i", "+t", "5s", "0o", "2z", "c("];
+  function alike(a, b) { return ALIKE.some(function (g) { return g.indexOf(a) >= 0 && g.indexOf(b) >= 0; }); }
+  // -> { l: the closest learned label, d: how far, sure }. sure: it is close, and no label that looks
+  // different is nearly as close.
+  function nearest(p) {
+    var by = {}; hw.forEach(function (t) { var d = differ(p, t.p); if (!(by[t.l] <= d)) by[t.l] = d; });
+    var out = { l: "", d: 1e9 }, rival = 1e9, l;
+    for (l in by) if (by[l] < out.d) { out.d = by[l]; out.l = l; }
+    for (l in by) if (l !== out.l && !alike(l, out.l)) rival = Math.min(rival, by[l]);
+    out.sure = out.d <= SURE && rival - out.d >= CLEAR;
+    return out;
+  }
+
+  // Symbols that geometry alone can name, so they never have to be learned: a plus (a flat and an upright
+  // stroke crossing), an x (two slanted strokes crossing near their middles) and a 1 (one straight
+  // downstroke). A minus and an equals sign are named in sketch(), which knows what is flat.
+  function ends(s) { var a = s.pts[0], z = s.pts[s.pts.length - 1]; return { ax: a[0], ay: a[1], dx: z[0] - a[0], dy: z[1] - a[1], len: Math.hypot(z[0] - a[0], z[1] - a[1]) }; }
+  function tilt(s) { var e = ends(s); return Math.atan2(Math.abs(e.dy), Math.abs(e.dx)) * 180 / Math.PI; } // 0 is flat, 90 upright
+  function bulge(s) { // how far the stroke strays from the straight line between its ends, as a share of that line
+    var e = ends(s), worst = 0;
+    if (!e.len) return 1;
+    s.pts.forEach(function (p) { worst = Math.max(worst, Math.abs((p[0] - e.ax) * e.dy - (p[1] - e.ay) * e.dx) / e.len); });
+    return worst / e.len;
+  }
+  function byShape(strokes) {
+    if (strokes.length === 1) return strokes[0].pts.length > 1 && bulge(strokes[0]) < 0.05 && tilt(strokes[0]) >= 78 ? "1" : null;
+    // (the limits come from the user's own strokes: their small x has quite curved strokes, their plus a slanted bar)
+    if (strokes.length !== 2 || strokes[0].pts.length < 2 || strokes[1].pts.length < 2) return null;
+    var curve = Math.max(bulge(strokes[0]), bulge(strokes[1]));
+    var a = ends(strokes[0]), b = ends(strokes[1]), den = a.dx * b.dy - a.dy * b.dx;
+    if (Math.abs(den) < 1e-6) return null;
+    var t = ((b.ax - a.ax) * b.dy - (b.ay - a.ay) * b.dx) / den, u = ((b.ax - a.ax) * a.dy - (b.ay - a.ay) * a.dx) / den; // where they cross, along each
+    var ta = tilt(strokes[0]), tb = tilt(strokes[1]);
+    if (t < 0.1 || t > 0.9 || u < 0.1 || u > 0.9) return null;
+    if (curve <= 0.2 && Math.min(ta, tb) <= 30 && Math.max(ta, tb) >= 72) return "+";
+    if (curve <= 0.35 && ta >= 22 && ta <= 70 && tb >= 22 && tb <= 70 && a.dx * a.dy * b.dx * b.dy < 0 && t >= 0.2 && t <= 0.8 && u >= 0.2 && u <= 0.8) return "x";
+    return null;
+  }
+  function union(boxes) {
+    var b = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9 };
+    boxes.forEach(function (o) { b.x0 = Math.min(b.x0, o.x0); b.y0 = Math.min(b.y0, o.y0); b.x1 = Math.max(b.x1, o.x1); b.y1 = Math.max(b.y1, o.y1); });
+    b.w = b.x1 - b.x0; b.h = b.y1 - b.y0; b.cx = (b.x0 + b.x1) / 2; b.cy = (b.y0 + b.y1) / 2;
+    return b;
+  }
+  function touching(a, b) { // do two strokes come within 3 units of each other?
+    function dense(s) { var o = [s.pts[0]], p = s.pts; for (var i = 1; i < p.length; i++) { var k = Math.ceil(Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]) / 2) || 1; for (var j = 1; j <= k; j++) o.push([p[i - 1][0] + (p[i][0] - p[i - 1][0]) * j / k, p[i - 1][1] + (p[i][1] - p[i - 1][1]) * j / k]); } return o; }
+    var da = dense(a), db = dense(b);
+    for (var i = 0; i < da.length; i++) for (var j = 0; j < db.length; j++) { var dx = da[i][0] - db[j][0], dy = da[i][1] - db[j][1]; if (dx * dx + dy * dy < 9) return true; }
+    return false;
+  }
+  // The line as a tree: a list of items left to right, each { box, sup: [raised items] } and either
+  // idx (the strokes of one symbol) with an optional forced label, or num and den (a stacked fraction).
+  // Returns { line, items, leaves }, leaves being the symbols in reading order, or null.
+  function sketch(strokes) {
+    strokes = strokes.filter(function (s) { return s.pts && s.pts.length; });
+    var line = lastLine(strokes);
+    if (!line) return null;
+    var sh = shape(strokes), bs = sh.bs, flat = sh.flat, side = sh.side;
+    var isBar = {}; // the fraction bars of this line (shape() also counts ink from other lines)
+    line.idx.forEach(function (i) {
+      if (!flat(i)) return;
+      var over = false, under = false;
+      line.idx.forEach(function (j) { if (j === i) return; var s = side(i, bs[j]); if (s < 0) over = true; if (s > 0) under = true; });
+      if (over && under) isBar[i] = true;
+    });
+    // symbols: strokes that touch (the two strokes of x or +), a dot with the stem under it, the bars of =
+    var rest = line.idx.filter(function (i) { return !isBar[i]; }), group = {};
+    rest.forEach(function (i) { group[i] = i; });
+    function root(i) { while (group[i] !== i) i = group[i]; return i; }
+    var equals = {};
+    rest.forEach(function (i, a) {
+      rest.slice(a + 1).forEach(function (j) {
+        var p = bs[i], q = bs[j], join = false;
+        if (gap(p.x0, p.x1, q.x0, q.x1) <= 3 && gap(p.y0, p.y1, q.y0, q.y1) <= 3 && touching(strokes[i], strokes[j])) join = true;
+        var dot = Math.max(p.w, p.h) <= 7 ? p : Math.max(q.w, q.h) <= 7 ? q : null, stem = dot === p ? q : p;
+        if (dot && Math.abs(dot.cx - stem.cx) <= Math.max(8, stem.w / 2) && stem.y0 - dot.y1 > 0 && stem.y0 - dot.y1 <= 30 && stem.h > stem.w) join = true;
+        if (flat(i) && flat(j) && Math.min(p.x1, q.x1) - Math.max(p.x0, q.x0) >= 0.6 * Math.min(p.w, q.w) && gap(p.y0, p.y1, q.y0, q.y1) <= 0.9 * Math.min(p.w, q.w)) { join = true; equals[i] = equals[j] = true; }
+        if (join) group[root(i)] = root(j);
+      });
+    });
+    var bySym = {}, items = [];
+    rest.forEach(function (i) { (bySym[root(i)] = bySym[root(i)] || []).push(i); });
+    Object.keys(bySym).forEach(function (r) {
+      var idx = bySym[r], it = { idx: idx, box: union(idx.map(function (i) { return bs[i]; })), sup: [] };
+      if (idx.every(function (i) { return equals[i]; }) && idx.length === 2) it.forced = "=";
+      else if (idx.length === 1 && flat(idx[0]) && bs[idx[0]].w >= 3 * Math.max(bs[idx[0]].h, 2)) it.forced = "-";
+      else it.forced = byShape(idx.map(function (i) { return strokes[i]; })) || undefined;
+      items.push(it);
+    });
+    Object.keys(isBar).forEach(function (i) { items.push({ bar: +i, box: bs[i], sup: [] }); });
+
+    function row(list) { // a horizontal run: fold fractions (widest bar first), then hang exponents on their bases
+      list = list.slice();
+      list.filter(function (it) { return it.bar !== undefined; }).sort(function (a, b) { return b.box.w - a.box.w; }).forEach(function (B) {
+        if (list.indexOf(B) < 0) return;
+        var over = list.filter(function (it) { return it !== B && side(B.bar, it.box, true) < 0; }), under = list.filter(function (it) { return it !== B && side(B.bar, it.box, true) > 0; });
+        var at = list.indexOf(B);
+        if (!over.length || !under.length) { list[at] = { idx: [B.bar], box: B.box, sup: [], forced: "-" }; return; }
+        list[at] = { num: row(over), den: row(under), box: union([B.box].concat(over.concat(under).map(function (it) { return it.box; }))), sup: [] };
+        list = list.filter(function (it) { return over.indexOf(it) < 0 && under.indexOf(it) < 0; });
+      });
+      list.sort(function (a, b) { return a.box.x0 - b.box.x0; });
+      // handwriting drifts up or down along the line; measure exponents against that drift
+      var n = list.length, sx = 0, sy = 0, sxx = 0, sxy = 0, slope = 0;
+      list.forEach(function (it) { sx += it.box.cx; sy += it.box.cy; sxx += it.box.cx * it.box.cx; sxy += it.box.cx * it.box.cy; });
+      if (n >= 4 && n * sxx - sx * sx > 1) slope = Math.max(-0.2, Math.min(0.2, (n * sxy - sx * sy) / (n * sxx - sx * sx)));
+      var out = [], base = null;
+      list.forEach(function (it) {
+        if (base) {
+          var b = base.box, o = it.box, lift = slope * (o.cx - b.cx), isFrac = !!base.num;
+          var raised = o.cy - lift <= b.y0 + 0.1 * b.h && o.y1 - lift <= b.y0 + (isFrac ? 0.25 : 0.6) * b.h && o.x0 >= b.x0 + 0.4 * b.w;
+          if (raised) { base.sup.push(it); return; }
+        }
+        out.push(it);
+        base = it.forced && "-=+".indexOf(it.forced) >= 0 || (it.idx && it.box.h < 0.35 * it.box.w) ? null : it; // nothing is raised to a sign
+      });
+      out.forEach(function (it) { if (it.sup.length > 1) it.sup = row(it.sup); });
+      return out;
+    }
+    var tree = row(items), leaves = [];
+    (function walk(list) { list.forEach(function (it) { if (it.num) { walk(it.num); walk(it.den); } else leaves.push(it); walk(it.sup); }); })(tree);
+    leaves.forEach(function (lf) { lf.strokes = lf.idx.map(function (i) { return strokes[i]; }); });
+    return { line: line, items: tree, leaves: leaves };
+  }
+  function emit(list) { // the tree as LaTeX, in the spaced form the model writes, so toTyped() takes both
+    return list.map(function (it) {
+      var s = it.num ? "\\frac { " + emit(it.num) + " } { " + emit(it.den) + " }" : it.l;
+      return it.sup.length ? s + " ^ { " + emit(it.sup) + " }" : s;
+    }).join(" ");
+  }
+  // Read the last line with what has been learned. -> { text, latex, box, mode: "personal", sure, worst } or null.
+  // sure means every symbol was close to a learned one and opt.valid (if given) accepts the text.
+  function quick(strokes, opt) {
+    if (!hw.length) return null;
+    var sk = sketch(strokes);
+    if (!sk || !sk.leaves.length) return null;
+    var known = true;
+    sk.leaves.forEach(function (lf) {
+      if (lf.forced) { lf.l = lf.forced; return; }
+      var hit = nearest(glyph(lf.strokes)); lf.l = hit.l; if (!hit.sure) known = false;
+    });
+    var latex = emit(sk.items), text = toTyped(latex, opt && opt.vars);
+    return { text: text, latex: latex, box: sk.line.box, mode: "personal", sure: known && !!text && (!opt || !opt.valid || opt.valid(text)) };
+  }
+  // Does a reading have as many symbols as the line has? (The model can return valid math that isn't what
+  // was written, like an extra "sin x +".) true when it can't be counted.
+  function fits(strokes, text) {
+    var sk = sketch(strokes), sizes = {};
+    if (!sk) return true;
+    [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(function (v) { var sp = spell(text, v[0], v[1]); if (sp) sizes[sp.length] = true; });
+    return !Object.keys(sizes).length || !!sizes[sk.leaves.length];
+  }
+  // The symbols a typed answer is written with, in reading order, or null when it uses something not handled
+  // yet. A stacked fraction has no slash and needs no parentheses, so both are optional.
+  function spell(typed, parens, slash) {
+    var s = String(typed).replace(/\s+/g, ""), out = [];
+    if (/sqrt|cbrt|abs|pi|exp|[=*_,<>]/i.test(s)) return null;
+    for (var i = 0; i < s.length; i++) {
+      var c = s[i];
+      if (/[0-9.+\-|]/.test(c)) out.push(c); else if (/[a-zA-Z]/.test(c)) out.push(c.toLowerCase());
+      else if (c === "(" || c === ")") { if (parens) out.push(c); }
+      else if (c === "/") { if (slash) out.push(c); }
+      else if (c !== "^") return null;
+    }
+    return out;
+  }
+  // Learn the user's symbols from an answer they got right: `typed` is the answer, `strokes` the scratch pad.
+  // Nothing is learned unless the pad's last line has exactly the symbols of the answer AND, with those
+  // names put on its fractions and exponents, means the same as the answer (opt.same(a, b) decides), so a
+  // pad that holds something else can't teach wrong names. Returns how many symbols were learned.
+  function learn(strokes, typed, opt) {
+    var sk = sketch(strokes);
+    if (!sk || !sk.leaves.length || !opt || !opt.same) return 0;
+    var fits = {};
+    [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(function (v) { var sp = spell(typed, v[0], v[1]); if (sp && sp.length === sk.leaves.length) fits[sp.join(" ")] = sp; });
+    var keys = Object.keys(fits);
+    if (keys.length !== 1) return 0;
+    var names = fits[keys[0]];
+    for (var i = 0; i < names.length; i++) { // what geometry named has to agree (a plus may be the t of tan, a 1 the l of ln)
+      var f = sk.leaves[i].forced;
+      if (f && f !== names[i] && !alike(f, names[i])) return 0;
+      sk.leaves[i].l = names[i];
+    }
+    if (!opt.same(toTyped(emit(sk.items), opt.vars), typed)) return 0;
+    // and nothing may contradict what is already known: if a symbol is clearly a learned "4", an answer
+    // that calls it "3" was typed from something other than this pad
+    var glyphs = sk.leaves.map(function (lf) { return lf.forced ? null : glyph(lf.strokes); });
+    for (var g = 0; g < glyphs.length; g++) if (glyphs[g]) { var hit = nearest(glyphs[g]); if (hit.sure && hit.l !== names[g] && !alike(hit.l, names[g])) return 0; }
+    var count = 0;
+    sk.leaves.forEach(function (lf, k) {
+      if (lf.forced) return;
+      var p = glyphs[k], mine = hw.filter(function (t) { return t.l === lf.l; });
+      if (mine.some(function (t) { return differ(p, t.p) < 0.05; })) return; // this very drawing is already known
+      hw.push({ l: lf.l, p: p }); count++;
+      if (mine.length >= KEEP) hw.splice(hw.indexOf(mine[0]), 1);
+    });
+    return count;
+  }
+
   /* ---------- running the model ---------- */
   var st = { loading: null, enc: null, dec: null, vocab: null, ok: null, cmd: null, slash: null };
   // The model may only write what an answer can contain: these characters, and after a backslash these
@@ -2167,9 +2448,12 @@ var Reader = (function () {
   }
   // the chosen strokes, drawn black on white and stretched to the square the model expects
   function picture(strokes, line, opt) {
-    var pad = PAD, k = 2, b = line.box, c = document.createElement("canvas");
+    var pad = opt && opt.pad || PAD, k = 2, b = line.box, c = document.createElement("canvas");
     c.width = Math.ceil((b[2] - b[0] + 2 * pad) * k); c.height = Math.ceil((b[3] - b[1] + 2 * pad) * k);
+    var shift = 0, wide = opt && opt.minAspect ? Math.ceil(c.height * opt.minAspect) : 0;
+    if (wide > c.width) { shift = opt.align === "left" ? 0 : (wide - c.width) / 2; c.width = wide; }
     var g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+    g.translate(shift, 0);
     g.strokeStyle = "#000"; g.lineWidth = (opt && opt.pen || line.pen || 3) * k; g.lineCap = "round"; g.lineJoin = "round";
     line.idx.forEach(function (i) {
       var pts = strokes[i].pts; g.beginPath();
@@ -2185,8 +2469,9 @@ var Reader = (function () {
     return px;
   }
   // strokes: [{ pts: [[x, y, pressure], ...] }, ...] -> Promise of { text, latex, box, mode, sure }, or null when there is nothing to read
-  // opt.valid(text) tells whether the answer checker can parse a reading; without it the first reading is kept.
-  // The result's `sure` is false when no reading passed. opt.modes and opt.pen are for experiments.
+  // opt.valid(text) tells whether the answer checker can parse a reading; opt.vars are the problem's variable
+  // letters. The result's `sure` is false when no reading passed every check. opt.modes (which also turns
+  // the personal reader off), opt.pen, opt.pad and opt.minAspect are for experiments.
   function read(strokes, opt) {
     strokes = strokes.filter(function (s) { return s.pts && s.pts.length; });
     var line = lastLine(strokes);
@@ -2207,19 +2492,24 @@ var Reader = (function () {
       }).then(function (ids) { return ids.slice(1).map(function (id) { return st.vocab[id] || ""; }).join("").replace(SPACE, " ").trim(); });
     }
     var ok = function (text) { return !!text && (!opt || !opt.valid || opt.valid(text)); };
+    // the personal reader first: it is instant, and when it knows every symbol the model isn't needed at all
+    var mine = opt && opt.modes ? null : quick(strokes, opt);
+    if (mine && mine.sure) return Promise.resolve(mine);
     return load().then(function () {
-      var modes = opt && opt.modes || MODES, tried = {}, first = null;
-      function attempt(m) { // go down the modes until a reading passes opt.valid; if none does, keep the first
-        if (m >= modes.length) return first;
+      var modes = opt && opt.modes || MODES, tried = {}, first = null, parsed = null;
+      // Go down the modes until a reading is valid math with as many symbols as the line has. Failing that,
+      // settle for valid math (the model's, else the personal reader's), else the first reading; sure stays false.
+      function attempt(m) {
+        if (m >= modes.length) return parsed || (mine && ok(mine.text) ? mine : first);
         var parts = pieces(strokes, line, modes[m]), out = [];
         var key = parts.map(function (p) { return p.idx.join(",") + "@" + p.pen.toFixed(1); }).join("|");
         if (tried[key]) return attempt(m + 1);
         tried[key] = true;
         function next(i) { return i < parts.length ? readPiece(parts[i]).then(function (l) { out.push(l); return next(i + 1); }) : null; }
         return new Promise(function (res) { setTimeout(res, m ? 30 : 0); }).then(function () { return next(0); }).then(function () {
-          var latex = out.join(" "), res = { text: toTyped(latex), latex: latex, box: line.box, mode: modes[m], sure: false };
+          var latex = out.join(" "), res = { text: toTyped(latex, opt && opt.vars), latex: latex, box: line.box, mode: modes[m], sure: false };
           if (!first) first = res;
-          if (ok(res.text)) { res.sure = true; return res; }
+          if (ok(res.text)) { if (fits(strokes, res.text)) { res.sure = true; return res; } if (!parsed) parsed = res; }
           return attempt(m + 1);
         });
       }
@@ -2227,7 +2517,9 @@ var Reader = (function () {
     });
   }
 
-  return { read: read, load: load, stored: stored, lastLine: lastLine, pieces: pieces, toTyped: toTyped, megabytes: Math.round(TOTAL / 1e6) };
+  return { read: read, load: load, stored: stored, lastLine: lastLine, pieces: pieces, toTyped: toTyped,
+    quick: quick, learn: learn, sketch: sketch, differ: differ, glyph: glyph,
+    learned: function (list) { if (list) hw = list; return hw; }, megabytes: Math.round(TOTAL / 1e6) };
 })();
 
 CONFIG.hosted = true;
@@ -2864,11 +3156,56 @@ CONFIG.web = true;
       return true;
     } catch (e) { return false; }
   }
+  function readOpts(pid) {
+    var pp = PROB[pid];
+    return { vars: "x" + (pp && pp.v || ""), valid: function (text) { return readable(pid, text); } };
+  }
+  // The reader's second half learns the user's own symbols (see reader.js). What it has learned stays on this
+  // device: handwriting differs between a mouse and a pencil.
+  var HWK = KEY + ":hw";
+  function sameMath(pid, a, b) { // do two typed answers mean the same? Compared by value at two points
+    var pp = PROB[pid];
+    try {
+      var A = E.parse(pp && pp.v ? E.subVar(a, pp.v) : a), B = E.parse(pp && pp.v ? E.subVar(b, pp.v) : b);
+      return [0.7, 1.3].every(function (x) { var p = E.ev(A, x, 0.37), q = E.ev(B, x, 0.37); return isFinite(p) && isFinite(q) && Math.abs(p - q) <= 1e-9 * Math.max(1, Math.abs(q)); });
+    } catch (e) { return false; }
+  }
+  // Called when an answer is checked and correct: if the scratch pad's last line is that answer, learn its symbols.
+  function learnFrom(pid, typed, quiet) {
+    if (!CONFIG.web || typeof Reader === "undefined" || !PROB[pid] || PROB[pid].type === "choice" || PROB[pid].type === "set") return 0;
+    var sc = SCR[pid] || decodeScratch(scratchLocal(pid));
+    if (!sc || !sc.strokes.length) return 0;
+    var o = readOpts(pid); o.same = function (a, b) { return sameMath(pid, a, b); };
+    var n = 0;
+    try { n = Reader.learn(sc.strokes, typed, o); } catch (e) {}
+    if (n && !quiet) saveLearned();
+    return n;
+  }
+  function saveLearned() { try { localStorage.setItem(HWK, JSON.stringify({ v: 1, t: Reader.learned() })); } catch (e) {} }
+  function initReader() { // load what was learned; the first time, learn from the answers already marked correct
+    if (!CONFIG.web || typeof Reader === "undefined") return;
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem(HWK) || "null"); } catch (e) {}
+    if (saved && saved.v === 1 && saved.t) { Reader.learned(saved.t); return; }
+    var n = 0;
+    Object.keys(S.ans).forEach(function (pid) { if (S.ans[pid] && S.ans[pid].status === "correct") n += learnFrom(pid, S.ans[pid].val, true); });
+    saveLearned();
+  }
+  function showRead(el, inp, r) {
+    el.__api.flash(r.box);
+    inp.value = r.text; preview(inp); inp.focus({ preventScroll: true });
+    toast(r.sure ? "I read “" + r.text + "”. Fix anything I got wrong, then press Check." : "I’m not sure I read that right: “" + r.text + "”. Fix it, or write it again a little larger.", 8000);
+    mark();
+  }
   function readAnswer(pid, btn) {
     var el = btn.closest(".scratch"), inp = $(".ans", btn.closest(".prob"));
     if (!el || !el.__api || !inp || btn.disabled) return;
     if (el.__api.isEmpty()) { toast("Write your answer on the scratch pad first."); return; }
     function reset() { btn.disabled = false; btn.textContent = READ_LABEL; btn.dataset.confirm = ""; }
+    // when every symbol is one the reader has learned from this user, the answer is instant and needs no download
+    var fast = null;
+    try { fast = Reader.quick(el.__api.strokes(), readOpts(pid)); } catch (e) {}
+    if (fast && fast.sure) { reset(); showRead(el, inp, fast); return; }
     Reader.stored().then(function (have) {
       if (!have && !btn.dataset.confirm) { // first time on this device: ask before the big download
         btn.dataset.confirm = "1"; btn.textContent = "Download the reader (" + Reader.megabytes + " MB)";
@@ -2882,14 +3219,11 @@ CONFIG.web = true;
         return new Promise(function (res) { setTimeout(res, 60); }); // let "Reading…" show: the reader holds the page for a second or two
       }).then(function () {
         // the reader tries another way of reading when the result isn't something Check can parse
-        return Reader.read(el.__api.strokes(), { valid: function (text) { return readable(pid, text); } });
+        return Reader.read(el.__api.strokes(), readOpts(pid));
       }).then(function (r) {
         reset();
         if (!r || !r.text) { toast("I couldn’t read that. Try writing the answer again, a little larger."); return; }
-        el.__api.flash(r.box);
-        inp.value = r.text; preview(inp); inp.focus({ preventScroll: true });
-        toast(r.sure ? "I read “" + r.text + "”. Fix anything I got wrong, then press Check." : "I’m not sure I read that right: “" + r.text + "”. Fix it, or write it again a little larger.", 8000);
-        mark();
+        showRead(el, inp, r);
       });
     }).catch(function (e) {
       reset();
@@ -3438,7 +3772,7 @@ CONFIG.web = true;
     var prev = S.ans[pid] || {};
     S.ans[pid] = { val: v, status: r.status, shape: !!r.shape, msg: r.status === "error" ? r.msg : r.msg || "", revealed: prev.revealed, first: prev.first || (r.status !== "error" ? (prev.revealed ? "wrong" : r.status) : undefined) };
     if (r.status === "wrong" || r.status === "almost") logMistake(p, v, r.msg);
-    if (r.status === "correct") { resolveMistakes(pid); mark(); }
+    if (r.status === "correct") { resolveMistakes(pid); mark(); if (chosen === undefined) learnFrom(pid, v); }
     save();
     if (p.type === "choice") {
       $$(".choice", box).forEach(function (b) { b.className = "choice" + (b.dataset.i === v ? " sel " + r.status : ""); });
@@ -3717,6 +4051,7 @@ CONFIG.web = true;
   });
 
   applyTheme();
+  initReader();
   lastJSON = fingerprint();
   render();
   if (CONFIG.web) initGH(); else if (CONFIG.hosted) { initCloud(); initSample(); } else { initFile(); extPost("hello"); }
