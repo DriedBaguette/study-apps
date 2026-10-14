@@ -2645,7 +2645,7 @@ CONFIG.web = true;
         '<button class="btn small ghost" data-act="scr-undo">Undo</button><button class="btn small ghost" data-act="scr-clear">Clear</button><button class="btn small ghost" data-act="scr-taller">More room</button>' +
         (COARSE ? '<label class="row scr-finger" style="gap:6px;font-size:13px"><input type="checkbox" class="ck" data-act="scr-finger"> Finger draws</label>' : "") +
         '<span class="spacer"></span>' + (CONFIG.web && typeof Reader !== "undefined" && p.type !== "choice" ? '<button class="btn small" data-act="scr-read" data-pid="' + p.pid + '" title="Types the last line you wrote into the answer box">' + READ_LABEL + "</button>" : "") +
-        '<button class="btn small" data-act="scr-ask" data-pid="' + p.pid + '"' + (CONFIG.web ? "" : " hidden") + ">" + (CONFIG.web ? "Ask Claude to check" : "Check my work") + '</button></div>' +
+        (p.quiz ? "" : '<button class="btn small" data-act="scr-ask" data-pid="' + p.pid + '"' + (CONFIG.web ? "" : " hidden") + ">" + (CONFIG.web ? "Ask Claude to check" : "Check my work") + "</button>") + "</div>" +
         '<div class="scr-canvas"><canvas></canvas></div><div class="scr-fb" hidden></div></div>' : "") + "</div>";
   }
   function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#000"; }
@@ -3545,9 +3545,8 @@ CONFIG.web = true;
       h += '<div class="fbwrap">' + (a.status ? fbHTML(a.status, a.msg, p, a.shape) : "") + "</div>";
       h += '<div class="prob-tools">' + (p.hint ? '<button class="link-btn" data-act="hint" data-pid="' + p.pid + '">Hint</button>' : "") + (p.sol ? '<button class="link-btn" data-act="sol" data-pid="' + p.pid + '">Show solution</button>' : "") + "</div>" +
         '<div class="reveal" data-r="hint" hidden>' + (p.hint || "") + '</div><div class="reveal" data-r="sol" hidden>' + (p.sol ? steps(p.sol) : "") + "<div>Answer: " + ansHTML(p) + "</div></div>";
-      h += scratchHTML(p);
     }
-    return h + "</div>";
+    return h + scratchHTML(p) + "</div>"; // quiz items carry p.quiz, which leaves out "Ask Claude" (no hints in a quiz)
   }
   var PRAISE = ["Correct.", "Nice.", "Right.", "That’s it.", "Correct, keep going."];
   function fbHTML(stt, msg, p, shape) {
@@ -3659,13 +3658,18 @@ CONFIG.web = true;
     h += '<div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">' + run.items.map(function (p, k) {
       var r = run.res[k];
       return '<div class="prob ' + r.status + '"><div class="prob-q"><span class="qn">' + (k + 1) + "</span><div>" + prompt(p) + "</div></div>" +
-        '<div class="mcmp"><span class="l">You</span><span>' + givenHTML(p, run.vals[k]) + '</span><span class="l">Answer</span><span>' + ansHTML(p) + "</span></div>" + fbHTML(r.status, r.msg, { n: k }) + "</div>";
+        '<div class="mcmp"><span class="l">You</span><span>' + givenHTML(p, run.vals[k]) + '</span><span class="l">Answer</span><span>' + ansHTML(p) + "</span></div>" + fbHTML(r.status, r.msg, { n: k }) + (r.status === "correct" ? "" : solHTML(p)) + "</div>";
     }).join("") + "</div>";
     return h;
   }
   function safePretty(v) { try { return '<span class="m">' + E.pretty(E.parse(v)) + "</span>"; } catch (e) { return '<span class="mono">' + esc(v) + "</span>"; } }
   function quizStart(sid) {
     var s = BY[sid], items = shuffle(s.quiz.pool.slice()).slice(0, s.quiz.count);
+    items.forEach(function (p) { // a new attempt starts with clean pads; old work could give the answer away
+      var old = SCR[p.pid] || decodeScratch(scratchLocal(p.pid));
+      SCR[p.pid] = { h: 420, strokes: [] };
+      if (old && old.strokes.length) saveScratch(p.pid);
+    });
     QZ[sid] = { items: items, end: Date.now() + s.quiz.minutes * 60000, done: false, vals: [] };
     rerenderTab();
   }
@@ -3676,7 +3680,9 @@ CONFIG.web = true;
     run.res = run.items.map(function (p, k) { var v = run.vals[k]; if (!String(v).trim()) return { status: "wrong", msg: "Left blank." }; var r = grade(p, v); if (r.status === "error") r = { status: "wrong", msg: "Couldn’t read: " + esc(r.msg) }; return r; });
     run.score = run.res.filter(function (r) { return r.status === "correct"; }).length;
     run.done = true;
-    run.items.forEach(function (p, k) { if (run.res[k].status !== "correct") logMistake(p, run.vals[k] || "(blank)"); else resolveMistakes(p.pid); });
+    var learned = 0;
+    run.items.forEach(function (p, k) { if (run.res[k].status !== "correct") logMistake(p, run.vals[k] || "(blank)"); else { resolveMistakes(p.pid); learned += learnFrom(p.pid, run.vals[k], true); } });
+    if (learned) saveLearned();
     var rec = S.quiz[sid] || { best: 0, total: run.items.length, hist: [] };
     rec.best = Math.max(rec.best, run.score); rec.total = run.items.length; rec.hist.push({ when: today(), score: run.score });
     S.quiz[sid] = rec; mark(); save();
@@ -3718,9 +3724,12 @@ CONFIG.web = true;
         '<span class="row" style="gap:10px"><select data-act="reason" data-id="' + m.id + '" aria-label="Why you missed it"><option value="">Why?</option>' + ["Concept gap", "Algebra slip", "Careless", "Didn’t know where to start"].map(function (o) { return "<option" + (m.reason === o ? " selected" : "") + ">" + o + "</option>"; }).join("") + "</select>" +
         '<label class="row" style="gap:6px;font-size:13px"><input type="checkbox" class="ck" data-act="resolve" data-id="' + m.id + '"' + (m.resolved ? " checked" : "") + "> Got it now</label>" +
         (p.quiz ? "" : '<a class="btn small" href="' + link + '" data-act="retry" data-pid="' + p.pid + '">Redo</a>') + "</span></div>" +
-        '<div class="mq">' + prompt(p) + '</div><div class="mcmp"><span class="l">You wrote</span><span>' + givenHTML(p, m.given) + '</span><span class="l">Answer</span><span>' + ansHTML(p) + "</span></div></div>";
+        '<div class="mq">' + prompt(p) + '</div><div class="mcmp"><span class="l">You wrote</span><span>' + givenHTML(p, m.given) + '</span><span class="l">Answer</span><span>' + ansHTML(p) + "</span></div>" + solHTML(p) + "</div>";
     }).join("") + "</div>";
     return h;
+  }
+  function solHTML(p) { // worked solution behind a button, for the mistake log and quiz results
+    return p.sol ? '<div class="prob-tools"><button class="link-btn" data-act="msol">Show solution</button></div><div class="reveal" data-r="msol" hidden>' + steps(p.sol) + "<div>Answer: " + ansHTML(p) + "</div></div>" : "";
   }
   function tally() {
     var c = {}; S.mistakes.forEach(function (m) { if (m.reason) c[m.reason] = (c[m.reason] || 0) + 1; });
@@ -3804,6 +3813,7 @@ CONFIG.web = true;
       case "gh-sync": GH.state = "saving"; fileChip(); ghSync(true).then(function () { toast(GH.state === "saved" ? "Synced." : GH.err || "Couldn\u2019t sync right now."); }); break;
       case "choose": doCheck(t.dataset.pid, t.dataset.i); break;
       case "qchoose": $$(".choice", t.closest(".prob")).forEach(function (b) { b.classList.toggle("sel", b === t); }); break;
+      case "msol": var rv = $('[data-r="msol"]', t.parentNode.parentNode); rv.hidden = !rv.hidden; t.textContent = rv.hidden ? "Show solution" : "Hide solution"; break;
       case "hint": case "sol":
         var box = t.closest(".prob"), r = $('[data-r="' + a + '"]', box); r.hidden = !r.hidden;
         if (a === "sol" && !r.hidden) { var an = S.ans[t.dataset.pid] || {}; an.revealed = true; S.ans[t.dataset.pid] = an; save(); }

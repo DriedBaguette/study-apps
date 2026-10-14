@@ -1028,20 +1028,20 @@ var SESSIONS = [
     { k: "ivp", q: "3sqrt(x)", at: "4", val: "20", type: "expr", ivp: true, ans: "2x^(3/2) + 4", hint: "Rewrite as " + M("3x^(1/2)") + ". Note " + M("4^(3/2)") + " = 8.", sol: [M("3x^(1/2)") + " → " + M("3x^(3/2)/(3/2)") + " = " + M("2x^(3/2)"), "20 = 2·8 + C, so C = 4", M("2x^(3/2) + 4")] }
   ],
   quiz: { minutes: 20, count: 8, pool: [
-    { k: "d", q: "6x^5 - x", type: "expr", ans: "30x^4 - 1" },
-    { k: "d", q: "sqrt(x) + 1/x", type: "expr", ans: "1/(2sqrt(x)) - 1/x^2" },
-    { k: "d", q: "3e^x - 2sin(x)", type: "expr", ans: "3e^x - 2cos(x)" },
-    { k: "d", q: "5ln(x) + tan(x)", type: "expr", ans: "5/x + sec(x)^2" },
-    { k: "d", q: "x^(3/2)", type: "expr", ans: "(3/2)x^(1/2)" },
-    { k: "i", q: "9x^2 - 4", type: "antideriv", ans: "3x^3 - 4x + C" },
-    { k: "i", q: "2/x + e^x", type: "antideriv", ans: "2ln|x| + e^x + C" },
-    { k: "i", q: "sin(x) + cos(x)", type: "antideriv", ans: "-cos(x) + sin(x) + C" },
-    { k: "i", q: "x^(-4)", type: "antideriv", ans: "-x^(-3)/3 + C" },
-    { k: "i", q: "8sqrt(x)", type: "antideriv", ans: "(16/3)x^(3/2) + C" },
-    { k: "i", q: "(x^2 + 1)/x^2", type: "antideriv", ans: "x - 1/x + C" },
-    { k: "i", q: "sec(x)tan(x)", type: "antideriv", ans: "sec(x) + C" },
-    { k: "ivp", q: "2x", at: "3", val: "10", type: "expr", ivp: true, ans: "x^2 + 1" },
-    { k: "ivp", q: "-sin(x)", at: "0", val: "5", type: "expr", ivp: true, ans: "cos(x) + 4" }
+    { k: "d", q: "6x^5 - x", type: "expr", ans: "30x^4 - 1", sol: ["Power rule on each term: bring the power down, then lower it by 1.", M("6(5x^4) - 1"), "= " + M("30x^4 - 1")] },
+    { k: "d", q: "sqrt(x) + 1/x", type: "expr", ans: "1/(2sqrt(x)) - 1/x^2", sol: ["Rewrite as powers: " + M("x^(1/2) + x^(-1)"), "Power rule: " + M("(1/2)x^(-1/2) - x^(-2)"), "= " + M("1/(2sqrt(x)) - 1/x^2")] },
+    { k: "d", q: "3e^x - 2sin(x)", type: "expr", ans: "3e^x - 2cos(x)", sol: ["The derivative of eˣ is eˣ, and the derivative of sin x is cos x.", DD("3e^x - 2sin(x)") + " = " + M("3e^x - 2cos(x)")] },
+    { k: "d", q: "5ln(x) + tan(x)", type: "expr", ans: "5/x + sec(x)^2", sol: ["The derivative of ln x is 1/x, and the derivative of tan x is sec² x.", DD("5ln(x) + tan(x)") + " = " + M("5/x + sec(x)^2")] },
+    { k: "d", q: "x^(3/2)", type: "expr", ans: "(3/2)x^(1/2)", sol: ["Power rule: bring 3/2 down, then subtract 1 from the power.", "3/2 − 1 = 1/2, so the answer is " + M("(3/2)x^(1/2)")] },
+    { k: "i", q: "9x^2 - 4", type: "antideriv", ans: "3x^3 - 4x + C", sol: ["Raise each power by 1 and divide by the new power.", M("9x^3/3 - 4x") + " = " + M("3x^3 - 4x"), "Add C: " + M("3x^3 - 4x + C")] },
+    { k: "i", q: "2/x + e^x", type: "antideriv", ans: "2ln|x| + e^x + C", sol: [II("1/x") + " = " + M("ln|x|") + " and " + II("e^x") + " = " + M("e^x"), M("2ln|x| + e^x + C")] },
+    { k: "i", q: "sin(x) + cos(x)", type: "antideriv", ans: "-cos(x) + sin(x) + C", sol: [II("sin(x)") + " = " + M("-cos(x)") + " and " + II("cos(x)") + " = " + M("sin(x)"), M("-cos(x) + sin(x) + C")] },
+    { k: "i", q: "x^(-4)", type: "antideriv", ans: "-x^(-3)/3 + C", sol: ["−4 + 1 = −3, so divide by −3.", M("x^(-3)/(-3)") + " = " + M("-x^(-3)/3 + C")] },
+    { k: "i", q: "8sqrt(x)", type: "antideriv", ans: "(16/3)x^(3/2) + C", sol: ["Rewrite as " + M("8x^(1/2)") + ".", "1/2 + 1 = 3/2: " + M("8x^(3/2)/(3/2)"), "= " + M("(16/3)x^(3/2) + C")] },
+    { k: "i", q: "(x^2 + 1)/x^2", type: "antideriv", ans: "x - 1/x + C", sol: ["Split: " + M("x^2/x^2 + 1/x^2") + " = " + M("1 + x^(-2)"), "Integrate: " + M("x + x^(-1)/(-1)"), "= " + M("x - 1/x + C")] },
+    { k: "i", q: "sec(x)tan(x)", type: "antideriv", ans: "sec(x) + C", sol: ["The derivative of sec x is sec x tan x, so run it backward.", M("sec(x) + C")] },
+    { k: "ivp", q: "2x", at: "3", val: "10", type: "expr", ivp: true, ans: "x^2 + 1", sol: [M("x^2 + C"), "10 = 9 + C, so C = 1", M("x^2 + 1")] },
+    { k: "ivp", q: "-sin(x)", at: "0", val: "5", type: "expr", ivp: true, ans: "cos(x) + 4", sol: [M("cos(x) + C") + ", since the derivative of cos x is −sin x", "5 = cos 0 + C = 1 + C, so C = 4", M("cos(x) + 4")] }
   ] }
 },
 /* ================= B1 ================= */
@@ -1178,16 +1178,16 @@ var SESSIONS = [
     { k: "di", a: "0", b: "4", q: "1/sqrt(2x + 1)", type: "number", ans: "2", hint: "u = 2x + 1, new limits 1 to 9.", sol: ["(1/2)" + DI("1", "9", "x^(-1/2)", "u"), "= " + '<span class="m">√<i>u</i></span> from 1 to 9 = 3 − 1 = 2'] }
   ],
   quiz: { minutes: 30, count: 8, pool: [
-    { k: "txt", text: "Right Riemann sum for " + M("x") + " on [0, 4] with n = 4.", type: "number", ans: "10" },
-    { k: "di", a: "0", b: "3", q: "2x + 1", type: "number", ans: "12" },
-    { k: "di", a: "1", b: "2", q: "4x^3", type: "number", ans: "15" },
-    { k: "ftc", a: "2", b: "x", q: "sqrt(x^2 + 5)", type: "expr", ans: "sqrt(x^2 + 5)" },
-    { k: "d", q: "(5x^2 - 1)^3", type: "expr", ans: "30x(5x^2 - 1)^2" },
-    { k: "di", a: "-3", b: "3", q: "x^5 - 2x", type: "number", ans: "0" },
-    { k: "i", q: "6x(x^2 - 4)^2", type: "antideriv", ans: "(x^2 - 4)^3 + C" },
-    { k: "i", q: "sin(4x)", type: "antideriv", ans: "-cos(4x)/4 + C" },
-    { k: "di", a: "0", b: "1", q: "x(x^2 + 1)^3", type: "number", ans: "15/8" },
-    { k: "txt", text: "Average value of " + M("3x^2") + " on [0, 2].", type: "number", ans: "4" }
+    { k: "txt", text: "Right Riemann sum for " + M("x") + " on [0, 4] with n = 4.", type: "number", ans: "10", sol: ["Δx = (4 − 0)/4 = 1", "Right endpoints: 1, 2, 3, 4. Heights: 1, 2, 3, 4.", "(1 + 2 + 3 + 4) × 1 = 10"] },
+    { k: "di", a: "0", b: "3", q: "2x + 1", type: "number", ans: "12", sol: [DI("0", "3", "2x + 1") + " = " + M("x^2 + x") + " from 0 to 3", "(9 + 3) − 0 = 12"] },
+    { k: "di", a: "1", b: "2", q: "4x^3", type: "number", ans: "15", sol: [DI("1", "2", "4x^3") + " = " + M("x^4") + " from 1 to 2", "16 − 1 = 15"] },
+    { k: "ftc", a: "2", b: "x", q: "sqrt(x^2 + 5)", type: "expr", ans: "sqrt(x^2 + 5)", sol: ["FTC part 1: the bottom limit is a constant and the top is x, so put x in for t.", M("sqrt(x^2 + 5)")] },
+    { k: "d", q: "(5x^2 - 1)^3", type: "expr", ans: "30x(5x^2 - 1)^2", sol: ["Chain rule: the outside gives 3( )², and the inside's derivative is 10x.", M("3(5x^2 - 1)^2 (10x)"), "= " + M("30x(5x^2 - 1)^2")] },
+    { k: "di", a: "-3", b: "3", q: "x^5 - 2x", type: "number", ans: "0", sol: ["x⁵ − 2x is odd: plugging in −x flips its sign.", "Over [−3, 3] the left half cancels the right half.", "= 0"] },
+    { k: "i", q: "6x(x^2 - 4)^2", type: "antideriv", ans: "(x^2 - 4)^3 + C", sol: ["u = x² − 4, du = 2x dx, so 6x dx = 3 du.", "3∫u² du = u³ + C", M("(x^2 - 4)^3 + C")] },
+    { k: "i", q: "sin(4x)", type: "antideriv", ans: "-cos(4x)/4 + C", sol: ["u = 4x, du = 4 dx, so dx = du/4.", "(1/4)∫sin u du = −(1/4)cos u", M("-cos(4x)/4 + C")] },
+    { k: "di", a: "0", b: "1", q: "x(x^2 + 1)^3", type: "number", ans: "15/8", sol: ["u = x² + 1, du = 2x dx, so x dx = du/2. New limits: 1 to 2.", "(1/2)" + DI("1", "2", "x^3", "u") + " = (1/2)·" + M("x^4/4", "u") + " from 1 to 2", "(1/2)(16/4 − 1/4) = (1/2)(15/4) = 15/8"] },
+    { k: "txt", text: "Average value of " + M("3x^2") + " on [0, 2].", type: "number", ans: "4", sol: ["Average value = integral ÷ (b − a)", DI("0", "2", "3x^2") + " = " + M("x^3") + " from 0 to 2 = 8", "8 ÷ 2 = 4"] }
   ] }
 },
 /* ================= B8: Exam 1 practice test ================= */
@@ -1230,28 +1230,28 @@ var SESSIONS = [
     { k: "di", a: "0", b: "3", q: "x/sqrt(x^2 + 16)", type: "number", ans: "1", hint: "u = x² + 16, x dx = du/2, new limits 16 to 25.", sol: ["(1/2)" + DI("16", "25", "x^(-1/2)", "u"), "= √u from 16 to 25 = 5 − 4 = 1"] }
   ],
   quiz: { minutes: 50, count: 12, name: "Practice test", blurb: "12 problems drawn from everything on Exam 1. No notes, no hints. Star the easy ones and do them first; skip anything that stalls you. Missed problems go to your mistake log.", pool: [
-    { k: "i", q: "4x^3 - 6x + 2", type: "antideriv", ans: "x^4 - 3x^2 + 2x + C" },
-    { k: "i", q: "(x^3 - 2)/x", type: "antideriv", ans: "x^3/3 - 2ln|x| + C" },
-    { k: "i", q: "3cos(x) - 5e^x", type: "antideriv", ans: "3sin(x) - 5e^x + C" },
-    { k: "i", q: "6/sqrt(x)", type: "antideriv", ans: "12sqrt(x) + C" },
-    { k: "ivp", q: "6x^2 - 4x", at: "1", val: "3", type: "expr", ivp: true, ans: "2x^3 - 2x^2 + 3" },
-    { k: "txt", text: "Left Riemann sum for " + M("x^2") + " on [0, 2] with n = 4.", type: "number", ans: "1.75" },
-    { k: "sum", from: "1", to: "6", q: "3x - 1", type: "number", ans: "57" },
-    { k: "txt", text: 'If <span class="m">∫<sub>0</sub><sup>4</sup> <i>f</i>(<i>x</i>) <i>dx</i> = 6</span>, find <span class="m">∫<sub>0</sub><sup>4</sup> (2<i>f</i>(<i>x</i>) + 1) <i>dx</i></span>.', type: "number", ans: "16" },
-    { k: "di", a: "0", b: "3", q: "sqrt(9 - x^2)", type: "number", ans: "9pi/4" },
-    { k: "di", a: "1", b: "4", q: "3sqrt(x)", type: "number", ans: "14" },
-    { k: "di", a: "0", b: "pi", q: "sin(x)", type: "number", ans: "2" },
-    { k: "ftc", a: "1", b: "x", q: "cos(x^2)", type: "expr", ans: "cos(x^2)" },
-    { k: "ftc", a: "0", b: "x^3", q: "e^x", type: "expr", ans: "3x^2 e^(x^3)" },
-    { k: "txt", text: "Average value of " + M("x^2 + 1") + " on [0, 3].", type: "number", ans: "4" },
-    { k: "txt", text: "A particle moves with velocity " + '<span class="m"><i>v</i>(<i>t</i>) = 3<i>t</i><sup>2</sup> − 6<i>t</i></span>' + " m/s. Find its displacement from t = 0 to t = 3.", type: "number", ans: "0" },
-    { k: "txt", text: "Same particle, " + '<span class="m"><i>v</i>(<i>t</i>) = 3<i>t</i><sup>2</sup> − 6<i>t</i></span>' + ". Find the total distance it travels from t = 0 to t = 3.", type: "number", ans: "8" },
-    { k: "di", a: "-2", b: "2", q: "x^3 cos(x)", type: "number", ans: "0" },
-    { k: "i", q: "x^2(x^3 + 1)^4", type: "antideriv", ans: "(x^3 + 1)^5/15 + C" },
-    { k: "i", q: "x/sqrt(x^2 + 4)", type: "antideriv", ans: "sqrt(x^2 + 4) + C" },
-    { k: "i", q: "e^(5x)", type: "antideriv", ans: "e^(5x)/5 + C" },
-    { k: "di", a: "0", b: "1", q: "x(1 - x^2)^3", type: "number", ans: "1/8" },
-    { k: "di", a: "1", b: "e", q: "ln(x)/x", type: "number", ans: "1/2" }
+    { k: "i", q: "4x^3 - 6x + 2", type: "antideriv", ans: "x^4 - 3x^2 + 2x + C", sol: ["Integrate term by term: " + M("4x^4/4 - 6x^2/2 + 2x"), "= " + M("x^4 - 3x^2 + 2x + C")] },
+    { k: "i", q: "(x^3 - 2)/x", type: "antideriv", ans: "x^3/3 - 2ln|x| + C", sol: ["Split: " + M("x^3/x - 2/x") + " = " + M("x^2 - 2/x"), "Integrate: " + M("x^3/3 - 2ln|x| + C")] },
+    { k: "i", q: "3cos(x) - 5e^x", type: "antideriv", ans: "3sin(x) - 5e^x + C", sol: [II("cos(x)") + " = " + M("sin(x)") + " and " + II("e^x") + " = " + M("e^x"), M("3sin(x) - 5e^x + C")] },
+    { k: "i", q: "6/sqrt(x)", type: "antideriv", ans: "12sqrt(x) + C", sol: [M("6x^(-1/2)") + " → " + M("6x^(1/2)/(1/2)"), "= " + M("12x^(1/2)") + " = " + M("12sqrt(x) + C")] },
+    { k: "ivp", q: "6x^2 - 4x", at: "1", val: "3", type: "expr", ivp: true, ans: "2x^3 - 2x^2 + 3", sol: [M("2x^3 - 2x^2 + C"), "3 = 2 − 2 + C, so C = 3", M("2x^3 - 2x^2 + 3")] },
+    { k: "txt", text: "Left Riemann sum for " + M("x^2") + " on [0, 2] with n = 4.", type: "number", ans: "1.75", sol: ["Δx = 2/4 = 0.5", "Left endpoints: 0, 0.5, 1, 1.5. Heights: 0, 0.25, 1, 2.25.", "(0 + 0.25 + 1 + 2.25) × 0.5 = 3.5 × 0.5 = 1.75"] },
+    { k: "sum", from: "1", to: "6", q: "3x - 1", type: "number", ans: "57", sol: ["Split: 3Σk − Σ1", "Σk from 1 to 6 = 6·7/2 = 21, and Σ1 = 6", "3(21) − 6 = 57"] },
+    { k: "txt", text: 'If <span class="m">∫<sub>0</sub><sup>4</sup> <i>f</i>(<i>x</i>) <i>dx</i> = 6</span>, find <span class="m">∫<sub>0</sub><sup>4</sup> (2<i>f</i>(<i>x</i>) + 1) <i>dx</i></span>.', type: "number", ans: "16", sol: ["Split: 2∫f(x) dx + ∫1 dx", "2(6) + (4 − 0)", "= 16"] },
+    { k: "di", a: "0", b: "3", q: "sqrt(9 - x^2)", type: "number", ans: "9pi/4", sol: [M("sqrt(9 - x^2)") + " is the top half of a circle of radius 3.", "From 0 to 3 is a quarter of that circle.", "(1/4)π(3²) = 9π/4"] },
+    { k: "di", a: "1", b: "4", q: "3sqrt(x)", type: "number", ans: "14", sol: [M("3x^(1/2)") + " → " + M("2x^(3/2)") + " from 1 to 4", "4^(3/2) = 8, so 2(8) − 2(1) = 14"] },
+    { k: "di", a: "0", b: "pi", q: "sin(x)", type: "number", ans: "2", sol: [M("-cos(x)") + " from 0 to π", "−cos π − (−cos 0) = 1 + 1 = 2"] },
+    { k: "ftc", a: "1", b: "x", q: "cos(x^2)", type: "expr", ans: "cos(x^2)", sol: ["FTC part 1: the bottom limit is a constant and the top is x, so put x in for t.", M("cos(x^2)")] },
+    { k: "ftc", a: "0", b: "x^3", q: "e^x", type: "expr", ans: "3x^2 e^(x^3)", sol: ["The top limit is x³: plug it in for t, then multiply by its derivative, 3x².", M("e^(x^3)") + " × " + M("3x^2"), "= " + M("3x^2 e^(x^3)")] },
+    { k: "txt", text: "Average value of " + M("x^2 + 1") + " on [0, 3].", type: "number", ans: "4", sol: [DI("0", "3", "x^2 + 1") + " = " + M("x^3/3 + x") + " from 0 to 3 = 9 + 3 = 12", "Average: 12 ÷ (3 − 0) = 4"] },
+    { k: "txt", text: "A particle moves with velocity " + '<span class="m"><i>v</i>(<i>t</i>) = 3<i>t</i><sup>2</sup> − 6<i>t</i></span>' + " m/s. Find its displacement from t = 0 to t = 3.", type: "number", ans: "0", sol: ["Displacement = " + DI("0", "3", "3x^2 - 6x", "t"), "= " + M("x^3 - 3x^2", "t") + " from 0 to 3", "(27 − 27) − 0 = 0"] },
+    { k: "txt", text: "Same particle, " + '<span class="m"><i>v</i>(<i>t</i>) = 3<i>t</i><sup>2</sup> − 6<i>t</i></span>' + ". Find the total distance it travels from t = 0 to t = 3.", type: "number", ans: "8", sol: ["v = 3t(t − 2) = 0 at t = 0 and t = 2. Split at t = 2.", DI("0", "2", "3x^2 - 6x", "t") + " = 8 − 12 = −4", DI("2", "3", "3x^2 - 6x", "t") + " = 0 − (−4) = 4", "Distance: 4 + 4 = 8"] },
+    { k: "di", a: "-2", b: "2", q: "x^3 cos(x)", type: "number", ans: "0", sol: ["x³ cos x is odd: plugging in −x flips its sign.", "Over [−2, 2] the halves cancel.", "= 0"] },
+    { k: "i", q: "x^2(x^3 + 1)^4", type: "antideriv", ans: "(x^3 + 1)^5/15 + C", sol: ["u = x³ + 1, du = 3x² dx, so x² dx = du/3.", "(1/3)∫u⁴ du = u⁵/15", M("(x^3 + 1)^5/15 + C")] },
+    { k: "i", q: "x/sqrt(x^2 + 4)", type: "antideriv", ans: "sqrt(x^2 + 4) + C", sol: ["u = x² + 4, du = 2x dx, so x dx = du/2.", "(1/2)∫u^(−1/2) du = (1/2)·2u^(1/2) = √u", M("sqrt(x^2 + 4) + C")] },
+    { k: "i", q: "e^(5x)", type: "antideriv", ans: "e^(5x)/5 + C", sol: ["u = 5x, du = 5 dx, so dx = du/5.", "(1/5)∫eᵘ du = eᵘ/5", M("e^(5x)/5 + C")] },
+    { k: "di", a: "0", b: "1", q: "x(1 - x^2)^3", type: "number", ans: "1/8", sol: ["u = 1 − x², du = −2x dx, so x dx = −du/2. New limits: 1 to 0.", "Flip the limits to drop the minus: (1/2)" + DI("0", "1", "x^3", "u"), "(1/2)(1/4) = 1/8"] },
+    { k: "di", a: "1", b: "e", q: "ln(x)/x", type: "number", ans: "1/2", sol: ["u = ln x, du = dx/x. New limits: ln 1 = 0 to ln e = 1.", DI("0", "1", "x", "u") + " = " + M("x^2/2", "u") + " from 0 to 1 = 1/2"] }
   ] }
 },
 /* ================= Block C ================= */
@@ -1680,28 +1680,28 @@ var SESSIONS = [
       hint: "Find k from F = kx first.", sol: ["50 = k·0.25, so k = 200", DI("0", "0.5", "200x") + " = " + M("100x^2") + " from 0 to 0.5", "100·0.25 = 25 J"] }
   ],
   quiz: { minutes: 50, count: 12, name: "Practice test", blurb: "12 problems drawn from everything on Exam 2. No notes, no hints. Sketch each one before you set it up. Type pi for π and big numbers without commas. Missed problems go to your mistake log.", pool: [
-    { k: "txt", text: "A particle has velocity " + tq(VT, "6 - 2x") + " m/s. Find its displacement from t = 0 to t = 4.", type: "number", ans: "8", chk: [["6 - 2x", "0", "4"]] },
-    { k: "txt", text: "A particle has velocity " + tq(VT, "6 - 2x") + " m/s. Find the total distance it travels from t = 0 to t = 4.", type: "number", ans: "10", chk: [["abs(6 - 2x)", "0", "4"]] },
-    { k: "txt", text: "A particle has acceleration " + tq(AT, "6x") + " and " + mx("<i>v</i>(0) = 2") + ". Find " + mx(VT) + ".", type: "expr", ivp: true, v: "t", ans: "3x^2 + 2" },
-    { k: "txt", text: "Find the area between " + yq("x^2") + " and " + yq("3x") + ".", type: "number", ans: "9/2", chk: [["3x - x^2", "0", "3"]] },
-    { k: "txt", text: "Find the area between " + yq("x^2") + " and " + yq("8 - x^2") + ".", type: "number", ans: "64/3", chk: [["8 - x^2 - x^2", "-2", "2"]] },
-    { k: "txt", text: "Use horizontal slices: find the area between " + xq("x^2") + " and " + mx("<i>x</i> = 9") + ".", type: "number", ans: "36", chk: [["9 - x^2", "-3", "3"]] },
-    { k: "txt", text: "Find the area between " + yq("e^x") + " and " + yq("e^(-x)") + " from x = 0 to x = 1.", type: "number", ans: "e + 1/e - 2", chk: [["e^x - e^(-x)", "0", "1"]] },
-    { k: "txt", text: "The region under " + yq("x^2 + 1") + " from x = 0 to x = 1 is spun around the x-axis. Find the volume.", type: "number", ans: "28pi/15", chk: [["(x^2 + 1)^2", "0", "1", "pi"]] },
-    { k: "txt", text: "The region between " + yq("x^2") + " and " + yq("x^3") + " is spun around the x-axis. Find the volume.", type: "number", ans: "2pi/35", chk: [["(x^2)^2 - (x^3)^2", "0", "1", "pi"]] },
-    { k: "txt", text: "The region between " + yq("sqrt(x)") + ", " + mx("<i>y</i> = 2") + " and the y-axis is spun around the y-axis. Find the volume.", type: "number", ans: "32pi/5", chk: [["(x^2)^2", "0", "2", "pi"]] },
-    { k: "txt", text: "The region under " + yq("4 - x^2") + " in the first quadrant is spun around the y-axis. Find the volume.", type: "number", ans: "8pi", chk: [["x(4 - x^2)", "0", "2", "2pi"]] },
-    { k: "txt", text: "The region under " + yq("cos(x^2)") + " from x = 0 to x = " + M("sqrt(pi/2)") + " is spun around the y-axis. Find the volume.", type: "number", ans: "pi", chk: [["x cos(x^2)", "0", "sqrt(pi/2)", "2pi"]] },
-    { k: "txt", text: "The region under " + yq("x^2") + " from x = 0 to x = 1 is spun around the line " + mx("<i>y</i> = −1") + ". Find the volume.", type: "number", ans: "13pi/15", chk: [["(x^2 + 1)^2 - 1", "0", "1", "pi"]] },
-    { k: "txt", text: "Find the length of " + yq("(2/3)(x - 1)^(3/2)") + " from x = 1 to x = 4.", type: "number", ans: "14/3", chk: [["sqrt(1 + (sqrt(x - 1))^2)", "1", "4"]] },
-    { k: "txt", text: "Find the length of " + yq("x^4/8 + 1/(4x^2)") + " from x = 1 to x = 2.", type: "number", ans: "33/16", chk: [["sqrt(1 + (x^3/2 - 1/(2x^3))^2)", "1", "2"]] },
-    { k: "txt", text: "Spin the line " + yq("4x") + ", 0 ≤ x ≤ 1, around the x-axis. Find the surface area.", type: "number", ans: "4pi sqrt(17)", chk: [["4x sqrt(1 + 4^2)", "0", "1", "2pi"]] },
-    { k: "txt", text: "Spin " + yq("x^3/3") + ", 0 ≤ x ≤ 1, around the x-axis. Find the surface area.", type: "number", ans: "pi(2sqrt(2) - 1)/9", chk: [["(x^3/3) sqrt(1 + (x^2)^2)", "0", "1", "2pi"]] },
-    { k: "txt", text: "A 12 N force holds a spring stretched 0.2 m. How much work, in joules, stretches it from its natural length to 0.4 m?", type: "number", ans: "4.8", chk: [["60x", "0", "0.4"]] },
-    { k: "txt", text: "A 30 ft rope weighing 2 lb per foot hangs off a roof. How much work (in ft·lb) pulls it all the way up?", type: "number", ans: "900", chk: [["2x", "0", "30"]] },
-    { k: "txt", text: "A full cylinder tank has radius 1 m and height 3 m. Water weighs 9800 N per m³. How much work, in joules, pumps all the water out over the top?", type: "number", ans: "44100pi", chk: [["9800*(3 - x)", "0", "3", "pi"]] },
-    { k: "txt", text: "A 4 m bar has density " + mx("ρ(<i>x</i>) = 2 + √<i>x</i>") + " kg/m. Find its mass in kg.", type: "number", ans: "40/3", chk: [["2 + sqrt(x)", "0", "4"]] },
-    { k: "txt", text: "A rectangular dam is 8 m wide. The water behind it is 5 m deep. Find the total force on the dam in newtons (water: 9800 N per m³).", type: "number", ans: "980000", chk: [["9800*8*(5 - x)", "0", "5"]] }
+    { k: "txt", text: "A particle has velocity " + tq(VT, "6 - 2x") + " m/s. Find its displacement from t = 0 to t = 4.", type: "number", ans: "8", chk: [["6 - 2x", "0", "4"]], sol: [DI("0", "4", "6 - 2x", "t") + " = " + M("6x - x^2", "t") + " from 0 to 4", "24 − 16 = 8"] },
+    { k: "txt", text: "A particle has velocity " + tq(VT, "6 - 2x") + " m/s. Find the total distance it travels from t = 0 to t = 4.", type: "number", ans: "10", chk: [["abs(6 - 2x)", "0", "4"]], sol: ["v = 0 at t = 3. Split there.", DI("0", "3", "6 - 2x", "t") + " = 18 − 9 = 9", DI("3", "4", "6 - 2x", "t") + " = 8 − 9 = −1", "Distance: 9 + 1 = 10"] },
+    { k: "txt", text: "A particle has acceleration " + tq(AT, "6x") + " and " + mx("<i>v</i>(0) = 2") + ". Find " + mx(VT) + ".", type: "expr", ivp: true, v: "t", ans: "3x^2 + 2", sol: ["v(t) = ∫6t dt = 3t² + C", "v(0) = 0 + C = 2, so C = 2", M("3x^2 + 2", "t")] },
+    { k: "txt", text: "Find the area between " + yq("x^2") + " and " + yq("3x") + ".", type: "number", ans: "9/2", chk: [["3x - x^2", "0", "3"]], sol: ["Cross: x² = 3x, so x(x − 3) = 0: x = 0 or 3.", "At x = 1 the line (3) is above the parabola (1).", DI("0", "3", "3x - x^2") + " = " + M("3x^2/2 - x^3/3") + " from 0 to 3", "27/2 − 9 = 9/2"] },
+    { k: "txt", text: "Find the area between " + yq("x^2") + " and " + yq("8 - x^2") + ".", type: "number", ans: "64/3", chk: [["8 - x^2 - x^2", "-2", "2"]], sol: ["Cross: x² = 8 − x², so x² = 4: x = ±2.", "At x = 0, 8 − x² is on top.", DI("-2", "2", "8 - 2x^2") + " = " + M("8x - 2x^3/3") + " from −2 to 2", "(16 − 16/3) − (−16 + 16/3) = 64/3"] },
+    { k: "txt", text: "Use horizontal slices: find the area between " + xq("x^2") + " and " + mx("<i>x</i> = 9") + ".", type: "number", ans: "36", chk: [["9 - x^2", "-3", "3"]], sol: ["Cross: y² = 9, so y = ±3.", "Right minus left: 9 − y²", DI("-3", "3", "9 - x^2", "y") + " = " + M("9x - x^3/3", "y") + " from −3 to 3", "(27 − 9) − (−27 + 9) = 36"] },
+    { k: "txt", text: "Find the area between " + yq("e^x") + " and " + yq("e^(-x)") + " from x = 0 to x = 1.", type: "number", ans: "e + 1/e - 2", chk: [["e^x - e^(-x)", "0", "1"]], sol: ["On 0 to 1, eˣ is on top (at x = 1: e vs 1/e).", DI("0", "1", "e^x - e^(-x)") + " = " + M("e^x + e^(-x)") + " from 0 to 1", "(e + 1/e) − (1 + 1) = e + 1/e − 2"] },
+    { k: "txt", text: "The region under " + yq("x^2 + 1") + " from x = 0 to x = 1 is spun around the x-axis. Find the volume.", type: "number", ans: "28pi/15", chk: [["(x^2 + 1)^2", "0", "1", "pi"]], sol: ["Radius = x² + 1, so radius² = " + M("x^4 + 2x^2 + 1"), "π" + DI("0", "1", "x^4 + 2x^2 + 1") + " = π(1/5 + 2/3 + 1)", "= π(3 + 10 + 15)/15 = 28π/15"] },
+    { k: "txt", text: "The region between " + yq("x^2") + " and " + yq("x^3") + " is spun around the x-axis. Find the volume.", type: "number", ans: "2pi/35", chk: [["(x^2)^2 - (x^3)^2", "0", "1", "pi"]], sol: ["They cross at x = 0 and 1. In between x² ≥ x³, so R = x² and r = x³.", "R² − r² = " + M("x^4 - x^6"), "π" + DI("0", "1", "x^4 - x^6") + " = π(1/5 − 1/7)", "= 2π/35"] },
+    { k: "txt", text: "The region between " + yq("sqrt(x)") + ", " + mx("<i>y</i> = 2") + " and the y-axis is spun around the y-axis. Find the volume.", type: "number", ans: "32pi/5", chk: [["(x^2)^2", "0", "2", "pi"]], sol: ["Horizontal slices: x = y², from y = 0 to 2.", "Radius = y², so radius² = y⁴.", "π" + DI("0", "2", "x^4", "y") + " = π·32/5", "= 32π/5"] },
+    { k: "txt", text: "The region under " + yq("4 - x^2") + " in the first quadrant is spun around the y-axis. Find the volume.", type: "number", ans: "8pi", chk: [["x(4 - x^2)", "0", "2", "2pi"]], sol: ["Shells: radius x, height 4 − x², from x = 0 to 2.", "2π" + DI("0", "2", "4x - x^3") + " = 2π(8 − 4)", "= 8π"] },
+    { k: "txt", text: "The region under " + yq("cos(x^2)") + " from x = 0 to x = " + M("sqrt(pi/2)") + " is spun around the y-axis. Find the volume.", type: "number", ans: "pi", chk: [["x cos(x^2)", "0", "sqrt(pi/2)", "2pi"]], sol: ["Shells: radius x, height cos(x²).", "2π" + DI("0", "sqrt(pi/2)", "x cos(x^2)"), "u = x², du = 2x dx, so 2x dx = du. New limits: 0 to π/2.", "π" + DI("0", "pi/2", "cos(x)", "u") + " = π(sin(π/2) − sin 0) = π"] },
+    { k: "txt", text: "The region under " + yq("x^2") + " from x = 0 to x = 1 is spun around the line " + mx("<i>y</i> = −1") + ". Find the volume.", type: "number", ans: "13pi/15", chk: [["(x^2 + 1)^2 - 1", "0", "1", "pi"]], sol: ["Washers around y = −1. Outer radius R = x² + 1 (curve to the line). Inner radius r = 1 (x-axis to the line).", "R² − r² = " + M("(x^2 + 1)^2 - 1") + " = " + M("x^4 + 2x^2"), "π" + DI("0", "1", "x^4 + 2x^2") + " = π(1/5 + 2/3)", "= 13π/15"] },
+    { k: "txt", text: "Find the length of " + yq("(2/3)(x - 1)^(3/2)") + " from x = 1 to x = 4.", type: "number", ans: "14/3", chk: [["sqrt(1 + (sqrt(x - 1))^2)", "1", "4"]], sol: ["y′ = (x − 1)^(1/2), so 1 + (y′)² = 1 + (x − 1) = x.", DI("1", "4", "sqrt(x)") + " = " + M("(2/3)x^(3/2)") + " from 1 to 4", "(2/3)(8 − 1) = 14/3"] },
+    { k: "txt", text: "Find the length of " + yq("x^4/8 + 1/(4x^2)") + " from x = 1 to x = 2.", type: "number", ans: "33/16", chk: [["sqrt(1 + (x^3/2 - 1/(2x^3))^2)", "1", "2"]], sol: ["y′ = x³/2 − 1/(2x³)", "1 + (y′)² = (x³/2 + 1/(2x³))², a perfect square, so the root comes off.", DI("1", "2", "x^3/2 + 1/(2x^3)") + " = " + M("x^4/8 - 1/(4x^2)") + " from 1 to 2", "(2 − 1/16) − (1/8 − 1/4) = 31/16 + 1/8 = 33/16"] },
+    { k: "txt", text: "Spin the line " + yq("4x") + ", 0 ≤ x ≤ 1, around the x-axis. Find the surface area.", type: "number", ans: "4pi sqrt(17)", chk: [["4x sqrt(1 + 4^2)", "0", "1", "2pi"]], sol: ["Surface area = 2π∫y√(1 + (y′)²) dx, and y′ = 4.", "√(1 + 16) = √17", "2π√17" + DI("0", "1", "4x") + " = 2π√17 · 2", "= 4π√17"] },
+    { k: "txt", text: "Spin " + yq("x^3/3") + ", 0 ≤ x ≤ 1, around the x-axis. Find the surface area.", type: "number", ans: "pi(2sqrt(2) - 1)/9", chk: [["(x^3/3) sqrt(1 + (x^2)^2)", "0", "1", "2pi"]], sol: ["y′ = x², so √(1 + (y′)²) = √(1 + x⁴).", "2π" + DI("0", "1", "(x^3/3) sqrt(1 + x^4)"), "u = 1 + x⁴, du = 4x³ dx, so x³ dx = du/4. New limits: 1 to 2.", "(2π/3)(1/4)" + DI("1", "2", "sqrt(x)", "u") + " = (π/6)(2/3)(2√2 − 1)", "= π(2√2 − 1)/9"] },
+    { k: "txt", text: "A 12 N force holds a spring stretched 0.2 m. How much work, in joules, stretches it from its natural length to 0.4 m?", type: "number", ans: "4.8", chk: [["60x", "0", "0.4"]], sol: ["Hooke's law, F = kx: 12 = k(0.2), so k = 60.", DI("0", "0.4", "60x") + " = " + M("30x^2") + " from 0 to 0.4", "30(0.16) = 4.8 J"] },
+    { k: "txt", text: "A 30 ft rope weighing 2 lb per foot hangs off a roof. How much work (in ft·lb) pulls it all the way up?", type: "number", ans: "900", chk: [["2x", "0", "30"]], sol: ["The piece x ft below the roof weighs 2 dx lb and is lifted x ft.", DI("0", "30", "2x") + " = " + M("x^2") + " from 0 to 30", "= 900 ft·lb"] },
+    { k: "txt", text: "A full cylinder tank has radius 1 m and height 3 m. Water weighs 9800 N per m³. How much work, in joules, pumps all the water out over the top?", type: "number", ans: "44100pi", chk: [["9800*(3 - x)", "0", "3", "pi"]], sol: ["A slice at height x has volume π(1²) dx, so it weighs 9800π dx N.", "It is lifted 3 − x m to the top.", "9800π" + DI("0", "3", "3 - x") + " = 9800π(9 − 9/2)", "= 9800π · 4.5 = 44100π J"] },
+    { k: "txt", text: "A 4 m bar has density " + mx("ρ(<i>x</i>) = 2 + √<i>x</i>") + " kg/m. Find its mass in kg.", type: "number", ans: "40/3", chk: [["2 + sqrt(x)", "0", "4"]], sol: ["Mass = integral of the density.", DI("0", "4", "2 + sqrt(x)") + " = " + M("2x + (2/3)x^(3/2)") + " from 0 to 4", "8 + (2/3)(8) = 8 + 16/3 = 40/3 kg"] },
+    { k: "txt", text: "A rectangular dam is 8 m wide. The water behind it is 5 m deep. Find the total force on the dam in newtons (water: 9800 N per m³).", type: "number", ans: "980000", chk: [["9800*8*(5 - x)", "0", "5"]], sol: ["A strip h m below the surface is 8 m wide and dh tall. The pressure there is 9800h N/m².", "Force = 9800·8" + DI("0", "5", "x", "h"), "= 78400 · 25/2", "= 980000 N"] }
   ] }
 },
 /* ================= Block D ================= */
@@ -2816,7 +2816,7 @@ CONFIG.web = true;
         '<button class="btn small ghost" data-act="scr-undo">Undo</button><button class="btn small ghost" data-act="scr-clear">Clear</button><button class="btn small ghost" data-act="scr-taller">More room</button>' +
         (COARSE ? '<label class="row scr-finger" style="gap:6px;font-size:13px"><input type="checkbox" class="ck" data-act="scr-finger"> Finger draws</label>' : "") +
         '<span class="spacer"></span>' + (CONFIG.web && typeof Reader !== "undefined" && p.type !== "choice" ? '<button class="btn small" data-act="scr-read" data-pid="' + p.pid + '" title="Types the last line you wrote into the answer box">' + READ_LABEL + "</button>" : "") +
-        '<button class="btn small" data-act="scr-ask" data-pid="' + p.pid + '"' + (CONFIG.web ? "" : " hidden") + ">" + (CONFIG.web ? "Ask Claude to check" : "Check my work") + '</button></div>' +
+        (p.quiz ? "" : '<button class="btn small" data-act="scr-ask" data-pid="' + p.pid + '"' + (CONFIG.web ? "" : " hidden") + ">" + (CONFIG.web ? "Ask Claude to check" : "Check my work") + "</button>") + "</div>" +
         '<div class="scr-canvas"><canvas></canvas></div><div class="scr-fb" hidden></div></div>' : "") + "</div>";
   }
   function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#000"; }
@@ -3716,9 +3716,8 @@ CONFIG.web = true;
       h += '<div class="fbwrap">' + (a.status ? fbHTML(a.status, a.msg, p, a.shape) : "") + "</div>";
       h += '<div class="prob-tools">' + (p.hint ? '<button class="link-btn" data-act="hint" data-pid="' + p.pid + '">Hint</button>' : "") + (p.sol ? '<button class="link-btn" data-act="sol" data-pid="' + p.pid + '">Show solution</button>' : "") + "</div>" +
         '<div class="reveal" data-r="hint" hidden>' + (p.hint || "") + '</div><div class="reveal" data-r="sol" hidden>' + (p.sol ? steps(p.sol) : "") + "<div>Answer: " + ansHTML(p) + "</div></div>";
-      h += scratchHTML(p);
     }
-    return h + "</div>";
+    return h + scratchHTML(p) + "</div>"; // quiz items carry p.quiz, which leaves out "Ask Claude" (no hints in a quiz)
   }
   var PRAISE = ["Correct.", "Nice.", "Right.", "That’s it.", "Correct, keep going."];
   function fbHTML(stt, msg, p, shape) {
@@ -3830,13 +3829,18 @@ CONFIG.web = true;
     h += '<div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">' + run.items.map(function (p, k) {
       var r = run.res[k];
       return '<div class="prob ' + r.status + '"><div class="prob-q"><span class="qn">' + (k + 1) + "</span><div>" + prompt(p) + "</div></div>" +
-        '<div class="mcmp"><span class="l">You</span><span>' + givenHTML(p, run.vals[k]) + '</span><span class="l">Answer</span><span>' + ansHTML(p) + "</span></div>" + fbHTML(r.status, r.msg, { n: k }) + "</div>";
+        '<div class="mcmp"><span class="l">You</span><span>' + givenHTML(p, run.vals[k]) + '</span><span class="l">Answer</span><span>' + ansHTML(p) + "</span></div>" + fbHTML(r.status, r.msg, { n: k }) + (r.status === "correct" ? "" : solHTML(p)) + "</div>";
     }).join("") + "</div>";
     return h;
   }
   function safePretty(v) { try { return '<span class="m">' + E.pretty(E.parse(v)) + "</span>"; } catch (e) { return '<span class="mono">' + esc(v) + "</span>"; } }
   function quizStart(sid) {
     var s = BY[sid], items = shuffle(s.quiz.pool.slice()).slice(0, s.quiz.count);
+    items.forEach(function (p) { // a new attempt starts with clean pads; old work could give the answer away
+      var old = SCR[p.pid] || decodeScratch(scratchLocal(p.pid));
+      SCR[p.pid] = { h: 420, strokes: [] };
+      if (old && old.strokes.length) saveScratch(p.pid);
+    });
     QZ[sid] = { items: items, end: Date.now() + s.quiz.minutes * 60000, done: false, vals: [] };
     rerenderTab();
   }
@@ -3847,7 +3851,9 @@ CONFIG.web = true;
     run.res = run.items.map(function (p, k) { var v = run.vals[k]; if (!String(v).trim()) return { status: "wrong", msg: "Left blank." }; var r = grade(p, v); if (r.status === "error") r = { status: "wrong", msg: "Couldn’t read: " + esc(r.msg) }; return r; });
     run.score = run.res.filter(function (r) { return r.status === "correct"; }).length;
     run.done = true;
-    run.items.forEach(function (p, k) { if (run.res[k].status !== "correct") logMistake(p, run.vals[k] || "(blank)"); else resolveMistakes(p.pid); });
+    var learned = 0;
+    run.items.forEach(function (p, k) { if (run.res[k].status !== "correct") logMistake(p, run.vals[k] || "(blank)"); else { resolveMistakes(p.pid); learned += learnFrom(p.pid, run.vals[k], true); } });
+    if (learned) saveLearned();
     var rec = S.quiz[sid] || { best: 0, total: run.items.length, hist: [] };
     rec.best = Math.max(rec.best, run.score); rec.total = run.items.length; rec.hist.push({ when: today(), score: run.score });
     S.quiz[sid] = rec; mark(); save();
@@ -3889,9 +3895,12 @@ CONFIG.web = true;
         '<span class="row" style="gap:10px"><select data-act="reason" data-id="' + m.id + '" aria-label="Why you missed it"><option value="">Why?</option>' + ["Concept gap", "Algebra slip", "Careless", "Didn’t know where to start"].map(function (o) { return "<option" + (m.reason === o ? " selected" : "") + ">" + o + "</option>"; }).join("") + "</select>" +
         '<label class="row" style="gap:6px;font-size:13px"><input type="checkbox" class="ck" data-act="resolve" data-id="' + m.id + '"' + (m.resolved ? " checked" : "") + "> Got it now</label>" +
         (p.quiz ? "" : '<a class="btn small" href="' + link + '" data-act="retry" data-pid="' + p.pid + '">Redo</a>') + "</span></div>" +
-        '<div class="mq">' + prompt(p) + '</div><div class="mcmp"><span class="l">You wrote</span><span>' + givenHTML(p, m.given) + '</span><span class="l">Answer</span><span>' + ansHTML(p) + "</span></div></div>";
+        '<div class="mq">' + prompt(p) + '</div><div class="mcmp"><span class="l">You wrote</span><span>' + givenHTML(p, m.given) + '</span><span class="l">Answer</span><span>' + ansHTML(p) + "</span></div>" + solHTML(p) + "</div>";
     }).join("") + "</div>";
     return h;
+  }
+  function solHTML(p) { // worked solution behind a button, for the mistake log and quiz results
+    return p.sol ? '<div class="prob-tools"><button class="link-btn" data-act="msol">Show solution</button></div><div class="reveal" data-r="msol" hidden>' + steps(p.sol) + "<div>Answer: " + ansHTML(p) + "</div></div>" : "";
   }
   function tally() {
     var c = {}; S.mistakes.forEach(function (m) { if (m.reason) c[m.reason] = (c[m.reason] || 0) + 1; });
@@ -3975,6 +3984,7 @@ CONFIG.web = true;
       case "gh-sync": GH.state = "saving"; fileChip(); ghSync(true).then(function () { toast(GH.state === "saved" ? "Synced." : GH.err || "Couldn\u2019t sync right now."); }); break;
       case "choose": doCheck(t.dataset.pid, t.dataset.i); break;
       case "qchoose": $$(".choice", t.closest(".prob")).forEach(function (b) { b.classList.toggle("sel", b === t); }); break;
+      case "msol": var rv = $('[data-r="msol"]', t.parentNode.parentNode); rv.hidden = !rv.hidden; t.textContent = rv.hidden ? "Show solution" : "Hide solution"; break;
       case "hint": case "sol":
         var box = t.closest(".prob"), r = $('[data-r="' + a + '"]', box); r.hidden = !r.hidden;
         if (a === "sol" && !r.hidden) { var an = S.ans[t.dataset.pid] || {}; an.revealed = true; S.ans[t.dataset.pid] = an; save(); }
