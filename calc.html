@@ -3369,6 +3369,7 @@ CONFIG.web = true;
   }
   var READ_LABEL = "Read my answer";
   function scratchHTML(p) {
+    if (CONFIG.noPad) return ""; // history app: no math to work out by hand
     var open = SCR_OPEN[p.pid] !== undefined ? SCR_OPEN[p.pid] : COARSE;
     return '<div class="scratch-wrap" data-pid="' + p.pid + '"><button class="link-btn scratch-toggle" data-act="scratch-toggle" data-pid="' + p.pid + '">' + (open ? "Hide scratch pad" : "✎ Work it out by hand") + "</button>" +
       (open ? '<div class="scratch" data-pid="' + p.pid + '"><div class="scr-tools">' +
