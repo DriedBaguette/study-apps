@@ -3663,8 +3663,24 @@ CONFIG.web = true;
     return h;
   }
   function safePretty(v) { try { return '<span class="m">' + E.pretty(E.parse(v)) + "</span>"; } catch (e) { return '<span class="mono">' + esc(v) + "</span>"; } }
+  // One problem per type (p.g, set in quizbank.js), preferring ones this device hasn't shown yet,
+  // so retakes rarely repeat. A pool without types is drawn at random, still preferring unseen problems.
+  function pickQuiz(s) {
+    var pool = s.quiz.pool, n = s.quiz.count, key = KEY + ":qseen:" + s.id, seen = {}, groups = {}, names = [];
+    try { seen = JSON.parse(localStorage.getItem(key) || "{}") || {}; } catch (e) {}
+    pool.forEach(function (p) { var g = p.g || p.pid; if (!groups[g]) { groups[g] = []; names.push(g); } groups[g].push(p); });
+    var chosen = shuffle(names.slice()).slice(0, n).sort(function (a, b) { return names.indexOf(a) - names.indexOf(b); });
+    var items = chosen.map(function (g) {
+      var all = groups[g], fresh = all.filter(function (p) { return !seen[p.pid]; });
+      if (!fresh.length) { all.forEach(function (p) { delete seen[p.pid]; }); fresh = all; } // all of this type seen: start over
+      var p = fresh[Math.floor(Math.random() * fresh.length)]; seen[p.pid] = 1; return p;
+    });
+    if (items.length < n) items = items.concat(shuffle(pool.filter(function (p) { return items.indexOf(p) < 0; })).slice(0, n - items.length));
+    try { localStorage.setItem(key, JSON.stringify(seen)); } catch (e) {}
+    return items;
+  }
   function quizStart(sid) {
-    var s = BY[sid], items = shuffle(s.quiz.pool.slice()).slice(0, s.quiz.count);
+    var s = BY[sid], items = pickQuiz(s);
     items.forEach(function (p) { // a new attempt starts with clean pads; old work could give the answer away
       var old = SCR[p.pid] || decodeScratch(scratchLocal(p.pid));
       SCR[p.pid] = { h: 420, strokes: [] };

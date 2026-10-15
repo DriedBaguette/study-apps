@@ -1956,6 +1956,445 @@ SESSIONS.unshift({
   }
 })();
 
+/* ================= Quiz bank =================
+   More quiz problems, about ten of each type, so a retaken quiz rarely repeats a problem.
+   Every pool item gets g (its type). quizStart in ui.js draws one item per type and skips items
+   this device showed recently. Items are only appended to the pools, so saved quiz mistakes
+   (keyed by position, like B8-q3) keep pointing at the right problem.
+   Added Oct 15, 2026 at the user's request. Problems test the same skills as the homework
+   but never copy it: the exam won't reuse homework problems. tests/check-answers.js verifies them. */
+(function () {
+  /* ---- exact fractions ---- */
+  function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { var t = a % b; a = b; b = t; } return a || 1; }
+  function R(p, q) { q = q === undefined ? 1 : q; if (q < 0) { p = -p; q = -q; } var g = gcd(p, q); return { p: p / g, q: q / g }; }
+  function add(a, b) { return R(a.p * b.q + b.p * a.q, a.q * b.q); }
+  function sub(a, b) { return R(a.p * b.q - b.p * a.q, a.q * b.q); }
+  function mul(a, b) { return R(a.p * b.p, a.q * b.q); }
+  function div(a, b) { return R(a.p * b.q, a.q * b.p); }
+  function rs(r) { return r.q === 1 ? String(r.p) : r.p + "/" + r.q; }
+  function rp(r) { return r.p < 0 ? "(" + rs(r) + ")" : rs(r); }          // in parentheses when negative
+  function rat(v) { for (var q = 1; q <= 120; q++) { var p = Math.round(v * q); if (Math.abs(p / q - v) < 1e-9) return R(p, q); } throw new Error("not a fraction: " + v); }
+  function ev(s, x) { return MathEngine.ev(MathEngine.parse(String(s).replace(/\|([^|]+)\|/g, "abs($1)")), x, 0); }
+  function fmt(v) { var r = Math.round(v * 1e6) / 1e6; return String(Math.abs(r) < 1e-12 ? 0 : r); }
+
+  /* ---- powers of x: { c: coefficient, e: exponent }, both fractions ---- */
+  function T(c, e) { return { c: c.length ? R(c[0], c[1]) : R(c), e: e.length ? R(e[0], e[1]) : R(e) }; }
+  function xs(e) { if (e.p === 0) return ""; if (e.q === 1 && e.p === 1) return "x"; if (e.q === 1 && e.p > 0) return "x^" + e.p; return "x^(" + rs(e) + ")"; }
+  function cs(c, body) {
+    var f = rs(c);
+    if (!body) return f;
+    if (f === "1") return body;
+    if (f === "-1") return "-" + body;
+    if (c.q !== 1) return (c.p < 0 ? "-(" + rs(R(-c.p, c.q)) + ")" : "(" + f + ")") + body;
+    return f + body;
+  }
+  function over(c, den) { return (c < 0 ? "-" : "") + Math.abs(c) + "/" + den; }
+  function sum(parts) { var s = ""; parts.forEach(function (t, i) { t = String(t); if (!i) s = t; else if (t.charAt(0) === "-") s += " - " + t.slice(1); else s += " + " + t; }); return s || "0"; }
+  function isT(p) { return p && p.e !== undefined; }
+  function dT(t) { return { c: mul(t.c, t.e), e: sub(t.e, R(1)) }; }
+  function iT(t) { var n = add(t.e, R(1)); return { c: div(t.c, n), e: n }; }
+  function ts(t) { return t.c.p === 0 ? "0" : cs(t.c, xs(t.e)); }
+  function same(a, b) { return String(a).replace(/\s+/g, "") === String(b).replace(/\s+/g, ""); }
+
+  /* ---- pieces: a power of x, or [coefficient, function name] ---- */
+  var DF = { "e^x": "e^x", "sin(x)": "cos(x)", "tan(x)": "sec(x)^2", "sec(x)": "sec(x)tan(x)" };
+  var IF = { "e^x": "e^x", "cos(x)": "sin(x)", "sec(x)^2": "tan(x)", "sec(x)tan(x)": "sec(x)" };
+  function pq(p) { // how a piece is written in the problem
+    if (isT(p)) return ts(p);
+    if (p.exp) return cs(R(p.c), p.k === 1 ? "e^x" : p.k === -1 ? "e^(-x)" : "e^(" + p.k + "x)");
+    if (p.atan) return over(p.c, "(x^2 + 1)");
+    return p[1] === "1/x" ? over(p[0], "x") : cs(R(p[0]), p[1]);
+  }
+  function pd(p) { // its derivative
+    if (isT(p)) return ts(dT(p));
+    if (p[1] === "ln(x)") return over(p[0], "x");
+    if (p[1] === "cos(x)") return cs(R(-p[0]), "sin(x)");
+    return cs(R(p[0]), DF[p[1]]);
+  }
+  function pi(p) { // its antiderivative
+    if (isT(p)) return ts(iT(p));
+    if (p.exp) { var b = p.k === 1 ? "e^x" : p.k === -1 ? "e^(-x)" : "e^(" + p.k + "x)"; return cs(R(p.c, p.k), b); }
+    if (p.atan) return cs(R(p.c), "arctan(x)");
+    if (p[1] === "1/x") return cs(R(p[0]), "ln|x|");
+    if (p[1] === "sin(x)") return cs(R(-p[0]), "cos(x)");
+    return cs(R(p[0]), IF[p[1]]);
+  }
+  function nz(p) { return !isT(p) || p.c.p !== 0; }
+
+  /* ---- problem builders ---- */
+  function deriv(q, pieces) {
+    var ans = sum(pieces.map(pd).filter(function (s) { return s !== "0"; })), rw = sum(pieces.map(pq)), sol = [];
+    if (!same(rw, q)) sol.push("Rewrite as powers: " + M(rw));
+    sol.push("Term by term: " + pieces.map(function (p) { return M(pq(p)) + " → " + M(pd(p)); }).join(", "));
+    sol.push("= " + M(ans));
+    return { k: "d", q: q, type: "expr", ans: ans, sol: sol };
+  }
+  function anti(q, pieces) {
+    var F = sum(pieces.map(pi)), rw = sum(pieces.map(pq)), sol = [];
+    if (!same(rw, q)) sol.push("Rewrite as powers: " + M(rw));
+    sol.push("Term by term: " + pieces.map(function (p) { return M(pq(p)) + " → " + M(pi(p)); }).join(", "));
+    sol.push("Add C: " + M(F + " + C"));
+    return { k: "i", q: q, type: "antideriv", ans: F + " + C", sol: sol };
+  }
+  // f'(x) is given by pieces; f(at) = val. motion: "v" (velocity → position) or "a" (acceleration → velocity)
+  function ivp(pieces, at, val, motion) {
+    var q = sum(pieces.map(pq)), F = sum(pieces.map(pi)), Fa = rat(ev(F, +at)), C = sub(R(val), Fa);
+    var ans = C.p === 0 ? F : sum([F, rs(C)]);
+    var nm = motion === "v" ? "s" : motion === "a" ? "v" : "f";
+    var sol = [M(F + " + C", motion ? "t" : null),
+      nm + "(" + at + ") = " + val + ": " + rs(Fa) + " + C = " + val + ", so C = " + rs(C),
+      M(ans, motion ? "t" : null)];
+    if (!motion) return { k: "ivp", q: q, at: String(at), val: String(val), type: "expr", ivp: true, ans: ans, sol: sol };
+    var text = motion === "v"
+      ? "An object moves with velocity " + tq(VT, q) + " and " + mx("<i>s</i>(" + at + ") = " + val) + ". Find its position " + mx(ST) + "."
+      : "An object has acceleration " + tq(AT, q) + " and " + mx("<i>v</i>(" + at + ") = " + val) + ". Find its velocity " + mx(VT) + ".";
+    return { k: "txt", text: text, type: "expr", ivp: true, v: "t", ans: ans, chkIvp: [q, String(at), String(val)], sol: sol };
+  }
+  var MODE = { L: ["Left", "Left edges"], R: ["Right", "Right edges"], M: ["Midpoint", "Midpoints"] };
+  function riemann(f, a, b, n, mode, vel) {
+    var dx = (b - a) / n, xs_ = [], hs = [], t = 0;
+    for (var i = 0; i < n; i++) { var x = a + dx * (mode === "L" ? i : mode === "R" ? i + 1 : i + 0.5); xs_.push(fmt(x)); var h = ev(f, x); hs.push(fmt(h)); t += h; }
+    var ans = fmt(t * dx), nm = MODE[mode][0] + (mode === "M" ? " sum" : " Riemann sum");
+    var text = vel
+      ? "A cart moves with velocity " + tq(VT, f) + " m/s. Estimate the distance it travels from t = " + a + " to t = " + b + " with a " + nm.toLowerCase() + " and " + n + " rectangles."
+      : nm + " for " + M(f) + " on [" + a + ", " + b + "] with n = " + n + ".";
+    return { k: "txt", text: text, type: "number", ans: ans,
+      sol: ["Δx = (" + b + " − " + rp(R(a)) + ")/" + n + " = " + fmt(dx), MODE[mode][1] + ": " + xs_.join(", "), "Heights: " + hs.join(", "), "(" + hs.join(" + ").replace(/\+ -/g, "− ") + ") × " + fmt(dx) + " = " + ans] };
+  }
+  function sigma(n, a, b, c) { // sum from k = 1 to n of a k^2 + b k + c
+    var s1 = n * (n + 1) / 2, s2 = n * (n + 1) * (2 * n + 1) / 6, tot = a * s2 + b * s1 + c * n;
+    var q = sum([a ? cs(R(a), "x^2") : "", b ? cs(R(b), "x") : "", c ? String(c) : ""].filter(Boolean));
+    var sol = ["Split: " + sum([a ? cs(R(a), "Σk²") : "", b ? cs(R(b), "Σk") : "", c ? cs(R(c), "Σ1") : ""].filter(Boolean))];
+    var facts = [];
+    if (a) facts.push("Σk² = " + n + "·" + (n + 1) + "·" + (2 * n + 1) + "/6 = " + s2);
+    if (b) facts.push("Σk = " + n + "·" + (n + 1) + "/2 = " + s1);
+    if (c) facts.push("Σ1 = " + n);
+    sol.push(facts.join(", "));
+    sol.push(sum([a ? a + "(" + s2 + ")" : "", b ? b + "(" + s1 + ")" : "", c ? c + "(" + n + ")" : ""].filter(Boolean)) + " = " + tot);
+    return { k: "sum", from: "1", to: String(n), q: q, type: "number", ans: String(tot), sol: sol };
+  }
+  function polyAt(terms, x) { return terms.reduce(function (s, t) { return add(s, mul(t.c, rat(Math.pow(x, t.e.p / t.e.q)))); }, R(0)); }
+  function defint(terms, a, b) {
+    var q = sum(terms.map(ts)), F = terms.map(iT), Fs = sum(F.map(ts)), Fb = polyAt(F, b), Fa = polyAt(F, a), v = sub(Fb, Fa);
+    return { k: "di", a: String(a), b: String(b), q: q, type: "number", ans: rs(v),
+      sol: [DI(String(a), String(b), q) + " = " + M(Fs) + " from " + a + " to " + b, rp(Fb) + " − " + rp(Fa), "= " + rs(v)] };
+  }
+  function avg(terms, a, b) {
+    var q = sum(terms.map(ts)), F = terms.map(iT), I = sub(polyAt(F, b), polyAt(F, a)), v = div(I, R(b - a));
+    return { k: "txt", text: "Find the average value of " + M(q) + " on [" + a + ", " + b + "].", type: "number", ans: rs(v), chk: [[q, String(a), String(b), "1/" + (b - a)]],
+      sol: [DI(String(a), String(b), q) + " = " + M(sum(F.map(ts))) + " from " + a + " to " + b + " = " + rs(I), "Average: " + rs(I) + " ÷ (" + b + " − " + rp(R(a)) + ") = " + rs(v)] };
+  }
+  // velocity v(t) = polynomial in t; dist: total distance instead of displacement; turns: where v changes sign inside [0, T]
+  function motion(terms, T_, dist, turns) {
+    var q = sum(terms.map(ts)), F = terms.map(iT), Fs = sum(F.map(ts)), at = function (t) { return polyAt(F, t); };
+    var disp = sub(at(T_), at(0));
+    if (!dist) return { k: "txt", text: "An object moves with velocity " + tq(VT, q) + " m/s. Find its displacement from t = 0 to t = " + T_ + ".", type: "number", ans: rs(disp), chk: [[q, "0", String(T_)]],
+      sol: ["Displacement = " + DI("0", String(T_), q, "t"), "= " + M(Fs, "t") + " from 0 to " + T_, rp(at(T_)) + " − " + rp(at(0)) + " = " + rs(disp)] };
+    var cuts = [0].concat(turns || [], [T_]), tot = R(0), lines = ["v = 0 at t = " + (turns || []).join(" and ") + ". Split there."];
+    for (var i = 0; i < cuts.length - 1; i++) {
+      var piece = sub(at(cuts[i + 1]), at(cuts[i])), abs = R(Math.abs(piece.p), piece.q);
+      lines.push(DI(String(cuts[i]), String(cuts[i + 1]), q, "t") + " = " + rs(piece)); tot = add(tot, abs);
+    }
+    lines.push("Drop the minus signs and add: " + rs(tot));
+    return { k: "txt", text: "An object moves with velocity " + tq(VT, q) + " m/s. Find the total distance it travels from t = 0 to t = " + T_ + ".", type: "number", ans: rs(tot), chk: [["abs(" + q + ")", "0", String(T_)]], sol: lines };
+  }
+  function ftc1(a, b, q, ans, gp) {
+    var low = /x/.test(a), sol;
+    if (low && b !== "x" && !/x/.test(b)) sol = [(a === "x" ? "x is on the bottom" : M(a) + " is on the bottom") + ": flip the limits, which adds a minus sign." + (gp ? " Then multiply by the derivative of " + M(a) + ", " + M(gp) + "." : ""), M(ans)];
+    else if (b === "x") sol = ["The top limit is x, so put x in for t.", M(ans)];
+    else sol = ["Put " + M(b) + " in for t, then multiply by its derivative, " + M(gp) + ".", M(ans)];
+    return { k: "ftc", a: a, b: b, q: q, type: "expr", ans: ans, sol: sol };
+  }
+  function I(q, ans, sol) { return { k: "i", q: q, type: "antideriv", ans: ans, sol: sol }; }
+  function D(q, ans, sol) { return { k: "d", q: q, type: "expr", ans: ans, sol: sol }; }
+  function DIq(a, b, q, ans, sol) { return { k: "di", a: a, b: b, q: q, type: "number", ans: ans, sol: sol }; }
+  function N(text, ans, sol) { return { k: "txt", text: text, type: "number", ans: ans, sol: sol }; }
+  function chain(q, inner, innerD, ans) { return D(q, ans, ["Inside: " + M(inner) + ". Its derivative: " + M(innerD) + ".", "Derivative of the outside (inside left alone) × " + M(innerD), M(ans)]); }
+  function odd(a, b, q) { return DIq(a, b, q, "0", ["Plug in −x: the sign flips, so " + M(q) + " is odd.", "Over [" + MI(a) + ", " + MI(b) + "] the left half cancels the right half.", "= 0"]); }
+  function even(a, b, q, half, ans) { return DIq(a, b, q, ans, ["Plug in −x: nothing changes, so " + M(q) + " is even.", "2" + DI("0", b, q) + " = 2(" + half + ")", "= " + ans]); }
+
+  /* ---- the bank: type → new items ---- */
+  var BANK = {
+    A5: {
+      dpow: [
+        deriv("4x^3 - 5x^2 + 2x - 9", [T(4, 3), T(-5, 2), T(2, 1), T(-9, 0)]),
+        deriv("2x^6 + 3/x", [T(2, 6), T(3, -1)]),
+        deriv("6sqrt(x)", [T(6, [1, 2])]),
+        deriv("x^4/2 - 7x", [T([1, 2], 4), T(-7, 1)]),
+        deriv("5/x^3 + x^2", [T(5, -3), T(1, 2)]),
+        deriv("cbrt(x) - 4x", [T(1, [1, 3]), T(-4, 1)]),
+        deriv("8x^(5/4) + 3", [T(8, [5, 4]), T(3, 0)])],
+      dfun: [
+        deriv("4e^x - 3cos(x)", [[4, "e^x"], [-3, "cos(x)"]]),
+        deriv("2ln(x) + 5sin(x)", [[2, "ln(x)"], [5, "sin(x)"]]),
+        deriv("tan(x) + 2x^3", [[1, "tan(x)"], T(2, 3)]),
+        deriv("6sec(x) - e^x", [[6, "sec(x)"], [-1, "e^x"]]),
+        deriv("-2sin(x) + 7ln(x)", [[-2, "sin(x)"], [7, "ln(x)"]]),
+        deriv("3cos(x) + x^4", [[3, "cos(x)"], T(1, 4)]),
+        deriv("5e^x + 2tan(x)", [[5, "e^x"], [2, "tan(x)"]]),
+        deriv("-4ln(x) + sec(x)", [[-4, "ln(x)"], [1, "sec(x)"]])],
+      ipoly: [
+        anti("8x^3 + 6x^2 - 5", [T(8, 3), T(6, 2), T(-5, 0)]),
+        anti("12x^5 - 4x", [T(12, 5), T(-4, 1)]),
+        anti("x^2 - 3x + 7", [T(1, 2), T(-3, 1), T(7, 0)]),
+        anti("10x^4 + 9x^2", [T(10, 4), T(9, 2)]),
+        anti("-6x^2 + 2x + 1", [T(-6, 2), T(2, 1), T(1, 0)]),
+        anti("5x^4 - 8x^3 + 3", [T(5, 4), T(-8, 3), T(3, 0)]),
+        anti("3x^8 - x", [T(3, 8), T(-1, 1)]),
+        anti("15x^2 - 4x^3", [T(15, 2), T(-4, 3)]),
+        anti("7 - 2x", [T(7, 0), T(-2, 1)])],
+      iroot: [
+        anti("4/x^3", [T(4, -3)]),
+        anti("3sqrt(x)", [T(3, [1, 2])]),
+        anti("1/sqrt(x)", [T(1, [-1, 2])]),
+        anti("x sqrt(x)", [T(1, [3, 2])]),
+        anti("(x^3 - 4)/x^2", [T(1, 1), T(-4, -2)]),
+        anti("5cbrt(x^2)", [T(5, [2, 3])]),
+        anti("(2x^2 + 3)/sqrt(x)", [T(2, [3, 2]), T(3, [-1, 2])])],
+      ifun: [
+        anti("5/x - 2e^x", [[5, "1/x"], [-2, "e^x"]]),
+        anti("3cos(x) + 4sin(x)", [[3, "cos(x)"], [4, "sin(x)"]]),
+        anti("2sec(x)^2 + x^2", [[2, "sec(x)^2"], T(1, 2)]),
+        anti("-sin(x) + 6/x", [[-1, "sin(x)"], [6, "1/x"]]),
+        anti("4e^x + sec(x)tan(x)", [[4, "e^x"], [1, "sec(x)tan(x)"]]),
+        anti("7cos(x) - 3/x", [[7, "cos(x)"], [-3, "1/x"]]),
+        anti("sec(x)^2 - 5e^x", [[1, "sec(x)^2"], [-5, "e^x"]])],
+      ispecial: [
+        anti("3e^(3x)", [{ exp: 1, c: 3, k: 3 }]),
+        anti("8e^(2x)", [{ exp: 1, c: 8, k: 2 }]),
+        anti("5/(x^2 + 1)", [{ atan: 1, c: 5 }]),
+        anti("-2/(x^2 + 1)", [{ atan: 1, c: -2 }]),
+        anti("e^(5x) + 1/(x^2 + 1)", [{ exp: 1, c: 1, k: 5 }, { atan: 1, c: 1 }]),
+        anti("6e^(3x) + 2x", [{ exp: 1, c: 6, k: 3 }, T(2, 1)]),
+        anti("7/(x^2 + 1) + 3x^2", [{ atan: 1, c: 7 }, T(3, 2)]),
+        anti("10e^(5x) - 3/(x^2 + 1)", [{ exp: 1, c: 10, k: 5 }, { atan: 1, c: -3 }]),
+        anti("2e^(-x)", [{ exp: 1, c: 2, k: -1 }]),
+        anti("-4e^(2x) + 4/(x^2 + 1)", [{ exp: 1, c: -4, k: 2 }, { atan: 1, c: 4 }])],
+      ivp: [
+        ivp([T(6, 2), T(2, 0)], 1, 9),
+        ivp([T(4, 1), T(-3, 0)], 2, 7),
+        ivp([T(3, 2), T(-4, 1)], 0, 6),
+        ivp([T(12, 3)], 1, 1),
+        ivp([T(1, 2), T(1, 0)], 3, 10),
+        ivp([T(8, 3), T(-6, 2)], -1, 4),
+        ivp([T(5, 4), T(2, 1)], 1, 0),
+        ivp([T(1, [1, 2])], 4, 10),
+        ivp([T(-2, -2)], 1, 3)],
+      ivpf: [
+        ivp([[2, "cos(x)"]], 0, 5),
+        ivp([[3, "e^x"], T(2, 1)], 0, 7),
+        ivp([[4, "1/x"]], 1, 2),
+        ivp([[-1, "sin(x)"]], 0, 3),
+        ivp([[6, "sec(x)^2"]], 0, 1),
+        ivp([[4, "cos(x)"]], 0, 3, "v"),
+        ivp([[1, "e^x"], T(2, 1)], 0, 5, "v"),
+        ivp([T(6, 1), T(-2, 0)], 0, 4, "a"),
+        ivp([[2, "1/x"], T(3, 2)], 1, 4)]
+    },
+    B7: {
+      riemann: [
+        riemann("x^2 + 1", 0, 4, 4, "L"),
+        riemann("3x", 0, 6, 3, "R", true),
+        riemann("x^2", 0, 3, 3, "M"),
+        riemann("10 - x^2", 0, 3, 3, "L"),
+        riemann("2x + 3", 1, 5, 4, "R"),
+        riemann("12/x", 1, 4, 3, "R"),
+        riemann("x^3", 0, 2, 4, "R", true),
+        riemann("x^2 - 2x", 2, 6, 4, "M"),
+        riemann("5 - x", 0, 5, 5, "L")],
+      dipoly: [
+        defint([T(3, 2), T(-2, 1)], 1, 3),
+        defint([T(6, 1), T(-4, 0)], 0, 2),
+        defint([T(1, 3), T(1, 0)], 0, 2),
+        defint([T(5, 4)], -1, 1),
+        defint([T(4, 3), T(-6, 2)], 1, 2),
+        defint([T(2, 1), T(5, 0)], -2, 3),
+        defint([T(1, 2)], -3, 0),
+        defint([T(8, 3), T(-3, 0)], 0, 1)],
+      ftc1: [
+        ftc1("1", "x", "x^3 + 2x", "x^3 + 2x"),
+        ftc1("0", "x^2", "sin(x)", "2x sin(x^2)", "2x"),
+        ftc1("3", "x", "e^(x^2)", "e^(x^2)"),
+        ftc1("x", "2", "x^4 + 1", "-(x^4 + 1)"),
+        ftc1("1", "x^3", "ln(x)", "3x^2 ln(x^3)", "3x^2"),
+        ftc1("0", "2x", "cos(x)", "2cos(2x)", "2"),
+        ftc1("1", "sqrt(x)", "x^2", "sqrt(x)/2", "1/(2sqrt(x))"),
+        ftc1("x", "0", "sqrt(1 + x^2)", "-sqrt(1 + x^2)"),
+        ftc1("2", "x^2", "1/x", "2/x", "2x")],
+      chain: [
+        chain("(4x - 1)^5", "4x - 1", "4", "20(4x - 1)^4"),
+        chain("e^(3x^2)", "3x^2", "6x", "6x e^(3x^2)"),
+        chain("ln(5x + 2)", "5x + 2", "5", "5/(5x + 2)"),
+        chain("sin(x^3)", "x^3", "3x^2", "3x^2 cos(x^3)"),
+        chain("sqrt(x^2 + 9)", "x^2 + 9", "2x", "x/sqrt(x^2 + 9)"),
+        chain("cos(6x)", "6x", "6", "-6sin(6x)"),
+        chain("(x^2 + 3x)^4", "x^2 + 3x", "2x + 3", "4(x^2 + 3x)^3 (2x + 3)"),
+        chain("tan(2x)", "2x", "2", "2sec(2x)^2"),
+        chain("e^(sin(x))", "sin(x)", "cos(x)", "cos(x)e^(sin(x))")],
+      sym: [
+        odd("-2", "2", "x^3 - 4x"),
+        odd("-1", "1", "x^2 sin(x)"),
+        odd("-3", "3", "x^5 + x"),
+        odd("-pi", "pi", "x cos(x)"),
+        even("-2", "2", "x^4", "32/5", "64/5"),
+        even("-1", "1", "3x^2 + 1", "2", "4"),
+        odd("-5", "5", "x/(x^2 + 1)"),
+        even("-pi/2", "pi/2", "cos(x)", "1", "2"),
+        odd("-1", "1", "x^7 - 2x^3")],
+      usub: [
+        I("3x^2(x^3 + 5)^4", "(x^3 + 5)^5/5 + C", ["u = x³ + 5, du = 3x² dx", "∫ u⁴ du = u⁵/5", M("(x^3 + 5)^5/5 + C")]),
+        I("cos(7x)", "sin(7x)/7 + C", ["u = 7x, dx = du/7", "(1/7)∫ cos u du = (1/7) sin u", M("sin(7x)/7 + C")]),
+        I("x(x^2 - 1)^3", "(x^2 - 1)^4/8 + C", ["u = x² − 1, du = 2x dx, so x dx = du/2", "(1/2)∫ u³ du = u⁴/8", M("(x^2 - 1)^4/8 + C")]),
+        I("e^(-2x)", "-e^(-2x)/2 + C", ["u = −2x, dx = −du/2", "−(1/2)∫ eᵘ du = −eᵘ/2", M("-e^(-2x)/2 + C")]),
+        I("4x/(x^2 + 3)", "2ln(x^2 + 3) + C", ["u = x² + 3, du = 2x dx, so 4x dx = 2 du", "2∫ du/u = 2 ln|u|", M("2ln(x^2 + 3) + C") + " (x² + 3 is always positive)"]),
+        I("x^2 e^(x^3)", "e^(x^3)/3 + C", ["u = x³, du = 3x² dx, so x² dx = du/3", "(1/3)∫ eᵘ du = eᵘ/3", M("e^(x^3)/3 + C")]),
+        I("sec(3x)^2", "tan(3x)/3 + C", ["u = 3x, dx = du/3", "(1/3)∫ sec² u du = (1/3) tan u", M("tan(3x)/3 + C")]),
+        I("x sqrt(x^2 + 1)", "(x^2 + 1)^(3/2)/3 + C", ["u = x² + 1, x dx = du/2", "(1/2)∫ u^(1/2) du = (1/2)(2/3)u^(3/2)", M("(x^2 + 1)^(3/2)/3 + C")])],
+      usubdef: [
+        DIq("0", "1", "2x(x^2 + 1)^3", "15/4", ["u = x² + 1, du = 2x dx. New limits: 1 to 2.", DI("1", "2", "x^3", "u") + " = " + M("x^4/4", "u") + " from 1 to 2", "16/4 − 1/4 = 15/4"]),
+        DIq("0", "1", "e^(2x)", "(e^2 - 1)/2", ["u = 2x, dx = du/2. New limits: 0 to 2.", "(1/2)" + DI("0", "2", "e^x", "u"), "(1/2)(e² − 1)"]),
+        DIq("0", "4", "x/sqrt(x^2 + 9)", "2", ["u = x² + 9, x dx = du/2. New limits: 9 to 25.", "(1/2)" + DI("9", "25", "x^(-1/2)", "u") + " = √u from 9 to 25", "5 − 3 = 2"]),
+        DIq("0", "pi/6", "cos(3x)", "1/3", ["u = 3x, dx = du/3. New limits: 0 to π/2.", "(1/3)" + DI("0", "pi/2", "cos(x)", "u") + " = (1/3) sin u from 0 to π/2", "(1/3)(1 − 0) = 1/3"]),
+        DIq("1", "2", "x^2(x^3 - 1)^2", "343/9", ["u = x³ − 1, x² dx = du/3. New limits: 0 to 7.", "(1/3)" + DI("0", "7", "x^2", "u") + " = (1/3)·" + M("x^3/3", "u") + " from 0 to 7", "(1/3)(343/3) = 343/9"]),
+        DIq("0", "1", "1/(2x + 1)", "ln(3)/2", ["u = 2x + 1, dx = du/2. New limits: 1 to 3.", "(1/2)" + DI("1", "3", "1/x", "u") + " = (1/2) ln u from 1 to 3", "(1/2)(ln 3 − 0) = (ln 3)/2"]),
+        DIq("0", "pi/2", "sin(x)cos(x)^2", "1/3", ["u = cos x, du = −sin x dx. New limits: 1 to 0.", "−" + DI("1", "0", "x^2", "u") + " = " + DI("0", "1", "x^2", "u"), "= 1/3"]),
+        DIq("0", "1", "x e^(x^2)", "(e - 1)/2", ["u = x², x dx = du/2. New limits: 0 to 1.", "(1/2)" + DI("0", "1", "e^x", "u"), "(1/2)(e − 1)"]),
+        DIq("1", "e", "ln(x)^2/x", "1/3", ["u = ln x, du = dx/x. New limits: 0 to 1.", DI("0", "1", "x^2", "u") + " = " + M("x^3/3", "u") + " from 0 to 1", "= 1/3"])],
+      avg: [
+        avg([T(2, 1)], 0, 5),
+        avg([T(1, 2)], 1, 4),
+        avg([T(6, 2)], 0, 2),
+        avg([T(4, 3)], 1, 3),
+        avg([T(1, 2), T(2, 0)], 0, 3),
+        avg([T(3, 2), T(-2, 1)], 0, 4),
+        avg([T(1, 3)], -1, 2),
+        avg([T(10, 0), T(-2, 1)], 0, 5),
+        avg([T(12, 1)], 1, 3)]
+    },
+    B8: {
+      anti: [
+        anti("5x^4 - 2x + 7", [T(5, 4), T(-2, 1), T(7, 0)]),
+        anti("(x^4 - 3x)/x", [T(1, 3), T(-3, 0)]),
+        anti("4sqrt(x) - 3/x^2", [T(4, [1, 2]), T(-3, -2)]),
+        anti("2sec(x)^2 - 4sin(x)", [[2, "sec(x)^2"], [-4, "sin(x)"]]),
+        anti("9/x + cos(x)", [[9, "1/x"], [1, "cos(x)"]]),
+        anti("12e^(4x) + 2/(x^2 + 1)", [{ exp: 1, c: 12, k: 4 }, { atan: 1, c: 2 }])],
+      ivp: [
+        ivp([T(9, 2), T(-4, 1)], 1, 2),
+        ivp([T(2, 1), T(5, 0)], 2, 0),
+        ivp([T(-3, 2)], 2, 1),
+        ivp([T(4, 3), T(1, 0)], 0, -2),
+        ivp([[5, "cos(x)"]], 0, -1),
+        ivp([[2, "e^x"]], 0, 6),
+        ivp([[3, "1/x"], T(2, 1)], 1, 4),
+        ivp([[1, "sin(x)"]], 0, 0, "v"),
+        ivp([T(-32, 0)], 0, 64, "a")],
+      sums: [
+        riemann("x^2", 1, 3, 4, "L"),
+        riemann("4 - x", 0, 4, 4, "R"),
+        riemann("x^2 + x", 0, 4, 2, "M"),
+        riemann("x^3", 1, 3, 2, "L"),
+        sigma(8, 0, 2, 3),
+        sigma(5, 1, 0, 0),
+        sigma(10, 0, 4, -1),
+        sigma(4, 1, 2, 0)],
+      props: [
+        N("If " + DIH("2", "5", FX) + " = 9 and " + DIH("2", "5", GX) + " = 4, find " + DIH("2", "5", "(" + FX + " − 2" + GX + " + 1)") + ".", "4", ["9 − 2(4) + 1 × (5 − 2)", "= 9 − 8 + 3 = 4"]),
+        N("If " + DIH("0", "3", FX) + " = 4 and " + DIH("0", "7", FX) + " = 10, find " + DIH("3", "7", FX) + ".", "6", [DIH("0", "7", FX) + " = " + DIH("0", "3", FX) + " + " + DIH("3", "7", FX), "10 = 4 + ?, so the answer is 6"]),
+        N("If " + DIH("1", "4", FX) + " = −2, find " + DIH("4", "1", "3" + FX) + ".", "6", ["Flipping the limits flips the sign: " + DIH("4", "1", FX) + " = 2", "3 × 2 = 6"]),
+        N("f is even and " + DIH("0", "6", FX) + " = 8. Find " + DIH("-6", "6", FX) + ".", "16", ["Even: the left half equals the right half.", "2 × 8 = 16"]),
+        N("Suppose −1 ≤ " + GX + " ≤ 4 for every x in [2, 7]. What is the smallest possible value of " + DIH("2", "7", GX) + "?", "-5", ["The smallest g can be is −1 the whole way.", "−1 × (7 − 2) = −5"]),
+        N("The average value of f on [0, 8] is 3. Find " + DIH("0", "8", "(" + FX + " + 1)") + ".", "32", [DIH("0", "8", FX) + " = 3 × 8 = 24", "24 + 1 × 8 = 32"]),
+        N("If " + DIH("a", "b", "2<i>x</i>") + " = 16 and " + DIH("a", "b", "5") + " = 10, find " + DIH("a", "b", "(3<i>x</i> − 1)") + ".", "22", [DIH("a", "b", "<i>x</i>") + " = 16/2 = 8, and 5(b − a) = 10, so b − a = 2", "3(8) − 1 × 2 = 22"])],
+      geom: [
+        DIq("-4", "4", "sqrt(16 - x^2)", "8pi", ["The top half of a circle of radius 4.", "(1/2)π(4²) = 8π"]),
+        DIq("0", "2", "sqrt(4 - x^2)", "pi", ["A quarter of a circle of radius 2.", "(1/4)π(2²) = π"]),
+        DIq("-4", "2", "abs(x)", "10", ["Two triangles above the axis: −4 to 0 and 0 to 2.", "½·4·4 + ½·2·2 = 8 + 2 = 10"]),
+        DIq("2", "9", "5", "35", ["A rectangle: height 5, width 9 − 2 = 7.", "5 × 7 = 35"]),
+        DIq("0", "5", "2x", "25", ["A triangle: base 5, height 2(5) = 10.", "½·5·10 = 25"]),
+        DIq("0", "3", "6 - 2x", "9", ["A triangle: base 3 (the line hits 0 at x = 3), height 6.", "½·3·6 = 9"]),
+        DIq("0", "6", "3 - x", "0", ["Triangle above the axis from 0 to 3: ½·3·3 = 4.5", "Triangle below from 3 to 6: also 4.5, counted as negative", "4.5 − 4.5 = 0"]),
+        DIq("0", "5", "abs(x - 2)", "13/2", ["A V with its point at x = 2: two triangles above the axis.", "½·2·2 + ½·3·3 = 2 + 4.5 = 6.5"]),
+        DIq("-3", "3", "-sqrt(9 - x^2)", "-9pi/2", ["The bottom half of a circle of radius 3, below the axis.", "−(1/2)π(3²) = −9π/2"])],
+      ftc2: [
+        DIq("0", "pi/4", "sec(x)^2", "1", [M("tan(x)") + " from 0 to π/4", "tan(π/4) − tan 0 = 1 − 0 = 1"]),
+        DIq("0", "ln(3)", "e^x", "2", [M("e^x") + " from 0 to ln 3", "e^(ln 3) − e⁰ = 3 − 1 = 2"]),
+        DIq("1", "e^2", "1/x", "2", [M("ln|x|") + " from 1 to e²", "ln e² − ln 1 = 2 − 0 = 2"]),
+        DIq("0", "1", "4/(1 + x^2)", "pi", ["4 arctan x from 0 to 1", "4(π/4 − 0) = π"]),
+        DIq("0", "pi/2", "sin(x)", "1", [M("-cos(x)") + " from 0 to π/2", "−cos(π/2) + cos 0 = 0 + 1 = 1"]),
+        DIq("1", "9", "6/sqrt(x)", "24", [M("6x^(-1/2)") + " → " + M("12x^(1/2)"), "12(3) − 12(1) = 24"]),
+        DIq("1", "5", "x^(-2)", "4/5", [M("-x^(-1)") + " from 1 to 5", "−1/5 − (−1) = 4/5"])],
+      ftc1: [
+        ftc1("0", "x", "sqrt(x^4 + 1)", "sqrt(x^4 + 1)"),
+        ftc1("1", "x^2", "cos(x)", "2x cos(x^2)", "2x"),
+        ftc1("x", "3", "e^(2x)", "-e^(2x)"),
+        ftc1("0", "e^x", "x^2", "e^(3x)", "e^x"),
+        ftc1("2", "x^3", "1/(1 + x)", "3x^2/(1 + x^3)", "3x^2"),
+        ftc1("x^2", "4", "sin(x)", "-2x sin(x^2)", "2x"),
+        ftc1("1", "4x", "ln(x)", "4ln(4x)", "4")],
+      avg: [
+        avg([T(3, 2)], 0, 2),
+        avg([T(2, 1), T(1, 0)], 1, 5),
+        avg([T(1, 2), T(-1, 0)], 0, 3),
+        avg([T(8, 3)], 0, 1),
+        avg([T(4, 1)], 2, 6),
+        avg([T(1, 2), T(1, 1)], 0, 6),
+        avg([T(6, 0), T(-1, 1)], 0, 6),
+        avg([T(5, 4)], 0, 2),
+        avg([T(1, 3), T(2, 0)], 0, 2)],
+      motion: [
+        motion([T(1, 2), T(-4, 1)], 6, true, [4]),
+        motion([T(2, 1), T(-6, 0)], 5),
+        motion([T(8, 0), T(-2, 1)], 6, true, [4]),
+        motion([T(1, 2), T(-1, 0)], 3),
+        motion([T(1, 2), T(-9, 0)], 5, true, [3]),
+        motion([T(3, 2), T(-12, 1)], 5),
+        motion([T(4, 0), T(-1, 1)], 6),
+        motion([T(5, 0), T(-1, 1)], 8, true, [5])],
+      sym: [
+        odd("-4", "4", "x^3 + 5x"),
+        even("-3", "3", "x^2", "9", "18"),
+        odd("-2", "2", "sin(x)cos(x)"),
+        even("-1", "1", "x^4 - x^2", "1/5 − 1/3", "-4/15"),
+        odd("-1", "1", "x e^(x^2)"),
+        DIq("-2", "2", "2 + x^3", "8", ["Split: " + DI("-2", "2", "2") + " + " + DI("-2", "2", "x^3"), "x³ is odd, so its part is 0. The 2 is a rectangle: 2 × 4 = 8.", "= 8"]),
+        DIq("-pi", "pi", "cos(x)", "0", ["cos x is even, so this is 2" + DI("0", "pi", "cos(x)"), "2(sin π − sin 0) = 2(0) = 0"]),
+        odd("-1", "1", "x^5"),
+        even("-2", "2", "6x^2", "16", "32")],
+      usub: [
+        I("(2x + 1)^5", "(2x + 1)^6/12 + C", ["u = 2x + 1, dx = du/2", "(1/2)∫ u⁵ du = u⁶/12", M("(2x + 1)^6/12 + C")]),
+        I("x^3 cos(x^4)", "sin(x^4)/4 + C", ["u = x⁴, x³ dx = du/4", "(1/4)∫ cos u du = (1/4) sin u", M("sin(x^4)/4 + C")]),
+        I("sec(x)^2/(tan(x) + 2)", "ln|tan(x) + 2| + C", ["u = tan x + 2, du = sec² x dx", "∫ du/u = ln|u|", M("ln|tan(x) + 2| + C")]),
+        I("6x^2/(x^3 + 1)^2", "-2/(x^3 + 1) + C", ["u = x³ + 1, 6x² dx = 2 du", "2∫ u^(−2) du = −2u^(−1)", M("-2/(x^3 + 1) + C")]),
+        I("sin(x)/cos(x)^3", "1/(2cos(x)^2) + C", ["u = cos x, du = −sin x dx", "−∫ u^(−3) du = u^(−2)/2", M("1/(2cos(x)^2) + C")]),
+        I("tan(x)", "-ln|cos(x)| + C", ["Write tan x as sin x / cos x. Let u = cos x, du = −sin x dx.", "−∫ du/u = −ln|u|", M("-ln|cos(x)| + C")])],
+      usubdef: [
+        DIq("0", "2", "3x^2 sqrt(x^3 + 1)", "52/3", ["u = x³ + 1, du = 3x² dx. New limits: 1 to 9.", DI("1", "9", "sqrt(x)", "u") + " = (2/3)u^(3/2) from 1 to 9", "(2/3)(27 − 1) = 52/3"]),
+        DIq("0", "pi/2", "sin(2x)", "1", ["u = 2x, dx = du/2. New limits: 0 to π.", "(1/2)" + DI("0", "pi", "sin(x)", "u") + " = (1/2)(−cos u) from 0 to π", "(1/2)(1 + 1) = 1"]),
+        DIq("0", "2", "x/(x^2 + 1)", "ln(5)/2", ["u = x² + 1, x dx = du/2. New limits: 1 to 5.", "(1/2)" + DI("1", "5", "1/x", "u") + " = (1/2) ln u from 1 to 5", "(ln 5)/2"]),
+        DIq("0", "2", "e^(x/2)", "2e - 2", ["u = x/2, dx = 2 du. New limits: 0 to 1.", "2" + DI("0", "1", "e^x", "u"), "2(e − 1) = 2e − 2"]),
+        DIq("0", "1", "(2x - 1)^4", "1/5", ["u = 2x − 1, dx = du/2. New limits: −1 to 1.", "(1/2)" + DI("-1", "1", "x^4", "u") + " = (1/2)·" + M("x^5/5", "u") + " from −1 to 1", "(1/2)(2/5) = 1/5"]),
+        DIq("0", "1", "x^2/(x^3 + 1)", "ln(2)/3", ["u = x³ + 1, x² dx = du/3. New limits: 1 to 2.", "(1/3)" + DI("1", "2", "1/x", "u"), "(ln 2)/3"]),
+        DIq("0", "pi/2", "cos(x) e^(sin(x))", "e - 1", ["u = sin x, du = cos x dx. New limits: 0 to 1.", DI("0", "1", "e^x", "u"), "e − 1"]),
+        DIq("e", "e^2", "1/(x ln(x))", "ln(2)", ["u = ln x, du = dx/x. New limits: 1 to 2.", DI("1", "2", "1/x", "u") + " = ln u from 1 to 2", "ln 2"])]
+    }
+  };
+
+  // Types of the problems already in the pools, by position (these keep their places).
+  var OLD = {
+    A5: ["dpow", "dpow", "dfun", "dfun", "dpow", "ipoly", "ifun", "ifun", "iroot", "iroot", "iroot", "ifun", "ivp", "ivpf"],
+    B7: ["riemann", "dipoly", "dipoly", "ftc1", "chain", "sym", "usub", "usub", "usubdef", "avg"],
+    B8: ["anti", "anti", "anti", "anti", "ivp", "sums", "sums", "props", "geom", "ftc2", "ftc2", "ftc1", "ftc1", "avg", "motion", "motion", "sym", "usub", "usub", "usub", "usubdef", "usubdef", "ftc1", "ftc2", "props", "props", "usub"]
+  };
+  SESSIONS.forEach(function (s) {
+    if (!s.quiz || !BANK[s.id]) return;
+    var pool = s.quiz.pool, old = OLD[s.id];
+    if (old.length !== pool.length) throw new Error("quizbank: " + s.id + " pool has " + pool.length + " items, expected " + old.length);
+    pool.forEach(function (p, i) { p.g = old[i]; });
+    Object.keys(BANK[s.id]).forEach(function (g) { BANK[s.id][g].forEach(function (p) { p.g = g; pool.push(p); }); });
+  });
+})();
+
 /* ===== Handwriting reader (web build only): the last line written on a scratch pad -> a typed answer =====
    Runs in the browser, so nothing the user writes leaves the device.
    Model: Pix2Text MFR 1.5 (breezedeus/pix2text-mfr-1.5, MIT), fetched once from Hugging Face and kept in the browser.
@@ -3955,8 +4394,24 @@ CONFIG.web = true;
     return h;
   }
   function safePretty(v) { try { return '<span class="m">' + E.pretty(E.parse(v)) + "</span>"; } catch (e) { return '<span class="mono">' + esc(v) + "</span>"; } }
+  // One problem per type (p.g, set in quizbank.js), preferring ones this device hasn't shown yet,
+  // so retakes rarely repeat. A pool without types is drawn at random, still preferring unseen problems.
+  function pickQuiz(s) {
+    var pool = s.quiz.pool, n = s.quiz.count, key = KEY + ":qseen:" + s.id, seen = {}, groups = {}, names = [];
+    try { seen = JSON.parse(localStorage.getItem(key) || "{}") || {}; } catch (e) {}
+    pool.forEach(function (p) { var g = p.g || p.pid; if (!groups[g]) { groups[g] = []; names.push(g); } groups[g].push(p); });
+    var chosen = shuffle(names.slice()).slice(0, n).sort(function (a, b) { return names.indexOf(a) - names.indexOf(b); });
+    var items = chosen.map(function (g) {
+      var all = groups[g], fresh = all.filter(function (p) { return !seen[p.pid]; });
+      if (!fresh.length) { all.forEach(function (p) { delete seen[p.pid]; }); fresh = all; } // all of this type seen: start over
+      var p = fresh[Math.floor(Math.random() * fresh.length)]; seen[p.pid] = 1; return p;
+    });
+    if (items.length < n) items = items.concat(shuffle(pool.filter(function (p) { return items.indexOf(p) < 0; })).slice(0, n - items.length));
+    try { localStorage.setItem(key, JSON.stringify(seen)); } catch (e) {}
+    return items;
+  }
   function quizStart(sid) {
-    var s = BY[sid], items = shuffle(s.quiz.pool.slice()).slice(0, s.quiz.count);
+    var s = BY[sid], items = pickQuiz(s);
     items.forEach(function (p) { // a new attempt starts with clean pads; old work could give the answer away
       var old = SCR[p.pid] || decodeScratch(scratchLocal(p.pid));
       SCR[p.pid] = { h: 420, strokes: [] };
