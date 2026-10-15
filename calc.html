@@ -814,6 +814,7 @@ function DIH(a, b, h, v) {
          seg:    [[xa, ya, xb, yb, dashed]],
          dots:   [[x, y]],   xt: [..], yt: [..],       labeled ticks
          lab:    [[x, y, "text", "start|middle|end"]],
+         poly:   [[[x, y], [x, y], ...]],              a graph made of straight pieces; grid: true draws faint lines at the ticks
          axes: false, w, h, cap: "caption", alt: "description for screen readers" }) */
 function fig(o) {
   var W = o.w || 280, H = o.h || 190, pad = 16, x0 = o.x[0], x1 = o.x[1], y0 = o.y[0], y1 = o.y[1], s = "";
@@ -851,6 +852,8 @@ function fig(o) {
     (o.xt || []).forEach(function (t) { s += '<line x1="' + X(t) + '" y1="' + (Y(0) - 3) + '" x2="' + X(t) + '" y2="' + (Y(0) + 3) + '" style="' + ax + '"/>' + text(X(t), Y(0) + 15, String(t).replace("-", "−"), "middle"); });
     (o.yt || []).forEach(function (t) { s += '<line x1="' + (X(0) - 3) + '" y1="' + Y(t) + '" x2="' + (X(0) + 3) + '" y2="' + Y(t) + '" style="' + ax + '"/>' + text(X(0) - 6, Y(t) + 4, String(t).replace("-", "−"), "end"); });
   }
+  if (o.grid) { var gs = "stroke:var(--ink-faint);stroke-width:.6;stroke-dasharray:2 3"; (o.xt || []).forEach(function (t) { s += line(t, y0, t, y1, gs); }); (o.yt || []).forEach(function (t) { s += line(x0, t, x1, t, gs); }); }
+  (o.poly || []).forEach(function (q) { s += '<polyline points="' + q.map(function (pt) { return X(pt[0]) + "," + Y(pt[1]); }).join(" ") + '" style="fill:none;stroke:var(--ink);stroke-width:2;stroke-linejoin:round"/>'; });
   (o.seg || []).forEach(function (g) { s += line(g[0], g[1], g[2], g[3], "stroke:var(--ink-soft);stroke-width:1.2" + (g[4] ? ";stroke-dasharray:4 3" : "")); });
   (o.curves || []).forEach(function (c) { s += '<path d="' + path(c) + '" style="fill:none;stroke:var(--' + (c.alt ? "break" : "ink") + ');stroke-width:2;stroke-linecap:round"/>'; });
   (o.dots || []).forEach(function (d) { s += '<circle cx="' + X(d[0]) + '" cy="' + Y(d[1]) + '" r="3.2" style="fill:var(--accent)"/>'; });
@@ -916,6 +919,14 @@ var EXAMS = [
   { id: "XF", title: "Final exam", covers: "everything", date: "2026-12-17", time: "5:30 PM", pts: 100, phase: 4, prep: "F3", canvas: "11483548" }
 ];
 
+// Graphs and labels for the "read it off a graph" problems in Block B (added Oct 15 after reading HW 5.1-5.3)
+var FX = "<i>f</i>(<i>x</i>)", GX = "<i>g</i>(<i>x</i>)", HX = "<i>h</i>(<i>x</i>)";
+var GB1 = { x: [-0.5, 6.6], y: [-0.6, 4.7], poly: [[[0, 1], [1, 3], [2, 4], [3, 3], [4, 1], [5, 2], [6, 2]]], dots: [[0, 1], [1, 3], [2, 4], [3, 3], [4, 1], [5, 2], [6, 2]],
+  xt: [1, 2, 3, 4, 5, 6], yt: [1, 2, 3, 4], grid: true, lab: [[6.35, 0.2, "x"], [0.12, 4.45, "y"]],
+  alt: "A graph made of straight pieces through (0, 1), (1, 3), (2, 4), (3, 3), (4, 1), (5, 2) and (6, 2).", cap: "The graph of <i>f</i>. Each grid square is 1 by 1." };
+var GB4 = { x: [-0.5, 6.6], y: [-2.6, 2.7], poly: [[[0, 0], [2, 2], [3, 2], [4, 0], [6, -2]]], dots: [[0, 0], [2, 2], [3, 2], [4, 0], [6, -2]],
+  xt: [1, 2, 3, 4, 5, 6], yt: [-2, -1, 1, 2], grid: true, lab: [[6.35, 0.2, "t"]],
+  alt: "f rises in a straight line from (0, 0) to (2, 2), stays at 2 until t = 3, falls to (4, 0) and keeps falling to (6, −2).", cap: "The graph of <i>f</i>. Each grid square is 1 by 1." };
 var BLOCKS = {
   A: { title: "Unlock antiderivatives", goal: "An antiderivative is a derivative run backwards. You can’t do HW 4.9 without derivatives, so this block teaches just enough of them to reverse." },
   B: { title: "Unlock definite integrals & substitution", goal: "Covers HW 5.1–5.5. The chain rule is the hinge here: u-substitution is the chain rule in reverse, and most of Calc 2 leans on u-sub." },
@@ -977,7 +988,7 @@ var SESSIONS = [
   flash: "rev",
   parts: [
     { t: "What the ∫ sign means", h: "<p>" + II("f") .replace("<i>f</i>", "<i>f</i>(<i>x</i>)") + " asks: <b>what function has derivative <i>f</i>(<i>x</i>)?</b></p><p>Every answer ends in <b>+ C</b> because constants vanish when you differentiate: " + M("x^2") + ", " + M("x^2 + 5") + " and " + M("x^2 - 100") + " all have derivative " + M("2x") + ". So " + II("2x") + " = " + M("x^2 + C") + ".</p>" },
-    { t: "The reverse table", h: tbl(["Integral", "Answer"], [[II("x^n"), '<span class="m"><i>x</i><sup><i>n</i>+1</sup>/(<i>n</i>+1) + <i>C</i></span> &nbsp;(<i>n</i> ≠ −1)'], [II("1/x"), M("ln|x| + C")], [II("e^x"), M("e^x + C")], [II("cos(x)"), M("sin(x) + C")], [II("sin(x)"), M("-cos(x) + C") + " &nbsp;← watch the sign"], [II("sec(x)^2"), M("tan(x) + C")], [II("sec(x)tan(x)"), M("sec(x) + C")], ['<span class="m">∫ <i>k</i> <i>dx</i></span>', '<span class="m"><i>kx</i> + <i>C</i></span>']]) },
+    { t: "The reverse table", h: tbl(["Integral", "Answer"], [[II("x^n"), '<span class="m"><i>x</i><sup><i>n</i>+1</sup>/(<i>n</i>+1) + <i>C</i></span> &nbsp;(<i>n</i> ≠ −1)'], [II("1/x"), M("ln|x| + C")], [II("e^x"), M("e^x + C")], [II("cos(x)"), M("sin(x) + C")], [II("sin(x)"), M("-cos(x) + C") + " &nbsp;← watch the sign"], [II("sec(x)^2"), M("tan(x) + C")], [II("sec(x)tan(x)"), M("sec(x) + C")], ['<span class="m">∫ <i>k</i> <i>dx</i></span>', '<span class="m"><i>kx</i> + <i>C</i></span>'], [II("1/(x^2 + 1)"), M("arctan(x) + C") + " &nbsp;(also written tan⁻¹ x)"], ['<span class="m">∫ <i>e</i><sup><i>kx</i></sup> <i>dx</i></span>', '<span class="m"><i>e</i><sup><i>kx</i></sup>/<i>k</i> + <i>C</i></span> &nbsp;(divide by the number in front of x)']]) },
     { t: "Rules that carry over, and one that doesn’t", h: steps(["<b>Constants come out front:</b> " + II("5x^2") + " = 5·" + M("x^3/3") + " + C", "<b>Sums split:</b> integrate term by term, then add one +C at the end.", "<b>There is no product rule for integrals.</b> If you see a product like " + M("x(x+2)") + ", expand it first (session A4)."]) },
     { t: "Worked examples", h: "<p>" + II("6x^2 - 4x + 5") + "</p>" + steps([M("6x^2") + " → 6·" + M("x^3/3") + " = " + M("2x^3"), M("-4x") + " → −4·" + M("x^2/2") + " = " + M("-2x^2"), "5 → " + M("5x"), "Answer: " + M("2x^3 - 2x^2 + 5x + C")]) + "<p>" + II("3/x + 2cos(x)") + "</p>" + steps([M("3/x") + " → " + M("3ln|x|"), M("2cos(x)") + " → " + M("2sin(x)"), "Answer: " + M("3ln|x| + 2sin(x) + C")]) },
     { t: "Check by differentiating", h: "<p>Take the derivative of your answer. If you get back what was inside the integral, you’re right.</p><p>Check: " + DD("2x^3 - 2x^2 + 5x") + " = " + M("6x^2 - 4x + 5") + " ✓</p><p>The checker here tells you when your answer is off by a sign or a constant factor, which are the two most common mistakes.</p>" }
@@ -1019,13 +1030,30 @@ var SESSIONS = [
   parts: [
     { t: "Finding C", h: "<p>An <b>initial value problem</b> gives you <span class=\"m\"><i>f</i>′(<i>x</i>)</span> plus one point, and asks for the exact <span class=\"m\"><i>f</i>(<i>x</i>)</span>. The point pins down C.</p>" + steps(["Integrate <span class=\"m\"><i>f</i>′</span> and keep the +C.", "Plug in the given x and set it equal to the given value.", "Solve for C.", "Write the final <span class=\"m\"><i>f</i>(<i>x</i>)</span> with the number in place of C."]) },
     { t: "Worked examples", h: "<p><span class=\"m\"><i>f</i>′(<i>x</i>) = 6<i>x</i><sup>2</sup> + 2</span>, <span class=\"m\"><i>f</i>(1) = 5</span></p>" + steps([M("2x^3 + 2x + C"), "5 = 2 + 2 + C", "C = 1", "<span class=\"m\"><i>f</i>(<i>x</i>)</span> = " + M("2x^3 + 2x + 1")]) + "<p><span class=\"m\"><i>f</i>′(<i>x</i>) = cos <i>x</i></span>, <span class=\"m\"><i>f</i>(0) = 3</span></p>" + steps([M("sin(x) + C"), "3 = sin 0 + C = 0 + C", "<span class=\"m\"><i>f</i>(<i>x</i>)</span> = " + M("sin(x) + 3")]) },
-    { t: "How the quiz works", h: "<p>Do the practice first. Then open the Quiz tab: 8 random problems, 20 minutes, no notes.</p><p>Stuck on one? Skip it and come back. Wrong answers go to your mistake log automatically so you can redo them later.</p>" }
+    { t: "How the quiz works", h: "<p>Do the practice first. Then open the Quiz tab: 8 random problems, 20 minutes, no notes.</p><p>Stuck on one? Skip it and come back. Wrong answers go to your mistake log automatically so you can redo them later.</p>" },
+    { t: "Other ways the homework asks", h: "<p>HW 4.9 dresses initial value problems up in a few ways. The method never changes: integrate, plug in the point, solve for C.</p>" +
+      tbl(["The homework says", "It means"], [
+        ["Velocity " + mx("<i>v</i>(<i>t</i>)") + ", find position " + mx("<i>s</i>(<i>t</i>)"), "Integrate " + mx("<i>v</i>") + ". Position is the antiderivative of velocity."],
+        ["Acceleration " + mx("<i>a</i>(<i>t</i>)") + ", find velocity " + mx("<i>v</i>(<i>t</i>)"), "Integrate " + mx("<i>a</i>") + ". Velocity is the antiderivative of acceleration."],
+        [mx("<i>F</i>(<i>x</i>)") + " is the antiderivative with " + mx("<i>F</i>(1) = 0"), "The same as " + mx("<i>f</i>(1) = 0") + " in the problems above."],
+        ["The variable is <i>t</i> instead of <i>x</i>", "Nothing changes. Type t in your answer."]]) +
+      "<p><b>Example.</b> " + mx("<i>a</i>(<i>t</i>) = <i>e</i><sup>2<i>t</i></sup>") + " and " + mx("<i>v</i>(0) = 3") + ".</p>" +
+      steps([mx("<i>v</i>(<i>t</i>) = <i>e</i><sup>2<i>t</i></sup>/2 + <i>C</i>") + " (divide by the 2 in front of t)", "3 = " + mx("<i>e</i><sup>0</sup>/2 + <i>C</i>") + " = 1/2 + C, so C = 5/2", mx("<i>v</i>(<i>t</i>) = <i>e</i><sup>2<i>t</i></sup>/2 + 5/2")]) +
+      "<p><b>When does it reach a value?</b> Set it equal and undo the <i>e</i> with ln. When does that velocity reach 10?</p>" +
+      steps(["10 = " + mx("<i>e</i><sup>2<i>t</i></sup>/2 + 5/2"), "Multiply by 2: 20 = " + mx("<i>e</i><sup>2<i>t</i></sup> + 5") + ", so " + mx("<i>e</i><sup>2<i>t</i></sup> = 15"), "Take ln of both sides: 2t = ln 15", "t = (ln 15)/2 ≈ 1.3540"]) +
+      rule("<b>Is it an antiderivative?</b> Differentiate it. If you get back the original function, yes. " + M("sin(x) - 4") + " works for " + M("cos(x)") + " (any constant does), but " + M("sin(2x)") + " doesn’t: its derivative is " + M("2cos(2x)") + ".") }
   ],
   probs: [
     { k: "ivp", q: "4x^3", at: "1", val: "6", type: "expr", ivp: true, ans: "x^4 + 5", hint: "Integrate to " + M("x^4 + C") + ", then use f(1) = 6.", sol: [M("x^4 + C"), "6 = 1 + C, so C = 5", M("x^4 + 5")] },
     { k: "ivp", q: "e^x", at: "0", val: "4", type: "expr", ivp: true, ans: "e^x + 3", hint: M("e^0") + " = 1.", sol: [M("e^x + C"), "4 = 1 + C, so C = 3", M("e^x + 3")] },
     { k: "ivp", q: "1/x", at: "1", val: "2", type: "expr", ivp: true, ans: "ln(x) + 2", hint: "ln 1 = 0.", sol: [M("ln|x| + C"), "2 = 0 + C", M("ln|x| + 2")] },
-    { k: "ivp", q: "3sqrt(x)", at: "4", val: "20", type: "expr", ivp: true, ans: "2x^(3/2) + 4", hint: "Rewrite as " + M("3x^(1/2)") + ". Note " + M("4^(3/2)") + " = 8.", sol: [M("3x^(1/2)") + " → " + M("3x^(3/2)/(3/2)") + " = " + M("2x^(3/2)"), "20 = 2·8 + C, so C = 4", M("2x^(3/2) + 4")] }
+    { k: "ivp", q: "3sqrt(x)", at: "4", val: "20", type: "expr", ivp: true, ans: "2x^(3/2) + 4", hint: "Rewrite as " + M("3x^(1/2)") + ". Note " + M("4^(3/2)") + " = 8.", sol: [M("3x^(1/2)") + " → " + M("3x^(3/2)/(3/2)") + " = " + M("2x^(3/2)"), "20 = 2·8 + C, so C = 4", M("2x^(3/2) + 4")] },
+    { k: "i", q: "-5/(x^2 + 1)", type: "antideriv", ans: "-5arctan(x) + C", hint: "Pull out the −5. " + II("1/(x^2 + 1)") + " = " + M("arctan(x)") + ". Type arctan(x).", sol: ["−5" + II("1/(x^2 + 1)"), "= " + M("-5arctan(x) + C")] },
+    { k: "i", q: "e^(4x)", type: "antideriv", ans: "e^(4x)/4 + C", hint: "Divide by the number in front of x. Check: the derivative of " + M("e^(4x)") + " is " + M("4e^(4x)") + ".", sol: [M("e^(4x)/4 + C"), "Check: " + DD("e^(4x)/4") + " = " + M("4e^(4x)/4") + " = " + M("e^(4x)")] },
+    { k: "txt", text: "A particle has velocity " + tq(VT, "6x") + " and " + mx("<i>s</i>(0) = 2") + ". Find its position " + mx(ST) + ".", type: "expr", ivp: true, v: "t", ans: "3x^2 + 2", hint: "Position is the antiderivative of velocity. Then use s(0) = 2 to find C.", sol: [mx("<i>s</i>(<i>t</i>) = 3<i>t</i><sup>2</sup> + <i>C</i>"), "2 = 0 + C, so C = 2", M("3x^2 + 2", "t")] },
+    { k: "txt", text: "An object has acceleration " + tq(AT, "e^(2x)") + " and " + mx("<i>v</i>(0) = 5") + ". Find its velocity " + mx(VT) + ".", type: "expr", ivp: true, v: "t", ans: "e^(2x)/2 + 9/2", hint: "Velocity is the antiderivative of acceleration. " + mx("<i>e</i><sup>0</sup> = 1") + ".", sol: [mx("<i>v</i>(<i>t</i>) = <i>e</i><sup>2<i>t</i></sup>/2 + <i>C</i>"), "5 = 1/2 + C, so C = 9/2", M("e^(2x)/2 + 9/2", "t")] },
+    { k: "txt", text: "Same object: " + mx("<i>v</i>(<i>t</i>) = <i>e</i><sup>2<i>t</i></sup>/2 + 9/2") + ". At what time does the velocity reach 20? Give 4 decimal places or the exact form.", type: "number", ans: "ln(31)/2", hint: "Set it equal to 20, get " + mx("<i>e</i><sup>2<i>t</i></sup>") + " by itself, then take ln of both sides.", sol: ["20 = " + mx("<i>e</i><sup>2<i>t</i></sup>/2 + 9/2"), "Multiply by 2: 40 = " + mx("<i>e</i><sup>2<i>t</i></sup> + 9") + ", so " + mx("<i>e</i><sup>2<i>t</i></sup> = 31"), "2t = ln 31, so t = (ln 31)/2 ≈ 1.7170"] },
+    { k: "txt", text: mx("<i>f</i>(<i>x</i>) = 6/<i>x</i><sup>3</sup>") + ". Let " + mx("<i>F</i>(<i>x</i>)") + " be the antiderivative with " + mx("<i>F</i>(1) = 0") + ". Find " + mx("<i>F</i>(<i>x</i>)") + ".", type: "expr", ivp: true, ans: "-3/x^2 + 3", hint: "Rewrite as " + M("6x^(-3)") + ", integrate, then use F(1) = 0.", sol: [M("6x^(-3)") + " → " + M("6x^(-2)/(-2)") + " = " + M("-3x^(-2)"), "0 = −3 + C, so C = 3", M("-3/x^2 + 3")] }
   ],
   quiz: { minutes: 20, count: 8, pool: [
     { k: "d", q: "6x^5 - x", type: "expr", ans: "30x^4 - 1", sol: ["Power rule on each term: bring the power down, then lower it by 1.", M("6(5x^4) - 1"), "= " + M("30x^4 - 1")] },
@@ -1052,7 +1080,12 @@ var SESSIONS = [
     { t: "Sigma notation", h: "<p>" + SIG("1", "4", "x^2") + " means: plug in k = 1, 2, 3, 4 and add.</p><p>= 1 + 4 + 9 + 16 = 30</p>" },
     { t: "Three formulas worth knowing", h: tbl(["Sum", "Shortcut"], [[SIG("1", "<i>n</i>", "a"), '<span class="m"><i>an</i></span>'], [SIG("1", "<i>n</i>", "x"), '<span class="m"><span class="frac"><span><i>n</i>(<i>n</i>+1)</span><span>2</span></span></span>'], [SIG("1", "<i>n</i>", "x^2"), '<span class="m"><span class="frac"><span><i>n</i>(<i>n</i>+1)(2<i>n</i>+1)</span><span>6</span></span></span>']]) + "<p>Constants pull out and sums split, the same as derivatives and integrals.</p>" },
     { t: "Riemann sums: the setup", h: "<p>To estimate the area under <i>f</i> from <i>a</i> to <i>b</i> with <i>n</i> rectangles:</p>" + steps(["<b>Width:</b> " + '<span class="m">Δ<i>x</i> = (<i>b</i> − <i>a</i>)/<i>n</i></span>', "<b>Heights:</b> pick a point in each strip: the left edge, right edge, or midpoint.", "<b>Add:</b> (sum of the heights) × Δ<i>x</i>"]) },
-    { t: "Worked example", h: "<p>" + M("x^2") + " on [0, 2] with n = 4. Δx = 2/4 = 0.5.</p>" + tbl(["Method", "x-values used", "Heights", "Estimate"], [["Left", "0, 0.5, 1, 1.5", "0, 0.25, 1, 2.25", "3.5 × 0.5 = 1.75"], ["Right", "0.5, 1, 1.5, 2", "0.25, 1, 2.25, 4", "7.5 × 0.5 = 3.75"], ["Midpoint", "0.25, 0.75, 1.25, 1.75", "0.0625, 0.5625, 1.5625, 3.0625", "5.25 × 0.5 = 2.625"]]) + "<p>The exact area is 8/3 ≈ 2.667. Midpoint is usually closest. For an increasing function, left underestimates and right overestimates.</p>" }
+    { t: "Worked example", h: "<p>" + M("x^2") + " on [0, 2] with n = 4. Δx = 2/4 = 0.5.</p>" + tbl(["Method", "x-values used", "Heights", "Estimate"], [["Left", "0, 0.5, 1, 1.5", "0, 0.25, 1, 2.25", "3.5 × 0.5 = 1.75"], ["Right", "0.5, 1, 1.5, 2", "0.25, 1, 2.25, 4", "7.5 × 0.5 = 3.75"], ["Midpoint", "0.25, 0.75, 1.25, 1.75", "0.0625, 0.5625, 1.5625, 3.0625", "5.25 × 0.5 = 2.625"]]) + "<p>The exact area is 8/3 ≈ 2.667. Midpoint is usually closest. For an increasing function, left underestimates and right overestimates.</p>" },
+    { t: "Riemann sums from a graph, or with a calculator", h: "<p>Some homework problems give a graph instead of a formula. The steps don’t change: find Δx, list the x-values, then read each height off the graph.</p>" + fig(GB1) +
+      "<p>Left sum from x = 0 to 6 with n = 3:</p>" + steps(["Δx = (6 − 0)/3 = 2", "Left edges: 0, 2, 4. Heights from the graph: 1, 4, 1.", "(1 + 4 + 1) × 2 = 12"]) +
+      "<p>If a point sits between grid lines, estimate it as carefully as you can.</p>" +
+      rule("<b>Calculator tips.</b> With 5 or more rectangles, list the x-values and heights in a table, then add. For anything with sin or cos, set the calculator to <b>radians</b>.") +
+      "<p><b>Velocity works the same way.</b> A Riemann sum of a velocity estimates the distance traveled: each rectangle is speed × time.</p>" }
   ],
   probs: [
     { k: "sum", from: "1", to: "5", q: "x", type: "number", ans: "15", hint: "1 + 2 + 3 + 4 + 5", sol: ["Or use n(n+1)/2 = 5·6/2 = 15"] },
@@ -1061,7 +1094,13 @@ var SESSIONS = [
     { k: "txt", text: "Find Δx for the interval [1, 5] with n = 8 rectangles.", type: "number", ans: "0.5", hint: "(b − a)/n", sol: ["(5 − 1)/8 = 0.5"] },
     { k: "txt", text: "Right Riemann sum for " + M("x^2") + " on [0, 2] with n = 2.", type: "number", ans: "5", hint: "Δx = 1. Right edges are x = 1 and x = 2.", sol: ["Heights: f(1) = 1, f(2) = 4", "(1 + 4)·1 = 5"] },
     { k: "txt", text: "Left Riemann sum for " + M("3x + 1") + " on [0, 4] with n = 4.", type: "number", ans: "22", hint: "Δx = 1. Left edges are 0, 1, 2, 3.", sol: ["Heights: 1, 4, 7, 10", "Sum × 1 = 22"] },
-    { k: "txt", text: "Midpoint sum for " + M("x^3") + " on [0, 2] with n = 2.", type: "number", ans: "3.5", hint: "Midpoints are 0.5 and 1.5.", sol: ["Heights: 0.125, 3.375", "(0.125 + 3.375)·1 = 3.5"] }
+    { k: "txt", text: "Midpoint sum for " + M("x^3") + " on [0, 2] with n = 2.", type: "number", ans: "3.5", hint: "Midpoints are 0.5 and 1.5.", sol: ["Heights: 0.125, 3.375", "(0.125 + 3.375)·1 = 3.5"] },
+    { k: "txt", text: "Use the graph. Find the left Riemann sum from x = 0 to x = 4 with n = 4." + fig(GB1), type: "number", ans: "11", hint: "Δx = 1. The left edges are 0, 1, 2, 3. Read those heights off the graph.", sol: ["Δx = 1. Left edges: 0, 1, 2, 3.", "Heights: 1, 3, 4, 3", "(1 + 3 + 4 + 3) × 1 = 11"] },
+    { k: "txt", text: "Use the graph. Find the right Riemann sum from x = 0 to x = 6 with n = 3." + fig(GB1), type: "number", ans: "14", hint: "Δx = 2. The right edges are 2, 4, 6.", sol: ["Δx = 6/3 = 2. Right edges: 2, 4, 6.", "Heights: 4, 1, 2", "(4 + 1 + 2) × 2 = 14"] },
+    { k: "txt", text: "Use the graph. Find the midpoint sum from x = 0 to x = 6 with n = 3." + fig(GB1), type: "number", ans: "16", hint: "Δx = 2, so the strips are [0, 2], [2, 4], [4, 6]. Their midpoints are 1, 3, 5.", sol: ["Δx = 2. Midpoints: 1, 3, 5.", "Heights: 3, 3, 2", "(3 + 3 + 2) × 2 = 16"] },
+    { k: "txt", text: "A drone flies with velocity " + tq(VT, "x^2") + " m/s. Estimate the distance it travels from t = 0 to t = 6 with a right Riemann sum and 3 rectangles.", type: "number", ans: "112", hint: "Δt = 2. Right edges: 2, 4, 6.", sol: ["Δt = 6/3 = 2. Right edges: 2, 4, 6.", "Velocities: 4, 16, 36", "(4 + 16 + 36) × 2 = 112 m"] },
+    { k: "txt", text: "Midpoint sum for " + M("x^2 - 2x + 3") + " on [1, 9] with n = 4.", type: "number", ans: "184", hint: "Δx = 2. The strips are [1, 3], [3, 5], [5, 7], [7, 9], so the midpoints are 2, 4, 6, 8.", sol: ["Δx = 8/4 = 2. Midpoints: 2, 4, 6, 8.", "Heights: 3, 11, 27, 51", "(3 + 11 + 27 + 51) × 2 = 92 × 2 = 184"] },
+    { k: "txt", text: "Right Riemann sum for " + M("1/x") + " on [1, 3] with n = 4.", type: "number", ans: "0.95", hint: "Δx = 0.5. Right edges: 1.5, 2, 2.5, 3.", sol: ["Δx = 2/4 = 0.5. Right edges: 1.5, 2, 2.5, 3.", "Heights: 2/3, 1/2, 2/5, 1/3", "(2/3 + 1/3) + 1/2 + 2/5 = 1.9, and 1.9 × 0.5 = 0.95"] }
   ]
 },
 /* ================= B2 ================= */
@@ -1071,7 +1110,22 @@ var SESSIONS = [
   parts: [
     { t: "What it means", h: "<p>" + DI("a", "b", "f").replace(/<i>a<\/i>/, "<i>a</i>").replace("<i>f</i>", "<i>f</i>(<i>x</i>)") + " is the limit of Riemann sums as the rectangles get infinitely thin. It equals the <b>net area</b>:</p>" + steps(["Area <b>above</b> the x-axis counts as positive.", "Area <b>below</b> the x-axis counts as negative."]) + "<p>It’s a number, not a function, so there’s no +C.</p>" },
     { t: "Evaluating with geometry", h: "<p>If the region is a shape you know, use the area formula.</p>" + steps([DI("0", "4", "x") + ": a triangle with base 4 and height 4 → ½·4·4 = 8", DI("-2", "2", "sqrt(4 - x^2)") + ": the top half of a circle with radius 2 → ½π(2)² = 2π", DI("0", "3", "x - 1") + ": below the axis from 0 to 1 (area ½), above from 1 to 3 (area 2) → −½ + 2 = 1.5"]) },
-    { t: "Properties", h: tbl(["Property", "In words"], [[DI("a", "a", "f").replace("<i>f</i>", "<i>f</i>") + " = 0", "No width, no area"], [DI("b", "a", "f") + " = −" + DI("a", "b", "f"), "Flipping the limits flips the sign"], [DI("a", "b", "k*f") + " = <i>k</i>" + DI("a", "b", "f"), "Constants pull out"], [DI("a", "b", "f") + " + " + DI("b", "c", "f") + " = " + DI("a", "c", "f"), "Adjacent pieces add"]]).replace(/<span class="m"><span class="intl"><span class="ib"><i>b<\/i><\/span><span class="is">∫<\/span><span class="ia"><i>a<\/i><\/span><\/span><i>f<\/i>/g, '$&') }
+    { t: "Properties", h: tbl(["Property", "In words"], [[DI("a", "a", "f").replace("<i>f</i>", "<i>f</i>") + " = 0", "No width, no area"], [DI("b", "a", "f") + " = −" + DI("a", "b", "f"), "Flipping the limits flips the sign"], [DI("a", "b", "k*f") + " = <i>k</i>" + DI("a", "b", "f"), "Constants pull out"], [DI("a", "b", "f") + " + " + DI("b", "c", "f") + " = " + DI("a", "c", "f"), "Adjacent pieces add"]]).replace(/<span class="m"><span class="intl"><span class="ib"><i>b<\/i><\/span><span class="is">∫<\/span><span class="ia"><i>a<\/i><\/span><\/span><i>f<\/i>/g, '$&') },
+    { t: "Combining integrals you’re given", h: "<p>Homework often gives you a few integrals and asks for a combination. Split it apart, pull out the constants, and plug in.</p>" +
+      "<p>If " + DIH("0", "4", FX) + " = 6 and " + DIH("0", "4", GX) + " = 2:</p>" +
+      steps([DIH("0", "4", "(3" + FX + " − " + GX + " + 5)") + " = 3" + DIH("0", "4", FX) + " − " + DIH("0", "4", GX) + " + " + DIH("0", "4", "5"), "= 3(6) − 2 + 5(4 − 0)", "= 18 − 2 + 20 = 36"]) +
+      rule("A lone constant <i>k</i> integrates to <i>k</i> × (width of the interval), not just <i>k</i>.") +
+      "<p><b>Splitting at a point:</b> " + DIH("1", "9", FX) + " = " + DIH("1", "5", FX) + " + " + DIH("5", "9", FX) + ".</p>" +
+      "<p><b>Working backward:</b> if " + DIH("a", "b", "5<i>x</i><sup>4</sup>") + " = 160, then " + DIH("a", "b", "<i>x</i><sup>4</sup>") + " = 160/5 = 32.</p>" },
+    { t: "Bounding an integral", h: "<p>If you don’t know a function exactly, but you know it stays between two heights, the integral is trapped between two rectangles.</p>" +
+      rule("If <i>m</i> ≤ <i>f</i>(<i>x</i>) ≤ <i>M</i> on [<i>a</i>, <i>b</i>], then <i>m</i>(<i>b</i> − <i>a</i>) ≤ " + DIH("a", "b", FX) + " ≤ <i>M</i>(<i>b</i> − <i>a</i>).") +
+      "<p>Example: 1 ≤ <i>g</i>(<i>x</i>) ≤ 3 on [0, 5], so " + DIH("0", "5", GX) + " is between 1 × 5 = 5 and 3 × 5 = 15. If also " + DIH("0", "5", FX) + " = 2, then " + DIH("0", "5", "(" + GX + " + " + FX + ")") + " is between 7 and 17.</p>" },
+    { t: "Absolute values, and areas from a graph", h: "<p>" + DIH("a", "b", FX) + " is the <b>net</b> area: parts below the axis count as negative. " + DIH("a", "b", "|" + FX + "|") + " flips those parts up, so it gives the <b>total</b> area.</p>" +
+      fig({ x: [-0.5, 6.6], y: [-4.4, 2.8], curves: [{ f: "2 - x", from: 0, to: 6 }], fill: [{ top: "2 - x", bot: "0", from: 0, to: 2 }, { top: "0", bot: "2 - x", from: 2, to: 6 }], xt: [2, 6], yt: [2, -4], lab: [[0.55, 0.5, "+2"], [3.9, -1.7, "8"]], alt: "The line y = 2 − x from 0 to 6: a small triangle above the axis from 0 to 2 and a bigger one below it from 2 to 6.", cap: "Triangle above: ½ · 2 · 2 = 2. Triangle below: ½ · 4 · 4 = 8." }) +
+      steps([DI("0", "6", "2 - x") + " = 2 − 8 = −6 (net)", DI("0", "6", "abs(2 - x)") + " = 2 + 8 = 10 (total)"]) +
+      "<p>When a graph labels the areas, combine them the same way. Say the regions are A above, B below, then C above:</p>" +
+      tbl(["Integral", "Value"], [[DIH("", "", FX), "A − B + C"], [DIH("", "", "|" + FX + "|"), "A + B + C"], [DIH("", "", "(" + FX + " + <i>k</i>)"), "(A − B + C) + <i>k</i> × width"], [DIH("", "", "4" + FX), "4(A − B + C)"]]) +
+      "<p>No labels? Cut the region into triangles, rectangles and trapezoids and use their area formulas.</p>" }
   ],
   probs: [
     { k: "di", a: "0", b: "5", q: "3", type: "number", ans: "15", hint: "A rectangle 5 wide and 3 tall.", sol: ["5 × 3 = 15"] },
@@ -1079,7 +1133,20 @@ var SESSIONS = [
     { k: "di", a: "-3", b: "3", q: "sqrt(9 - x^2)", type: "number", ans: "9pi/2", hint: "Top half of a circle with radius 3. Type pi for π.", sol: ["½πr² = ½π·9 = 9π/2"] },
     { k: "di", a: "-2", b: "0", q: "x", type: "number", ans: "-2", hint: "The triangle is below the axis.", sol: ["Area ½·2·2 = 2, below the axis → −2"] },
     { k: "txt", text: "If " + DI("0", "4", "f").replace("<i>f</i>", "<i>f</i>(<i>x</i>)") + " = 7 and " + DI("0", "1", "f").replace("<i>f</i>", "<i>f</i>(<i>x</i>)") + " = 2, find " + DI("1", "4", "f").replace("<i>f</i>", "<i>f</i>(<i>x</i>)") + ".", type: "number", ans: "5", hint: "The 0–1 piece plus the 1–4 piece makes the whole.", sol: ["2 + ? = 7, so ? = 5"] },
-    { k: "txt", text: "If " + DI("2", "5", "f").replace("<i>f</i>", "<i>f</i>(<i>x</i>)") + " = 6, find " + DI("5", "2", "3f").replace("3<i>f</i>", "3<i>f</i>(<i>x</i>)") + ".", type: "number", ans: "-18", hint: "Two properties: flip the limits, and pull out the 3.", sol: ["Flip: −6", "Times 3: −18"] }
+    { k: "txt", text: "If " + DI("2", "5", "f").replace("<i>f</i>", "<i>f</i>(<i>x</i>)") + " = 6, find " + DI("5", "2", "3f").replace("3<i>f</i>", "3<i>f</i>(<i>x</i>)") + ".", type: "number", ans: "-18", hint: "Two properties: flip the limits, and pull out the 3.", sol: ["Flip: −6", "Times 3: −18"] },
+    { k: "txt", text: "If " + DIH("0", "5", FX) + " = 10, " + DIH("0", "5", GX) + " = 4 and " + DIH("0", "5", HX) + " = 3, find " + DIH("0", "5", "(2" + FX + " − 3" + GX + " + " + HX + ")") + ".", type: "number", ans: "11", hint: "Split it into three integrals and pull out the constants.", sol: ["2(10) − 3(4) + 3", "= 20 − 12 + 3 = 11"] },
+    { k: "txt", text: "If " + DIH("2", "6", FX) + " = 7 and " + DIH("2", "6", GX) + " = 3, find " + DIH("2", "6", "(" + FX + " − " + GX + " + 4)") + ".", type: "number", ans: "20", hint: "The 4 integrates to 4 × (6 − 2).", sol: ["7 − 3 + 4(6 − 2)", "= 4 + 16 = 20"] },
+    { k: "txt", text: "If " + DIH("1", "3", FX) + " = 2, " + DIH("3", "8", FX) + " = 5 and " + DIH("1", "8", GX) + " = 3, find " + DIH("1", "8", "(" + FX + " + 2" + GX + ")") + ".", type: "number", ans: "13", hint: "First join the two pieces of f: 1 to 3 plus 3 to 8 is 1 to 8.", sol: [DIH("1", "8", FX) + " = 2 + 5 = 7", "7 + 2(3) = 13"] },
+    { k: "txt", text: "Suppose 2 ≤ " + GX + " ≤ 5 for every x in [1, 4], and " + DIH("1", "4", FX) + " = 3. What is the smallest possible value of " + DIH("1", "4", "(" + GX + " + " + FX + ")") + "?", type: "number", ans: "9", hint: "The smallest g can do is stay at height 2 the whole way. The interval is 3 wide.", sol: ["Smallest " + DIH("1", "4", GX) + " = 2 × (4 − 1) = 6", "6 + 3 = 9"] },
+    { k: "txt", text: "Same setup: 2 ≤ " + GX + " ≤ 5 on [1, 4] and " + DIH("1", "4", FX) + " = 3. What is the largest possible value of " + DIH("1", "4", "(" + GX + " + " + FX + ")") + "?", type: "number", ans: "18", hint: "Now g stays at height 5.", sol: ["Largest " + DIH("1", "4", GX) + " = 5 × 3 = 15", "15 + 3 = 18"] },
+    { k: "txt", text: "If " + DIH("a", "b", "4<i>x</i><sup>3</sup>") + " = 80 and " + DIH("a", "b", "3<i>x</i><sup>2</sup>") + " = 21, find " + DIH("a", "b", "(<i>x</i><sup>3</sup> − <i>x</i><sup>2</sup>)") + ".", type: "number", ans: "13", hint: "Divide out the constants first: what is the integral of x³ alone?", sol: [DIH("a", "b", "<i>x</i><sup>3</sup>") + " = 80/4 = 20", DIH("a", "b", "<i>x</i><sup>2</sup>") + " = 21/3 = 7", "20 − 7 = 13"] },
+    { k: "di", a: "-3", b: "1", q: "abs(x)", type: "number", ans: "5", hint: "Sketch |x|: a V. You get two triangles above the axis, one on each side of 0.", sol: ["Left triangle (−3 to 0): ½ · 3 · 3 = 4.5", "Right triangle (0 to 1): ½ · 1 · 1 = 0.5", "4.5 + 0.5 = 5"] },
+    { k: "di", a: "0", b: "6", q: "4 - x", type: "number", ans: "6", hint: "The line crosses the axis at x = 4. The part after that counts as negative.", sol: ["Above (0 to 4): ½ · 4 · 4 = 8", "Below (4 to 6): ½ · 2 · 2 = 2, counted as −2", "8 − 2 = 6"] },
+    { k: "di", a: "0", b: "6", q: "abs(4 - x)", type: "number", ans: "10", hint: "Same two triangles, but the absolute value makes both count as positive.", sol: ["Above: 8. Below, flipped up: 2.", "8 + 2 = 10"] },
+    { k: "txt", text: "On [0, 7] the graph of f makes three regions with the x-axis: area 5 above the axis on [0, 3], area 2 below it on [3, 5], and area 4 above it on [5, 7]. Find " + DIH("0", "7", FX) + ".", type: "number", ans: "7", hint: "Net area: above counts +, below counts −.", sol: ["5 − 2 + 4 = 7"] },
+    { k: "txt", text: "Same graph (areas 5 above, 2 below, 4 above on [0, 7]). Find " + DIH("0", "7", "|" + FX + "|") + ".", type: "number", ans: "11", hint: "Total area: every region counts as positive.", sol: ["5 + 2 + 4 = 11"] },
+    { k: "txt", text: "Same graph. Find " + DIH("0", "7", "(" + FX + " + 2)") + ".", type: "number", ans: "21", hint: "Split it: the integral of f, plus the integral of 2 over an interval 7 wide.", sol: [DIH("0", "7", FX) + " = 7", DIH("0", "7", "2") + " = 2 × 7 = 14", "7 + 14 = 21"] },
+    { k: "txt", text: "Use the graph of f to find " + DIH("2", "6", FX) + "." + fig(GB1), type: "number", ans: "9", hint: "The region under each straight piece is a trapezoid: width × (left height + right height)/2.", sol: ["2 to 3: (4 + 3)/2 = 3.5", "3 to 4: (3 + 1)/2 = 2. 4 to 5: (1 + 2)/2 = 1.5. 5 to 6: 2.", "3.5 + 2 + 1.5 + 2 = 9"] }
   ]
 },
 /* ================= B3 ================= */
@@ -1110,7 +1177,19 @@ var SESSIONS = [
     { t: "Part 2: evaluating definite integrals", h: rule(DI("a", "b", "f").replace("<i>f</i>", "<i>f</i>(<i>x</i>)") + ' = <span class="m"><i>F</i>(<i>b</i>) − <i>F</i>(<i>a</i>)</span>, where <i>F</i> is any antiderivative') + steps(["Find the antiderivative (no +C needed; it cancels).", "Plug in the top limit.", "Plug in the bottom limit.", "Subtract: top minus bottom."]) },
     { t: "Worked examples", h: "<p>" + DI("1", "3", "2x") + "</p>" + steps(["Antiderivative: " + M("x^2"), "Top: 3² = 9. Bottom: 1² = 1.", "9 − 1 = 8"]) + "<p>" + DI("0", "pi", "sin(x)") + "</p>" + steps(["Antiderivative: " + M("-cos(x)"), "Top: −cos π = 1. Bottom: −cos 0 = −1.", "1 − (−1) = 2"]) },
     { t: "Part 1: the derivative of an integral", h: rule(DDX + DI("a", "x", "f", "t").replace(/<i>f<\/i>/, "<i>f</i>(<i>t</i>)") + ' = <span class="m"><i>f</i>(<i>x</i>)</span>') + "<p>Differentiating undoes integrating. Just swap t for x.</p><p>" + DDX + DI("2", "x", "x^3", "t") + " = " + M("x^3") + "</p>" },
-    { t: "Part 1 with the chain rule", h: "<p>If the top limit is a function of x, multiply by its derivative:</p>" + rule(DDX + DI("a", "g(x)", "f", "t").replace(/<i>g<\/i>\(<i>x<\/i>\)/, "<i>g</i>(<i>x</i>)").replace(/<i>f<\/i>/, "<i>f</i>(<i>t</i>)") + ' = <span class="m"><i>f</i>(<i>g</i>(<i>x</i>))·<i>g</i>′(<i>x</i>)</span>') + "<p>" + DDX + DI("0", "x^2", "cos(x)", "t") + " = " + M("cos(x^2)") + "·" + M("2x") + "</p>" }
+    { t: "Part 1 with the chain rule", h: "<p>If the top limit is a function of x, multiply by its derivative:</p>" + rule(DDX + DI("a", "g(x)", "f", "t").replace(/<i>g<\/i>\(<i>x<\/i>\)/, "<i>g</i>(<i>x</i>)").replace(/<i>f<\/i>/, "<i>f</i>(<i>t</i>)") + ' = <span class="m"><i>f</i>(<i>g</i>(<i>x</i>))·<i>g</i>′(<i>x</i>)</span>') + "<p>" + DDX + DI("0", "x^2", "cos(x)", "t") + " = " + M("cos(x^2)") + "·" + M("2x") + "</p>" },
+    { t: "x on the bottom, or on both ends", h: "<p>The FTC rule above needs x in the <b>top</b> limit. If x is on the bottom, flip the limits first. Flipping adds a minus sign.</p>" +
+      rule(DDX + " " + DIH("x", "a", "<i>f</i>(<i>t</i>)", "t") + " = −<i>f</i>(<i>x</i>)") +
+      "<p>Example: " + DDX + " " + DI("x", "5", "cos(x^2)", "t") + " = −" + M("cos(x^2)") + "</p>" +
+      "<p>If <b>both</b> limits have x in them, do the top, then subtract the bottom. Each one gets its chain-rule factor:</p>" +
+      rule(DDX + " " + DIH("g(x)", "h(x)", "<i>f</i>(<i>t</i>)", "t") + " = <i>f</i>(<i>h</i>(<i>x</i>))·<i>h</i>′(<i>x</i>) − <i>f</i>(<i>g</i>(<i>x</i>))·<i>g</i>′(<i>x</i>)") +
+      steps([DDX + " " + DI("x^2", "x^3", "sin(x)", "t"), "Top: " + M("sin(x^3)") + " × " + M("3x^2"), "Bottom: " + M("sin(x^2)") + " × " + M("2x"), "= " + M("3x^2 sin(x^3) - 2x sin(x^2)")]) },
+    { t: "Area functions from a graph", h: "<p>" + mx("<i>A</i>(<i>x</i>) = ") + DIH("0", "x", "<i>f</i>(<i>t</i>)", "t") + " is the net area under <i>f</i> from 0 up to <i>x</i>. To find A(1), A(2), …, add areas from left to right: triangles are ½ · base · height, rectangles are base · height, and anything below the axis subtracts.</p>" + fig(GB4) +
+      tbl(["x", "New piece", "A(x)"], [["1", "triangle ½ · 1 · 1 = 0.5", "0.5"], ["2", "another 1.5 (the triangle up to 2 has area 2)", "2"], ["3", "rectangle 1 × 2 = 2", "4"], ["4", "triangle ½ · 1 · 2 = 1", "5"], ["5", "triangle below the axis, ½ · 1 · 1 = 0.5", "4.5"]]) },
+    { t: "Definite integrals with arctan, and rewriting first", h: "<p>Values worth knowing: arctan 0 = 0, arctan 1 = π/4, arctan √3 = π/3.</p>" +
+      steps([DI("0", "1", "4/(1 + x^2)") + " = 4 arctan x from 0 to 1", "= 4(π/4 − 0) = π"]) +
+      "<p>If an answer isn’t one of these, leave it exact, like 5(arctan 2 − π/4), or use a calculator in radians.</p>" +
+      "<p>There’s no quotient rule for integrals. Split a fraction over a single term first: " + M("(x^2 + 1)/sqrt(x)") + " = " + M("x^(3/2) + x^(-1/2)") + ".</p>" }
   ],
   probs: [
     { k: "di", a: "0", b: "2", q: "3x^2", type: "number", ans: "8", hint: "Antiderivative is " + M("x^3") + ".", sol: ["2³ − 0³ = 8"] },
@@ -1119,7 +1198,15 @@ var SESSIONS = [
     { k: "di", a: "1", b: "e", q: "1/x", type: "number", ans: "1", hint: "ln e = 1, ln 1 = 0.", sol: ["ln e − ln 1 = 1 − 0 = 1"] },
     { k: "ftc", a: "1", b: "x", q: "x^2 + 1", type: "expr", ans: "x^2 + 1", hint: "Part 1: swap t for x.", sol: [M("x^2 + 1")] },
     { k: "ftc", a: "0", b: "x^3", q: "sin(x)", type: "expr", ans: "3x^2 sin(x^3)", hint: "Plug " + M("x^3") + " in for t, then multiply by its derivative.", sol: [M("sin(x^3)") + " × " + M("3x^2")] },
-    { k: "di", a: "0", b: "1", q: "e^x", type: "number", ans: "e - 1", hint: "Type e for Euler’s number.", sol: [M("e^1") + " − " + M("e^0") + " = e − 1"] }
+    { k: "di", a: "0", b: "1", q: "e^x", type: "number", ans: "e - 1", hint: "Type e for Euler’s number.", sol: [M("e^1") + " − " + M("e^0") + " = e − 1"] },
+    { k: "ftc", a: "x", b: "5", q: "cos(x^2)", type: "expr", ans: "-cos(x^2)", hint: "x is on the bottom. Flip the limits, which adds a minus sign.", sol: ["Flip: " + M("-1") + " × " + DDX + " " + DI("5", "x", "cos(x^2)", "t"), "= " + M("-cos(x^2)")] },
+    { k: "ftc", a: "x^2", b: "x^3", q: "sin(x)", type: "expr", ans: "3x^2 sin(x^3) - 2x sin(x^2)", hint: "Top limit with its chain-rule factor, minus the bottom limit with its factor.", sol: ["Top: " + M("sin(x^3)") + " × " + M("3x^2"), "Bottom: " + M("sin(x^2)") + " × " + M("2x"), M("3x^2 sin(x^3) - 2x sin(x^2)")] },
+    { k: "ftc", a: "1", b: "sin(x)", q: "x^3 + 1", type: "expr", ans: "(sin(x)^3 + 1)cos(x)", hint: "Plug sin x in for t, then multiply by the derivative of sin x.", sol: [M("sin(x)^3 + 1") + " × " + M("cos(x)"), "= " + M("(sin(x)^3 + 1)cos(x)")] },
+    { k: "txt", text: mx("<i>A</i>(<i>x</i>) = ") + DIH("0", "x", "<i>f</i>(<i>t</i>)", "t") + ", with f graphed below. Find A(3)." + fig(GB4), type: "number", ans: "4", hint: "Area from 0 to 2 is a triangle, from 2 to 3 a rectangle.", sol: ["0 to 2: ½ · 2 · 2 = 2", "2 to 3: 1 × 2 = 2", "A(3) = 2 + 2 = 4"] },
+    { k: "txt", text: "Same A(x) and graph. Find A(6)." + fig(GB4), type: "number", ans: "3", hint: "Up to 4 the area is 5. From 4 to 6 the graph is below the axis.", sol: ["A(4) = 2 + 2 + 1 = 5", "4 to 6: a triangle below the axis, ½ · 2 · 2 = 2, so subtract it", "A(6) = 5 − 2 = 3"] },
+    { k: "di", a: "0", b: "sqrt(3)", q: "2/(1 + x^2)", type: "number", ans: "2pi/3", hint: II("1/(1 + x^2)") + " = arctan x, and arctan √3 = π/3. Type pi for π.", sol: ["2 arctan x from 0 to √3", "2(π/3 − 0) = 2π/3"] },
+    { k: "di", a: "1", b: "4", q: "(3x + 2)/sqrt(x)", type: "number", ans: "18", hint: "Split the fraction: " + M("3x^(1/2) + 2x^(-1/2)") + ".", sol: ["Split: " + M("3x^(1/2) + 2x^(-1/2)"), "Antiderivative: " + M("2x^(3/2) + 4x^(1/2)"), "At 4: 16 + 8 = 24. At 1: 2 + 4 = 6.", "24 − 6 = 18"] },
+    { k: "di", a: "0", b: "pi/3", q: "sin(3x)", type: "number", ans: "2/3", hint: II("sin(3x)") + " = " + M("-cos(3x)/3") + ".", sol: [M("-cos(3x)/3") + " from 0 to π/3", "(−cos π)/3 − (−cos 0)/3 = 1/3 + 1/3 = 2/3"] }
   ]
 },
 /* ================= B5 ================= */
@@ -1129,7 +1216,14 @@ var SESSIONS = [
   parts: [
     { t: "Symmetry shortcuts", h: tbl(["Type", "Test", "Shortcut on [−a, a]"], [["Even (mirror across the y-axis)", "f(−x) = f(x), e.g. " + M("x^2") + ", cos x", "2 × the integral from 0 to a"], ["Odd (rotates onto itself)", "f(−x) = −f(x), e.g. " + M("x^3") + ", sin x", "= 0, because the halves cancel"]]) + "<p>Only works when the limits are symmetric, like −3 to 3.</p>" },
     { t: "Average value", h: rule('<span class="m">avg = <span class="frac"><span>1</span><span><i>b</i> − <i>a</i></span></span></span>' + DI("a", "b", "f").replace("<i>f</i>", "<i>f</i>(<i>x</i>)")) + "<p>Total area ÷ width = the height of a rectangle with the same area.</p><p>Average of " + M("x^2") + " on [0, 3]: (1/3)·(27/3) = (1/3)·9 = 3.</p>" },
-    { t: "Mean Value Theorem for integrals", h: "<p>Somewhere in [a, b], the function actually equals its average. To find that spot c, set f(c) = average and solve.</p><p>For " + M("x^2") + " on [0, 3]: " + M("x^2") + " = 3 → c = √3.</p>" }
+    { t: "Mean Value Theorem for integrals", h: "<p>Somewhere in [a, b], the function actually equals its average. To find that spot c, set f(c) = average and solve.</p><p>For " + M("x^2") + " on [0, 3]: " + M("x^2") + " = 3 → c = √3.</p>" },
+    { t: "Symmetry with numbers you’re given", h: "<p>The homework often doesn’t give a formula. It says the function is even or odd and gives you a few integrals.</p>" +
+      tbl(["If f is", "Then", "So"], [["even", DIH("-a", "0", FX) + " = " + DIH("0", "a", FX), DIH("-a", "a", FX) + " = 2" + DIH("0", "a", FX)], ["odd", DIH("-a", "0", FX) + " = −" + DIH("0", "a", FX), DIH("-a", "a", FX) + " = 0"]]) +
+      "<p><b>Example.</b> f is odd and " + DIH("-4", "10", FX) + " = 7. Split at 4: " + DIH("-4", "4", FX) + " + " + DIH("4", "10", FX) + " = 7. The first piece is 0, so " + DIH("4", "10", FX) + " = 7.</p>" +
+      "<p><b>Example.</b> f is even, " + DIH("0", "5", FX) + " = 3 and " + DIH("5", "8", FX) + " = 1. Then " + DIH("-5", "8", FX) + " = " + DIH("-5", "0", FX) + " + " + DIH("0", "5", FX) + " + " + DIH("5", "8", FX) + " = 3 + 3 + 1 = 7.</p>" },
+    { t: "Average value, backward and between zeros", h: "<p>Average = integral ÷ width, so integral = average × width.</p>" +
+      "<p><b>Example.</b> The average of f on [1, 5] is 3, so " + DIH("1", "5", FX) + " = 3 × 4 = 12. Then " + DIH("1", "5", "(2" + FX + " + 7)") + " = 2(12) + 7(4) = 52.</p>" +
+      "<p><b>“Between its zeros”</b> means: solve f(x) = 0 first, and use those x-values as the interval. For " + M("6x - x^2") + " = x(6 − x) the zeros are 0 and 6.</p>" }
   ],
   probs: [
     { k: "di", a: "-5", b: "5", q: "x^7", type: "number", ans: "0", hint: "Is " + M("x^7") + " even or odd?", sol: ["Odd function on symmetric limits → 0"] },
@@ -1137,7 +1231,13 @@ var SESSIONS = [
     { k: "di", a: "-pi", b: "pi", q: "sin(x)", type: "number", ans: "0", hint: "sin is odd.", sol: ["Odd on symmetric limits → 0"] },
     { k: "txt", text: "Average value of " + M("2x") + " on [0, 4].", type: "number", ans: "4", hint: "(1/4) × " + DI("0", "4", "2x"), sol: [DI("0", "4", "2x") + " = 16", "16/4 = 4"] },
     { k: "txt", text: "Average value of " + M("x^2") + " on [0, 6].", type: "number", ans: "12", hint: DI("0", "6", "x^2") + " = 72", sol: ["72/6 = 12"] },
-    { k: "txt", text: "The average of " + M("x^2") + " on [0, 3] is 3. Find c in [0, 3] with " + M("x^2") + " = 3 at x = c.", type: "number", ans: "sqrt(3)", hint: "Type sqrt(3).", sol: ["c² = 3, c = √3 ≈ 1.732"] }
+    { k: "txt", text: "The average of " + M("x^2") + " on [0, 3] is 3. Find c in [0, 3] with " + M("x^2") + " = 3 at x = c.", type: "number", ans: "sqrt(3)", hint: "Type sqrt(3).", sol: ["c² = 3, c = √3 ≈ 1.732"] },
+    { k: "txt", text: "f is even and " + DIH("0", "3", FX) + " = 5. Find " + DIH("-3", "3", FX) + ".", type: "number", ans: "10", hint: "Even: the left half equals the right half.", sol: ["2 × 5 = 10"] },
+    { k: "txt", text: "f is even, " + DIH("0", "4", FX) + " = 3 and " + DIH("4", "9", FX) + " = 2. Find " + DIH("-4", "9", "5" + FX) + ".", type: "number", ans: "40", hint: "Split −4 to 9 into −4 to 0, 0 to 4, and 4 to 9.", sol: [DIH("-4", "9", FX) + " = 3 + 3 + 2 = 8", "5 × 8 = 40"] },
+    { k: "txt", text: "f is odd and " + DIH("-2", "7", FX) + " = 9. Find " + DIH("2", "7", FX) + ".", type: "number", ans: "9", hint: "Split at 2. The piece from −2 to 2 is 0 for an odd function.", sol: [DIH("-2", "2", FX) + " + " + DIH("2", "7", FX) + " = 9", "0 + " + DIH("2", "7", FX) + " = 9, so it’s 9"] },
+    { k: "txt", text: "The average value of f on [1, 6] is 4. Find " + DIH("1", "6", "(3" + FX + " + 2)") + ".", type: "number", ans: "70", hint: "Integral = average × width = 4 × 5.", sol: [DIH("1", "6", FX) + " = 4 × 5 = 20", "3(20) + 2(5) = 70"] },
+    { k: "txt", text: "Find the average value of " + M("4sqrt(x) - x") + " between its two zeros.", type: "number", ans: "8/3", hint: "Solve " + M("4sqrt(x)") + " = x. Square both sides: 16x = x².", sol: ["Zeros: 16x = x², so x = 0 and x = 16", DI("0", "16", "4x^(1/2) - x") + " = " + M("(8/3)x^(3/2) - x^2/2") + " from 0 to 16 = 512/3 − 128 = 128/3", "Average: (128/3) ÷ 16 = 8/3"] },
+    { k: "txt", text: "Find the average value of " + M("6/x") + " on [1, e]. Type e for Euler’s number.", type: "number", ans: "6/(e - 1)", hint: II("6/x") + " = 6 ln x, and ln e = 1.", sol: [DI("1", "e", "6/x") + " = 6(ln e − ln 1) = 6", "Width: e − 1", "Average: 6/(e − 1)"] }
   ]
 },
 /* ================= B6 ================= */
@@ -1149,7 +1249,16 @@ var SESSIONS = [
     { t: "The recipe", h: steps(["<b>Pick u:</b> usually the inside of something (inside a power, a root, e^( ), sin( ), ln( )).", "<b>Find du:</b> " + '<span class="m"><i>du</i> = <i>u</i>′ <i>dx</i></span>', "<b>Rewrite everything in u.</b> No x’s left.", "<b>Integrate</b> in u.", "<b>Put x back.</b>"]) },
     { t: "Worked example", h: "<p>" + II("2x(x^2 + 1)^5") + "</p>" + steps(['<span class="m"><i>u</i> = <i>x</i><sup>2</sup> + 1</span>', '<span class="m"><i>du</i> = 2<i>x</i> <i>dx</i></span>', '<span class="m">∫ <i>u</i><sup>5</sup> <i>du</i></span>', '<span class="m"><i>u</i><sup>6</sup>/6 + <i>C</i></span>', M("(x^2 + 1)^6/6 + C")]) },
     { t: "Fixing constants", h: "<p>" + II("x cos(x^2)") + "</p>" + steps(['<span class="m"><i>u</i> = <i>x</i><sup>2</sup></span>, <span class="m"><i>du</i> = 2<i>x</i> <i>dx</i></span>', "But only <i>x dx</i> is in the integral, so <span class=\"m\"><i>x dx</i> = <i>du</i>/2</span>", '<span class="m">½ ∫ cos <i>u</i> <i>du</i> = ½ sin <i>u</i> + <i>C</i></span>', M("(1/2)sin(x^2) + C")]) + rule("You can fix a missing <b>number</b>, but not a missing <b>x</b>.") },
-    { t: "Quick patterns", h: tbl(["Integral", "u", "Answer"], [[II("e^(3x)"), M("3x"), M("e^(3x)/3 + C")], [II("3x^2/(x^3 + 4)"), M("x^3 + 4"), M("ln|x^3 + 4| + C")], [II("sin(5x)"), M("5x"), M("-cos(5x)/5 + C")]]) }
+    { t: "Quick patterns", h: tbl(["Integral", "u", "Answer"], [[II("e^(3x)"), M("3x"), M("e^(3x)/3 + C")], [II("3x^2/(x^3 + 4)"), M("x^3 + 4"), M("ln|x^3 + 4| + C")], [II("sin(5x)"), M("5x"), M("-cos(5x)/5 + C")]]) },
+    { t: "When the answer is arctan or arcsin", h: "<p>Two more entries for the reverse table:</p>" +
+      tbl(["Integral", "Answer"], [[II("1/(1 + x^2)"), M("arctan(x) + C")], [II("1/sqrt(1 - x^2)"), M("arcsin(x) + C")]]) +
+      "<p>They often show up after a substitution. If you see <i>x</i><sup>4</sup> or <i>x</i><sup>6</sup> next to a 1, try making it <i>u</i><sup>2</sup>:</p>" +
+      steps([II("x^3/(x^8 + 1)") + ": let u = x⁴, du = 4x³ dx, so x³ dx = du/4", "(1/4)∫ 1/(u² + 1) du = (1/4) arctan u", "= " + M("(1/4)arctan(x^4) + C")]) +
+      "<p><b>Split first</b> when the top has two terms: " + M("(6x - 2)/(x^2 + 1)") + " = " + M("6x/(x^2 + 1)") + " − " + M("2/(x^2 + 1)") + ". The first piece is a ln (u = x² + 1), the second is arctan: " + M("3ln(x^2 + 1) - 2arctan(x) + C") + ".</p>" },
+    { t: "Naming u, du and the new integral", h: "<p>Some homework problems only ask you to set up the substitution. Fill in three things:</p>" +
+      steps(["<b>u</b> = the inside piece", "<b>du</b> = its derivative, written next to dx (WAMAP puts the dx after the box)", "<b>The new integral</b>: everything rewritten in u, with no x left"]) +
+      "<p>Example: " + II("x^2 sqrt(x^3 + 7)") + ". u = " + M("x^3 + 7") + ", du = " + M("3x^2") + " dx, so x² dx = du/3 and the integral becomes " + M("(1/3)sqrt(u)", "u") + " du.</p>" +
+      rule("Watch for ln tucked inside: in " + II("tan(x)ln(cos(x))") + ", u = ln(cos x) and du = −tan x dx, because the derivative of ln(cos x) is (−sin x)/(cos x).") }
   ],
   probs: [
     { k: "i", q: "2x(x^2 + 3)^4", type: "antideriv", ans: "(x^2 + 3)^5/5 + C", hint: "u = " + M("x^2 + 3") + ".", sol: ["du = 2x dx", "∫ u⁴ du = u⁵/5", M("(x^2 + 3)^5/5 + C")] },
@@ -1158,7 +1267,14 @@ var SESSIONS = [
     { k: "i", q: "x^2 (x^3 + 1)^3", type: "antideriv", ans: "(x^3 + 1)^4/12 + C", hint: "u = " + M("x^3 + 1") + ", du = " + M("3x^2") + " dx.", sol: [M("x^2") + " dx = du/3", "(1/3)∫ u³ du = u⁴/12", M("(x^3 + 1)^4/12 + C")] },
     { k: "i", q: "2x/(x^2 + 1)", type: "antideriv", ans: "ln(x^2 + 1) + C", hint: "The top is the derivative of the bottom.", sol: ["u = " + M("x^2 + 1") + ", du = 2x dx", "∫ du/u = ln|u|", M("ln(x^2 + 1) + C")] },
     { k: "i", q: "x e^(x^2)", type: "antideriv", ans: "e^(x^2)/2 + C", hint: "u = " + M("x^2") + ".", sol: ["x dx = du/2", "(1/2)∫ eᵘ du", M("e^(x^2)/2 + C")] },
-    { k: "i", q: "sqrt(2x + 1)", type: "antideriv", ans: "(2x + 1)^(3/2)/3 + C", hint: "u = 2x + 1, dx = du/2.", sol: ["(1/2)∫ u^(1/2) du", "(1/2)·(2/3)u^(3/2) = u^(3/2)/3", M("(2x + 1)^(3/2)/3 + C")] }
+    { k: "i", q: "sqrt(2x + 1)", type: "antideriv", ans: "(2x + 1)^(3/2)/3 + C", hint: "u = 2x + 1, dx = du/2.", sol: ["(1/2)∫ u^(1/2) du", "(1/2)·(2/3)u^(3/2) = u^(3/2)/3", M("(2x + 1)^(3/2)/3 + C")] },
+    { k: "i", q: "x^2/(x^6 + 1)", type: "antideriv", ans: "(1/3)arctan(x^3) + C", hint: "u = x³, du = 3x² dx. Then " + M("x^6 + 1") + " is u² + 1.", sol: ["u = x³, x² dx = du/3", "(1/3)∫ 1/(u² + 1) du = (1/3) arctan u", M("(1/3)arctan(x^3) + C")] },
+    { k: "i", q: "x/sqrt(1 - x^4)", type: "antideriv", ans: "(1/2)arcsin(x^2) + C", pts: [-0.7, -0.4, 0.15, 0.35, 0.6, 0.85], hint: "u = x², du = 2x dx. Then x⁴ is u².", sol: ["u = x², x dx = du/2", "(1/2)∫ 1/√(1 − u²) du = (1/2) arcsin u", M("(1/2)arcsin(x^2) + C")] },
+    { k: "i", q: "(2x + 3)/(x^2 + 1)", type: "antideriv", ans: "ln(x^2 + 1) + 3arctan(x) + C", hint: "Split: " + M("2x/(x^2 + 1) + 3/(x^2 + 1)") + ".", sol: ["Split: " + M("2x/(x^2 + 1)") + " + " + M("3/(x^2 + 1)"), "First piece, u = x² + 1: " + M("ln(x^2 + 1)"), "Second piece: " + M("3arctan(x)"), M("ln(x^2 + 1) + 3arctan(x) + C")] },
+    { k: "i", q: "e^x/(e^x + 1)", type: "antideriv", ans: "ln(e^x + 1) + C", hint: "u = eˣ + 1. Its derivative is right on top.", sol: ["u = eˣ + 1, du = eˣ dx", "∫ du/u = ln|u|", M("ln(e^x + 1) + C") + " (eˣ + 1 is always positive)"] },
+    { k: "i", q: "cos(x)/(sin(x) + 4)", type: "antideriv", ans: "ln(sin(x) + 4) + C", hint: "u = sin x + 4.", sol: ["u = sin x + 4, du = cos x dx", "∫ du/u = ln|u|", M("ln(sin(x) + 4) + C")] },
+    { k: "i", q: "sin(x)cos(x)/(sin(x)^2 + 3)", type: "antideriv", ans: "(1/2)ln(sin(x)^2 + 3) + C", hint: "u = sin² x + 3. Its derivative is 2 sin x cos x.", sol: ["u = sin² x + 3, du = 2 sin x cos x dx", "(1/2)∫ du/u = (1/2) ln|u|", M("(1/2)ln(sin(x)^2 + 3) + C")] },
+    { k: "i", q: "ln(x)^3/x", type: "antideriv", ans: "ln(x)^4/4 + C", hint: "u = ln x, du = dx/x.", sol: ["u = ln x, du = dx/x", "∫ u³ du = u⁴/4", M("ln(x)^4/4 + C")] }
   ]
 },
 /* ================= B7 ================= */
@@ -1251,7 +1367,12 @@ var SESSIONS = [
     { k: "i", q: "x/sqrt(x^2 + 4)", type: "antideriv", ans: "sqrt(x^2 + 4) + C", sol: ["u = x² + 4, du = 2x dx, so x dx = du/2.", "(1/2)∫u^(−1/2) du = (1/2)·2u^(1/2) = √u", M("sqrt(x^2 + 4) + C")] },
     { k: "i", q: "e^(5x)", type: "antideriv", ans: "e^(5x)/5 + C", sol: ["u = 5x, du = 5 dx, so dx = du/5.", "(1/5)∫eᵘ du = eᵘ/5", M("e^(5x)/5 + C")] },
     { k: "di", a: "0", b: "1", q: "x(1 - x^2)^3", type: "number", ans: "1/8", sol: ["u = 1 − x², du = −2x dx, so x dx = −du/2. New limits: 1 to 0.", "Flip the limits to drop the minus: (1/2)" + DI("0", "1", "x^3", "u"), "(1/2)(1/4) = 1/8"] },
-    { k: "di", a: "1", b: "e", q: "ln(x)/x", type: "number", ans: "1/2", sol: ["u = ln x, du = dx/x. New limits: ln 1 = 0 to ln e = 1.", DI("0", "1", "x", "u") + " = " + M("x^2/2", "u") + " from 0 to 1 = 1/2"] }
+    { k: "di", a: "1", b: "e", q: "ln(x)/x", type: "number", ans: "1/2", sol: ["u = ln x, du = dx/x. New limits: ln 1 = 0 to ln e = 1.", DI("0", "1", "x", "u") + " = " + M("x^2/2", "u") + " from 0 to 1 = 1/2"] },
+    { k: "ftc", a: "x", b: "4", q: "sqrt(1 + x^2)", type: "expr", ans: "-sqrt(1 + x^2)", sol: ["x is on the bottom, so flip the limits and add a minus sign.", M("-sqrt(1 + x^2)")] },
+    { k: "di", a: "0", b: "1", q: "3/(1 + x^2)", type: "number", ans: "3pi/4", sol: ["3 arctan x from 0 to 1", "3(π/4 − 0) = 3π/4"] },
+    { k: "txt", text: "f is odd and " + DIH("-3", "5", FX) + " = 4. Find " + DIH("3", "5", FX) + ".", type: "number", ans: "4", sol: ["Split at 3: " + DIH("-3", "3", FX) + " + " + DIH("3", "5", FX) + " = 4", "The first piece is 0 because f is odd, so the answer is 4."] },
+    { k: "txt", text: "Suppose 2 ≤ " + GX + " ≤ 6 for every x in [0, 3]. What is the largest possible value of " + DIH("0", "3", GX) + "?", type: "number", ans: "18", sol: ["The largest g can be is 6 the whole way.", "6 × (3 − 0) = 18"] },
+    { k: "i", q: "x^3/(x^4 + 1)", type: "antideriv", ans: "(1/4)ln(x^4 + 1) + C", sol: ["u = x⁴ + 1, du = 4x³ dx, so x³ dx = du/4", "(1/4)∫ du/u = (1/4) ln|u|", M("(1/4)ln(x^4 + 1) + C")] }
   ] }
 },
 /* ================= Block C ================= */
