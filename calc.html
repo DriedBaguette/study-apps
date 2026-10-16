@@ -341,6 +341,14 @@ input[type="checkbox"].ck { appearance: none; width: 18px; height: 18px; border-
 input[type="checkbox"].ck:checked { background: var(--good); border-color: var(--good); }
 input[type="checkbox"].ck:checked::after { content: ""; position: absolute; left: 5px; top: 1px; width: 5px; height: 10px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(40deg); }
 
+.calc { position: fixed; right: 16px; bottom: 16px; width: min(380px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 12px; z-index: 45; }
+.calc-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.calc input { width: 100%; box-sizing: border-box; margin-top: 8px; }
+.calc-lims { gap: 8px; flex-wrap: nowrap; }
+.calc-lims input { flex: 1; min-width: 0; }
+.calc-note { margin: 6px 0 0; font-size: 13px; }
+.calc-out { margin-top: 10px; font-size: 15px; line-height: 1.5; }
+.calc-plot svg { display: block; width: 100%; height: auto; margin-top: 8px; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); opacity: 0; background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 10px; font-size: 14px; z-index: 50; transition: all .25s; pointer-events: none; max-width: calc(100% - 32px); box-shadow: 0 8px 30px rgba(0,0,0,.25); }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .scrim { display: none; }
@@ -415,6 +423,7 @@ ul.wamap { margin: 0 0 10px; padding-left: 20px; line-height: 1.7; }
       <span class="spacer"></span>
       <button id="fileChip" class="chip" data-act="file-chip" hidden></button>
       <div class="timer" id="timer"></div>
+      <button class="icon-btn" id="calcBtn" aria-label="Calculator" title="Calculator"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="14" height="18" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 7h8M8 12h2M14 12h2M8 16h2M14 16h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
       <button class="icon-btn" id="themeBtn" data-act="theme" aria-label="Switch theme"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/></svg></button>
     </header>
     <main class="page" id="page"></main>
@@ -4638,6 +4647,78 @@ CONFIG.web = true;
   });
 
   applyTheme();
+  /* ---------- calculator (added Oct 15: values, definite integrals, graphs and crossing points) ---------- */
+  (function () {
+    var btn = document.getElementById("calcBtn"); if (!btn) return;
+    var box = document.createElement("div"); box.className = "calc"; box.hidden = true; box.setAttribute("role", "dialog"); box.setAttribute("aria-label", "Calculator");
+    box.innerHTML = '<div class="calc-h"><div class="seg"><button class="on" data-m="val">Calculate</button><button data-m="int">Integral</button><button data-m="gr">Graph</button></div><button class="icon-btn" data-x aria-label="Close calculator">×</button></div>' +
+      '<div data-p="val"><input class="ans" data-f="e" placeholder="e.g. ln(865)/9 or sin(2)" aria-label="Expression" autocomplete="off" autocapitalize="off" spellcheck="false"></div>' +
+      '<div data-p="int" hidden><input class="ans" data-f="f" placeholder="f(x), e.g. sqrt(1 + 4x^2)" aria-label="Function to integrate" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="row calc-lims"><input class="ans" data-f="a" placeholder="from" aria-label="Lower limit"><input class="ans" data-f="b" placeholder="to" aria-label="Upper limit"></div></div>' +
+      '<div data-p="gr" hidden><input class="ans" data-f="g1" placeholder="y = …, e.g. x^3/10 + 1" aria-label="First curve" autocomplete="off" autocapitalize="off" spellcheck="false"><input class="ans" data-f="g2" placeholder="second curve (optional)" aria-label="Second curve" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="row calc-lims"><input class="ans" data-f="ga" value="-5" aria-label="x from"><input class="ans" data-f="gb" value="5" aria-label="x to"></div><div class="calc-plot"></div></div>' +
+      '<p class="muted calc-note">Radians. Type pi for π and e for Euler’s number, the same way as in answer boxes.</p><div class="calc-out" aria-live="polite"></div>';
+    document.body.appendChild(box);
+    var mode = "val", out = box.querySelector(".calc-out"), plot = box.querySelector(".calc-plot");
+    function v(n) { return box.querySelector('[data-f="' + n + '"]').value.trim(); }
+    function num(s) { return E.ev(E.parse(s), 0, 0); }
+    function fn(s) { var a = E.parse(s); return function (x) { return E.ev(a, x, 0); }; }
+    function r(x) { return isFinite(x) ? String(+x.toPrecision(10)) : "undefined"; }
+    function f4(x) { return (Math.abs(x) < 5e-5 ? 0 : x).toFixed(4); }
+    function simpson(f, a, b, n) { var h = (b - a) / n, s = f(a) + f(b); for (var i = 1; i < n; i++) s += f(a + i * h) * (i % 2 ? 4 : 2); return s * h / 3; }
+    function draw(fs, A, B, roots) {
+      var n = 300, ys = [], pts = fs.map(function (f) { var a = []; for (var i = 0; i <= n; i++) { var x = A + (B - A) * i / n, y = f(x); a.push([x, y]); if (isFinite(y)) ys.push(y); } return a; });
+      if (!ys.length) { plot.innerHTML = ""; return; }
+      ys.sort(function (p, q) { return p - q; });
+      var lo = Math.min(ys[Math.floor(ys.length * 0.03)], 0), hi = Math.max(ys[Math.ceil(ys.length * 0.97) - 1], 0), pad = (hi - lo) * 0.08 || 1; lo -= pad; hi += pad;
+      var W = 340, H = 220, X = function (x) { return (x - A) / (B - A) * W; }, Y = function (y) { return H - (y - lo) / (hi - lo) * H; };
+      var s = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Graph of the curves">';
+      if (lo < 0 && hi > 0) s += '<line x1="0" x2="' + W + '" y1="' + Y(0) + '" y2="' + Y(0) + '" style="stroke:var(--ink-faint)"/>';
+      if (A < 0 && B > 0) s += '<line y1="0" y2="' + H + '" x1="' + X(0) + '" x2="' + X(0) + '" style="stroke:var(--ink-faint)"/>';
+      pts.forEach(function (a, k) {
+        var d = "", pen = false;
+        a.forEach(function (p) { if (!isFinite(p[1]) || p[1] < lo - (hi - lo) || p[1] > hi + (hi - lo)) { pen = false; return; } d += (pen ? "L" : "M") + X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1); pen = true; });
+        s += '<path d="' + d + '" style="fill:none;stroke-width:2;stroke:var(--' + (k ? "break" : "ink") + ')"/>';
+      });
+      roots.forEach(function (x) { s += '<circle cx="' + X(x).toFixed(1) + '" cy="' + Y(fs[0](x)).toFixed(1) + '" r="4" style="fill:var(--accent)"/>'; });
+      plot.innerHTML = s + '<text x="4" y="12" style="font-size:11px;fill:var(--ink-faint)">y from ' + r(+lo.toPrecision(3)) + " to " + r(+hi.toPrecision(3)) + "</text></svg>";
+    }
+    function run() {
+      try {
+        if (mode === "val") { if (!v("e")) { out.textContent = ""; return; } out.innerHTML = '<span class="m">' + E.pretty(E.parse(v("e"))) + "</span> = <b>" + r(num(v("e"))) + "</b>"; return; }
+        if (mode === "int") {
+          if (!v("f") || !v("a") || !v("b")) { out.textContent = "Enter the function and both limits."; return; }
+          var f = fn(v("f")), a = num(v("a")), b = num(v("b")), s1 = simpson(f, a, b, 2000), s2 = simpson(f, a, b, 4000);
+          out.innerHTML = "≈ <b>" + r(s2) + "</b>" + (!isFinite(s2) || Math.abs(s1 - s2) > 1e-6 * Math.max(1, Math.abs(s2)) ? ' <span class="muted">The function blows up or jumps somewhere in there, so don’t trust this one.</span>' : "");
+          return;
+        }
+        if (!v("g1")) { out.textContent = ""; plot.innerHTML = ""; return; }
+        var f1 = fn(v("g1")), two = !!v("g2"), f2 = two ? fn(v("g2")) : function () { return 0; }, A = num(v("ga")), B = num(v("gb")), n = 2000, roots = [];
+        if (!(B > A)) { out.textContent = "The second x-value must be bigger than the first."; return; }
+        var d = function (x) { return f1(x) - f2(x); };
+        for (var i = 0; i < n; i++) {
+          var p = A + (B - A) * i / n, q = A + (B - A) * (i + 1) / n, dp = d(p), dq = d(q);
+          if (!isFinite(dp) || !isFinite(dq)) continue;
+          if (dp === 0) { roots.push(p); continue; }
+          if (dp * dq < 0) { for (var k = 0; k < 60; k++) { var m = (p + q) / 2, dm = d(m); if (dp * dm <= 0) q = m; else { p = m; dp = dm; } } var x = (p + q) / 2; if (Math.abs(d(x)) < 1e-6 * (1 + Math.abs(f1(x)))) roots.push(x); }
+        }
+        draw(two ? [f1, f2] : [f1], A, B, roots);
+        out.innerHTML = roots.length ? (two ? "They cross at " : "Zeros at ") + roots.map(function (x) { return "x ≈ <b>" + f4(x) + "</b> (y ≈ " + f4(f1(x)) + ")"; }).join(", ") : (two ? "They don’t cross" : "No zeros") + " between " + A + " and " + B + ". Try a wider range.";
+      } catch (e) { out.textContent = e.message; if (mode === "gr") plot.innerHTML = ""; }
+    }
+    var tmr = null;
+    box.addEventListener("keydown", function (ev) { if (ev.key === "Escape") { box.hidden = true; btn.focus(); } });
+    box.addEventListener("input", function () { clearTimeout(tmr); tmr = setTimeout(run, 250); });
+    box.addEventListener("click", function (ev) {
+      var t = ev.target.closest("button"); if (!t) return;
+      if (t.hasAttribute("data-x")) { box.hidden = true; return; }
+      if (t.dataset.m) {
+        mode = t.dataset.m;
+        box.querySelectorAll("[data-m]").forEach(function (b) { b.classList.toggle("on", b === t); });
+        box.querySelectorAll("[data-p]").forEach(function (p) { p.hidden = p.dataset.p !== mode; });
+        run();
+      }
+    });
+    btn.addEventListener("click", function () { box.hidden = !box.hidden; if (!box.hidden) { var i = box.querySelector('[data-p="' + mode + '"] input'); if (i) i.focus(); } });
+  })();
   initReader();
   lastJSON = fingerprint();
   render();
