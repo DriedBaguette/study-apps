@@ -271,11 +271,11 @@ sup sup { font-size: .85em; }
 .prob-q { display: flex; gap: 12px; align-items: baseline; font-size: 17px; line-height: 1.9; }
 .prob-q .qn { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--ink-faint); font-weight: 600; flex: none; }
 .ans-row { display: flex; gap: 8px; }
-.ans {
+.ans, .calc-in {
   flex: 1; min-width: 0; font-family: "IBM Plex Mono", monospace; font-size: 16px; padding: 10px 12px; border-radius: 9px;
   border: 1.5px solid var(--border-strong); background: var(--surface-2); color: var(--ink);
 }
-.ans:focus { outline: none; border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 3px var(--accent-soft); }
+.ans:focus, .calc-in:focus { outline: none; border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 3px var(--accent-soft); }
 .pv { min-height: 26px; font-size: 14px; color: var(--ink-faint); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .pv .m { color: var(--ink); font-size: 1.15em; }
 .pv.err { color: var(--warn); }
@@ -3785,7 +3785,7 @@ CONFIG.web = true;
   }
   function afterRender() {
     mountScratches();
-    $$(".ans").forEach(function (i) { if (i.value) preview(i); });
+    $$("#page .prob .ans").forEach(function (i) { if (i.value) preview(i); });
     var first = $("#tabBody .prob:not(.correct) .ans");
     if (first && S.prefs.oneAtATime && window.innerWidth > 860 && !$("#qbar")) first.focus({ preventScroll: true });
     var top = $(".top"); if (top) document.documentElement.style.setProperty("--topH", top.offsetHeight + "px");
@@ -3922,9 +3922,9 @@ CONFIG.web = true;
     if (CONFIG.noPad || CONFIG.noCalc) { btn.hidden = true; return; } // not for apps without math, like History
     var box = document.createElement("div"); box.className = "calc"; box.hidden = true; box.setAttribute("role", "dialog"); box.setAttribute("aria-label", "Calculator");
     box.innerHTML = '<div class="calc-h"><div class="seg"><button class="on" data-m="val">Calculate</button><button data-m="int">Integral</button><button data-m="gr">Graph</button></div><button class="icon-btn" data-x aria-label="Close calculator">×</button></div>' +
-      '<div data-p="val"><input class="ans" data-f="e" placeholder="e.g. ln(865)/9 or sin(2)" aria-label="Expression" autocomplete="off" autocapitalize="off" spellcheck="false"></div>' +
-      '<div data-p="int" hidden><input class="ans" data-f="f" placeholder="f(x), e.g. sqrt(1 + 4x^2)" aria-label="Function to integrate" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="row calc-lims"><input class="ans" data-f="a" placeholder="from" aria-label="Lower limit"><input class="ans" data-f="b" placeholder="to" aria-label="Upper limit"></div></div>' +
-      '<div data-p="gr" hidden><input class="ans" data-f="g1" placeholder="y = …, e.g. x^3/10 + 1" aria-label="First curve" autocomplete="off" autocapitalize="off" spellcheck="false"><input class="ans" data-f="g2" placeholder="second curve (optional)" aria-label="Second curve" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="row calc-lims"><input class="ans" data-f="ga" value="-5" aria-label="x from"><input class="ans" data-f="gb" value="5" aria-label="x to"></div><div class="calc-plot"></div></div>' +
+      '<div data-p="val"><input class="calc-in" data-f="e" placeholder="e.g. ln(865)/9 or sin(2)" aria-label="Expression" autocomplete="off" autocapitalize="off" spellcheck="false"></div>' +
+      '<div data-p="int" hidden><input class="calc-in" data-f="f" placeholder="f(x), e.g. sqrt(1 + 4x^2)" aria-label="Function to integrate" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="row calc-lims"><input class="calc-in" data-f="a" placeholder="from" aria-label="Lower limit"><input class="calc-in" data-f="b" placeholder="to" aria-label="Upper limit"></div></div>' +
+      '<div data-p="gr" hidden><input class="calc-in" data-f="g1" placeholder="y = …, e.g. x^3/10 + 1" aria-label="First curve" autocomplete="off" autocapitalize="off" spellcheck="false"><input class="calc-in" data-f="g2" placeholder="second curve (optional)" aria-label="Second curve" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="row calc-lims"><input class="calc-in" data-f="ga" value="-5" aria-label="x from"><input class="calc-in" data-f="gb" value="5" aria-label="x to"></div><div class="calc-plot"></div></div>' +
       '<p class="muted calc-note">Radians. Type pi for π and e for Euler’s number, the same way as in answer boxes.</p><div class="calc-out" aria-live="polite"></div>';
     document.body.appendChild(box);
     var mode = "val", out = box.querySelector(".calc-out"), plot = box.querySelector(".calc-plot");
