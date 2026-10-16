@@ -4650,6 +4650,7 @@ CONFIG.web = true;
   /* ---------- calculator (added Oct 15: values, definite integrals, graphs and crossing points) ---------- */
   (function () {
     var btn = document.getElementById("calcBtn"); if (!btn) return;
+    if (CONFIG.noPad || CONFIG.noCalc) { btn.hidden = true; return; } // not for apps without math, like History
     var box = document.createElement("div"); box.className = "calc"; box.hidden = true; box.setAttribute("role", "dialog"); box.setAttribute("aria-label", "Calculator");
     box.innerHTML = '<div class="calc-h"><div class="seg"><button class="on" data-m="val">Calculate</button><button data-m="int">Integral</button><button data-m="gr">Graph</button></div><button class="icon-btn" data-x aria-label="Close calculator">×</button></div>' +
       '<div data-p="val"><input class="ans" data-f="e" placeholder="e.g. ln(865)/9 or sin(2)" aria-label="Expression" autocomplete="off" autocapitalize="off" spellcheck="false"></div>' +
