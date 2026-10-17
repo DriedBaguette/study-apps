@@ -2119,8 +2119,8 @@ SESSIONS.unshift({
   function D(q, ans, sol) { return { k: "d", q: q, type: "expr", ans: ans, sol: sol }; }
   function DIq(a, b, q, ans, sol) { return { k: "di", a: a, b: b, q: q, type: "number", ans: ans, sol: sol }; }
   function N(text, ans, sol) { return { k: "txt", text: text, type: "number", ans: ans, sol: sol }; }
-  function chain(q, inner, innerD, ans) { return D(q, ans, ["Inside: " + M(inner) + ". Its derivative: " + M(innerD) + ".", "Derivative of the outside (inside left alone) × " + M(innerD), M(ans)]); }
-  function odd(a, b, q) { return DIq(a, b, q, "0", ["Plug in −x: the sign flips, so " + M(q) + " is odd.", "Over [" + MI(a) + ", " + MI(b) + "] the left half cancels the right half.", "= 0"]); }
+  function chain(q, inner, innerD, ans, outD) { return D(q, ans, ["Chain rule: derivative of the outside (with the inside left alone) × derivative of the inside.", "Inside: " + M(inner) + ". The outside is what’s done to it.", "Derivative of the outside, inside left alone: " + M(outD) + ".", "Derivative of the inside: " + M(innerD) + ".", "Multiply them: " + M(ans)]); }
+  function odd(a, b, q) { return DIq(a, b, q, "0", ["Test for symmetry: put in −x and compare with the original.", "Putting in −x flips the sign, so " + M(q) + " is odd.", "An odd function’s graph on the left is the right side flipped below the axis, so over [" + MI(a) + ", " + MI(b) + "] the left half cancels the right half.", "So the integral is 0."]); }
   function even(a, b, q, half, ans) { return DIq(a, b, q, ans, ["Plug in −x: nothing changes, so " + M(q) + " is even.", "2" + DI("0", b, q) + " = 2(" + half + ")", "= " + ans]); }
 
   /* ---- the bank: type → new items ---- */
@@ -2232,15 +2232,15 @@ SESSIONS.unshift({
         ftc1("x", "0", "sqrt(1 + x^2)", "-sqrt(1 + x^2)"),
         ftc1("2", "x^2", "1/x", "2/x", "2x")],
       chain: [
-        chain("(4x - 1)^5", "4x - 1", "4", "20(4x - 1)^4"),
-        chain("e^(3x^2)", "3x^2", "6x", "6x e^(3x^2)"),
-        chain("ln(5x + 2)", "5x + 2", "5", "5/(5x + 2)"),
-        chain("sin(x^3)", "x^3", "3x^2", "3x^2 cos(x^3)"),
-        chain("sqrt(x^2 + 9)", "x^2 + 9", "2x", "x/sqrt(x^2 + 9)"),
-        chain("cos(6x)", "6x", "6", "-6sin(6x)"),
-        chain("(x^2 + 3x)^4", "x^2 + 3x", "2x + 3", "4(x^2 + 3x)^3 (2x + 3)"),
-        chain("tan(2x)", "2x", "2", "2sec(2x)^2"),
-        chain("e^(sin(x))", "sin(x)", "cos(x)", "cos(x)e^(sin(x))")],
+        chain("(4x - 1)^5", "4x - 1", "4", "20(4x - 1)^4", "5(4x - 1)^4"),
+        chain("e^(3x^2)", "3x^2", "6x", "6x e^(3x^2)", "e^(3x^2)"),
+        chain("ln(5x + 2)", "5x + 2", "5", "5/(5x + 2)", "1/(5x + 2)"),
+        chain("sin(x^3)", "x^3", "3x^2", "3x^2 cos(x^3)", "cos(x^3)"),
+        chain("sqrt(x^2 + 9)", "x^2 + 9", "2x", "x/sqrt(x^2 + 9)", "1/(2sqrt(x^2 + 9))"),
+        chain("cos(6x)", "6x", "6", "-6sin(6x)", "-sin(6x)"),
+        chain("(x^2 + 3x)^4", "x^2 + 3x", "2x + 3", "4(x^2 + 3x)^3 (2x + 3)", "4(x^2 + 3x)^3"),
+        chain("tan(2x)", "2x", "2", "2sec(2x)^2", "sec(2x)^2"),
+        chain("e^(sin(x))", "sin(x)", "cos(x)", "cos(x)e^(sin(x))", "e^(sin(x))")],
       sym: [
         odd("-2", "2", "x^3 - 4x"),
         odd("-1", "1", "x^2 sin(x)"),
@@ -2403,6 +2403,548 @@ SESSIONS.unshift({
     pool.forEach(function (p, i) { p.g = old[i]; });
     Object.keys(BANK[s.id]).forEach(function (g) { BANK[s.id][g].forEach(function (p) { p.g = g; pool.push(p); }); });
   });
+})();
+
+/* ================= Fuller hand-written solutions =================
+   Added Oct 17, 2026 at the user's request: every problem should show all its steps. These replace
+   one- and two-step solutions that steps.js can't generate (geometry, properties, chain rule,
+   substitution, Riemann sums, word problems), keyed by problem id (B2-5 is practice problem 5 of B2,
+   B8-q53 is quiz-pool item 53). Loaded after quizbank.js and before steps.js. An entry may instead add
+   `chk` so steps.js can write the steps itself. Calc build only. */
+(function () {
+  var I_ = function (a, b, body) { return DIH(a, b, body || FX); };
+  // substitution and the chain rule, written out the same way every time
+  var U = function (u, du, rw, integ, back) { return ["Pick the inside piece: u = " + u + ". Its derivative is also in the problem, so substitution works.", "Find du: " + du + ".", "Rewrite everything in u (no x left): " + rw + ".", "Integrate: " + integ + ".", "Put x back in for u: " + back + "."]; };
+  var UD = function (u, du, lim, rw, integ, val) { return ["Pick the inside piece: u = " + u + ".", "Find du: " + du + ".", "Change the limits to u-values: " + lim + ".", "Rewrite in u with the new limits: " + rw + ".", "Integrate: " + integ + ".", "Plug in the new limits. No need to go back to x: " + val + "."]; };
+  var CH = function (inner, outD, inD, ans) { return ["Chain rule: derivative of the outside (with the inside left alone) × derivative of the inside.", "Inside: " + inner + ".", "Derivative of the outside, inside left alone: " + outD + ".", "Derivative of the inside: " + inD + ".", "Multiply them: " + ans + "."]; };
+  var FIX = {
+    "A0-1": ["You can only add fractions with the same bottom. The smallest number 4 and 6 both go into is 12.", "3/4 = 9/12 (multiply top and bottom by 3). 5/6 = 10/12 (multiply top and bottom by 2).", "9/12 + 10/12 = 19/12. Nothing divides both 19 and 12, so that’s simplified."],
+    "A0-2": ["Dividing by a fraction is the same as multiplying by its flip: (2/3) ÷ (4/9) = (2/3) × (9/4).", "Multiply the tops and the bottoms: (2 · 9)/(3 · 4) = 18/12.", "Simplify by dividing top and bottom by 6: 3/2."],
+    "A0-4": ["Power of a power: multiply the exponents. (x³)² = x^(3·2) = x⁶.", "Multiplying powers with the same base: add the exponents. x⁶ · x⁻⁴ = x^(6 + (−4)).", "6 − 4 = 2, so the answer is x²."],
+    "A0-5": ["Factoring x² − 5x + 6 means finding two numbers that multiply to +6 and add to −5.", "Pairs that multiply to 6: 1 and 6, 2 and 3, and their negatives. (−2) × (−3) = 6 and (−2) + (−3) = −5. ✓", "So x² − 5x + 6 = (x − 2)(x − 3), and a = 3."],
+    "A0-6": ["(2x − 3)² means (2x − 3)(2x − 3). Don’t just square each part: that misses the middle terms.", "FOIL. First: 2x · 2x = 4x². Outer: 2x · (−3) = −6x. Inner: (−3) · 2x = −6x. Last: (−3)(−3) = 9.", "Combine the middle terms: −6x − 6x = −12x, so (2x − 3)² = 4x² − 12x + 9.", "The coefficient of x is −12."],
+    "A0-8": ["f(g(x)) means: take g(x) and put it into f wherever f has an x.", "g(x) = x + 1, so f(g(x)) = f(x + 1).", "f squares whatever you give it: f(x + 1) = (x + 1)². (Multiplied out, that’s x² + 2x + 1. Either form is right.)"],
+    "A0-9": ["π radians is 180°: half a turn around the unit circle.", "Start at (1, 0) and go half a turn. You land at (−1, 0).", "cos is the x-coordinate of that point, so cos π = −1."],
+    "A0-10": ["Convert to degrees: π/6 = 180°/6 = 30°.", "On the unit circle, 30° is the point (√3/2, 1/2).", "sin is the y-coordinate, so sin(π/6) = 1/2."],
+    "B1-3": ["This means 1² + 2² + … + 10². You could add ten squares, but the formula is faster.", "Σk² from 1 to n = n(n + 1)(2n + 1)/6. Here n = 10.", "10 · 11 · 21 = 2310.", "2310 ÷ 6 = 385."],
+    "B1-4": ["Δx = (b − a)/n: the length of the interval, cut into n equal pieces.", "Here a = 1, b = 5 and n = 8.", "Δx = (5 − 1)/8 = 4/8 = 0.5."],
+    "B1-5": ["Δx = (2 − 0)/2 = 1. The strips are [0, 1] and [1, 2].", "Right sum: use each strip’s right edge, x = 1 and x = 2.", "Heights: f(1) = 1² = 1 and f(2) = 2² = 4.", "Area ≈ (1 + 4) × 1 = 5."],
+    "B1-6": ["Δx = (4 − 0)/4 = 1. The strips are [0, 1], [1, 2], [2, 3], [3, 4].", "Left sum: use each strip’s left edge, x = 0, 1, 2, 3.", "Heights: f(0) = 3(0) + 1 = 1, f(1) = 4, f(2) = 7, f(3) = 10.", "Area ≈ (1 + 4 + 7 + 10) × 1 = 22."],
+    "B1-7": ["Δx = (2 − 0)/2 = 1. The strips are [0, 1] and [1, 2].", "Midpoint sum: use the middle of each strip, x = 0.5 and x = 1.5.", "Heights: 0.5³ = 0.125 and 1.5³ = 3.375.", "Area ≈ (0.125 + 3.375) × 1 = 3.5."],
+    "B2-1": ["Sketch y = 3: a flat line 3 units above the x-axis.", "From x = 0 to 5 the region under it is a rectangle: width 5 − 0 = 5, height 3.", "Area = 5 × 3 = 15. It’s above the axis, so the integral is 15."],
+    "B2-2": ["Sketch y = x: a straight line through the origin.", "From 0 to 6 the region is a triangle: base 6, and height 6 (the line’s height at x = 6).", "Area = ½ · 6 · 6 = 18. It’s above the axis, so the integral is 18."],
+    "B2-3": ["y = √(9 − x²) is the top half of a circle: squaring gives y² = 9 − x², so x² + y² = 9, radius 3.", "From x = −3 to 3 the region is the whole top half.", "Half of πr²: ½ · π · 3² = 9π/2."],
+    "B2-4": ["Sketch y = x from −2 to 0. That part of the line is below the x-axis.", "The region is a triangle: base 2, height 2 (the line is at y = −2 when x = −2).", "Area = ½ · 2 · 2 = 2. It’s below the axis, so it counts as −2."],
+    "B2-5": ["An interval can be cut into pieces: " + I_("0", "4") + " = " + I_("0", "1") + " + " + I_("1", "4") + ".", "Plug in what you know: 7 = 2 + " + I_("1", "4") + ".", I_("1", "4") + " = 7 − 2 = 5."],
+    "B2-6": ["Flipping the limits flips the sign: " + I_("5", "2") + " = −" + I_("2", "5") + " = −6.", "Constants pull out: " + I_("5", "2", "3" + FX) + " = 3 × " + I_("5", "2") + ".", "3 × (−6) = −18."],
+    "B2-7": ["Sums split into separate integrals, and constants pull out front:", "2" + I_("0", "5") + " − 3" + I_("0", "5", GX) + " + " + I_("0", "5", HX), "= 2(10) − 3(4) + 3", "= 20 − 12 + 3 = 11."],
+    "B2-8": ["Split it: " + I_("2", "6") + " − " + I_("2", "6", GX) + " + " + I_("2", "6", "4") + ".", "A lone constant integrates to itself times the width: " + I_("2", "6", "4") + " = 4 × (6 − 2) = 16. (It’s a rectangle of height 4 and width 4.)", "7 − 3 + 16 = 20."],
+    "B2-9": ["Join the two pieces of f: " + I_("1", "3") + " + " + I_("3", "8") + " = " + I_("1", "8") + " = 2 + 5 = 7.", "Split the integral you want: " + I_("1", "8") + " + 2" + I_("1", "8", GX) + ".", "7 + 2(3) = 13."],
+    "B2-10": ["Bounding rule: if m ≤ g(x) ≤ M on [a, b], then m(b − a) ≤ " + I_("a", "b", GX) + " ≤ M(b − a).", "The smallest g can be is 2 the whole way, so the smallest " + I_("1", "4", GX) + " = 2 × (4 − 1) = 6.", "Split what you want: " + I_("1", "4", GX) + " + " + I_("1", "4") + ". Smallest: 6 + 3 = 9."],
+    "B2-11": ["Bounding rule: " + I_("a", "b", GX) + " ≤ M(b − a) when g(x) ≤ M.", "The largest g can be is 5 the whole way, so the largest " + I_("1", "4", GX) + " = 5 × (4 − 1) = 15.", "Add " + I_("1", "4") + " = 3: 15 + 3 = 18."],
+    "B2-15": ["The absolute value flips anything below the axis up, so every piece counts as positive area.", "4 − x hits 0 at x = 4. From 0 to 4: a triangle with base 4 and height 4, area 8.", "From 4 to 6: a triangle with base 2 and height |4 − 6| = 2, area 2.", "Total: 8 + 2 = 10."],
+    "B2-16": [I_("0", "7") + " is the net area: regions above the axis count as +, regions below count as −.", "+5 (above), −2 (below), +4 (above).", "5 − 2 + 4 = 7."],
+    "B2-17": ["|f(x)| is never negative: the region below the axis gets flipped up.", "So every region counts as +: 5, 2 and 4.", "5 + 2 + 4 = 11."],
+    "B3-2": ["Chain rule: derivative of the outside (leave the inside alone) × derivative of the inside.", "Outside: sin( ). Inside: 3x.", "Derivative of the outside: cos(3x). Derivative of the inside: 3.", "Multiply: 3cos(3x)."],
+    "B3-4": ["Chain rule. Outside: ln( ). Inside: g = x² + 1.", "The derivative of ln g is 1/g, so the outside gives 1/(x² + 1).", "The derivative of the inside is 2x.", "Multiply: 2x/(x² + 1)."],
+    "B3-5": ["Write the root as a power: (4x − 3)^(1/2).", "Chain rule. Outside: ( )^(1/2), whose derivative is (1/2)( )^(−1/2). Inside: 4x − 3, whose derivative is 4.", "Multiply: (1/2)(4x − 3)^(−1/2) × 4 = 2(4x − 3)^(−1/2).", "A negative power means 1 over it: 2/√(4x − 3)."],
+    "B3-6": ["Chain rule. Outside: cos( ). Inside: x².", "The derivative of cos is −sin, so the outside gives −sin(x²).", "The derivative of the inside is 2x.", "Multiply: −2x sin(x²)."],
+    "B3-7": ["Chain rule. Outside: ( )⁶. Inside: x³ − x.", "Derivative of the outside: 6( )⁵, with the inside left alone: 6(x³ − x)⁵.", "Derivative of the inside: 3x² − 1.", "Multiply: 6(x³ − x)⁵(3x² − 1)."],
+    "B4-7": ["The antiderivative of eˣ is eˣ itself.", "Top limit: e¹ = e. Bottom limit: e⁰ = 1.", "Subtract, top minus bottom: e − 1 (about 1.718)."],
+    "B4-13": [II("1/(1 + x^2)") + " = arctan x, so the antiderivative is 2 arctan x.", "Top limit: 2 arctan √3. arctan √3 = π/3, because tan(π/3) = √3. So 2π/3.", "Bottom limit: 2 arctan 0 = 0, because tan 0 = 0.", "Subtract: 2π/3 − 0 = 2π/3."],
+    "B4-15": ["Antiderivative of sin(3x): −cos(3x), divided by the 3 in front of x, so −cos(3x)/3. (Check: its derivative is sin(3x).)", "Top limit: −cos(3 · π/3)/3 = −cos(π)/3 = −(−1)/3 = 1/3.", "Bottom limit: −cos(0)/3 = −1/3.", "Subtract: 1/3 − (−1/3) = 2/3."],
+    "B5-1": ["Check the symmetry: (−x)⁷ = −x⁷, so x⁷ is odd.", "An odd function is flipped below the axis on the left side, so the area left of 0 cancels the area right of 0.", "Over symmetric limits like [−5, 5], the integral is 0."],
+    "B5-2": ["Check the symmetry: (−x)² + 1 = x² + 1, so it’s even.", "Even over [−2, 2]: double the integral from 0 to 2.", DI("0", "2", "x^2 + 1") + " = " + M("x^3/3 + x") + " from 0 to 2 = 8/3 + 2 = 14/3.", "Double it: 2 × 14/3 = 28/3."],
+    "B5-3": ["Check the symmetry: sin(−x) = −sin x, so sin is odd.", "The area above the axis on one side cancels the area below on the other side.", "Over [−π, π] the integral is 0."],
+    "B5-6": ["The Mean Value Theorem for integrals: somewhere in the interval, the function equals its average.", "So set f(c) equal to the average: c² = 3.", "c = √3 or −√3. Only √3 ≈ 1.732 is inside [0, 3]."],
+    "B5-7": ["Even means f(−x) = f(x): the graph is mirrored across the y-axis.", "So the area from −3 to 0 equals the area from 0 to 3: " + I_("-3", "0") + " = 5 too.", I_("-3", "3") + " = 5 + 5 = 10."],
+    "B5-8": ["Split [−4, 9] into [−4, 0], [0, 4] and [4, 9].", "f is even, so " + I_("-4", "0") + " = " + I_("0", "4") + " = 3.", I_("-4", "9") + " = 3 + 3 + 2 = 8.", "The 5 pulls out: 5 × 8 = 40."],
+    "B5-9": ["Split at 2: " + I_("-2", "7") + " = " + I_("-2", "2") + " + " + I_("2", "7") + ".", "f is odd and [−2, 2] is symmetric, so " + I_("-2", "2") + " = 0.", "9 = 0 + " + I_("2", "7") + ", so " + I_("2", "7") + " = 9."],
+    "B5-10": ["Average = integral ÷ width, so integral = average × width.", I_("1", "6") + " = 4 × (6 − 1) = 20.", "Split: 3" + I_("1", "6") + " + " + I_("1", "6", "2") + " = 3(20) + 2 × 5.", "= 60 + 10 = 70."],
+    "B6-2": ["Let u = 5x, the inside.", "du = 5 dx, so dx = du/5.", II("cos(5x)") + " = ∫ cos u · du/5 = (1/5) ∫ cos u du = (1/5) sin u.", "Put x back in for u: " + M("sin(5x)/5 + C")],
+    "B7-2": ["Let u = x². Then du = 2x dx, so x dx = du/2.", "Change the limits: x = 0 gives u = 0, and x = 2 gives u = 4.", "(1/2)" + DI("0", "4", "e^x", "u") + " = (1/2)eᵘ from 0 to 4.", "(1/2)(e⁴ − e⁰) = (e⁴ − 1)/2."],
+    "B7-3": ["Let u = x/2. Then du = dx/2, so dx = 2 du.", "Change the limits: x = 0 gives u = 0, and x = π gives u = π/2.", "2" + DI("0", "pi/2", "cos(x)", "u") + " = 2 sin u from 0 to π/2.", "2(sin(π/2) − sin 0) = 2(1 − 0) = 2."],
+    "B7-4": ["Let u = x³ + 1. Then du = 3x² dx, which is exactly the top.", "Change the limits: x = 0 gives u = 1, and x = 1 gives u = 2.", DI("1", "2", "1/x", "u") + " = ln u from 1 to 2.", "ln 2 − ln 1 = ln 2 − 0 = ln 2."],
+    "B7-5": ["Let u = 2x + 1. Then du = 2 dx, so dx = du/2.", "Change the limits: x = 0 gives u = 1, and x = 4 gives u = 9.", "(1/2)" + DI("1", "9", "x^(-1/2)", "u") + " = (1/2) · 2u^(1/2) = √u, from 1 to 9.", "√9 − √1 = 3 − 1 = 2."],
+    "B8-3": ["Δx = (3 − 0)/3 = 1. The strips are [0, 1], [1, 2], [2, 3].", "Right sum: right edges x = 1, 2, 3.", "Heights: f(1) = 2(1) + 1 = 3, f(2) = 5, f(3) = 7.", "Area ≈ (3 + 5 + 7) × 1 = 15."],
+    "B8-4": ["An interval can be cut into pieces: " + I_("1", "5") + " = " + I_("1", "3") + " + " + I_("3", "5") + ".", "8 = 3 + " + I_("3", "5") + ".", I_("3", "5") + " = 8 − 3 = 5."],
+    "B8-6": ["Let u = x² + 16. Then du = 2x dx, so x dx = du/2.", "Change the limits: x = 0 gives u = 16, and x = 3 gives u = 25.", "(1/2)" + DI("16", "25", "x^(-1/2)", "u") + " = (1/2) · 2√u = √u, from 16 to 25.", "√25 − √16 = 5 − 4 = 1."],
+    "B8-q22": ["Let u = ln x. Then du = (1/x) dx.", "Change the limits: x = 1 gives u = ln 1 = 0, and x = e gives u = ln e = 1.", DI("0", "1", "x", "u") + " = u²/2 from 0 to 1.", "1/2 − 0 = 1/2."],
+    "B8-q24": [II("1/(1 + x^2)") + " = arctan x, so the antiderivative is 3 arctan x.", "Top limit: 3 arctan 1 = 3 · π/4, because tan(π/4) = 1.", "Bottom limit: 3 arctan 0 = 0.", "3π/4 − 0 = 3π/4."],
+    "B8-q70": [II("1/(1 + x^2)") + " = arctan x, so the antiderivative is 4 arctan x.", "Top limit: 4 arctan 1 = 4 · π/4 = π, because tan(π/4) = 1.", "Bottom limit: 4 arctan 0 = 0.", "π − 0 = π."],
+    "B8-q25": ["Split at 3: " + I_("-3", "5") + " = " + I_("-3", "3") + " + " + I_("3", "5") + ".", "f is odd and [−3, 3] is symmetric, so " + I_("-3", "3") + " = 0.", "4 = 0 + " + I_("3", "5") + ", so " + I_("3", "5") + " = 4."],
+    "B8-q26": ["Bounding rule: if g(x) ≤ M on [a, b], then " + I_("a", "b", GX) + " ≤ M(b − a).", "The largest g can be is 6, the whole way across.", "6 × (3 − 0) = 18."],
+    "B8-q51": ["Split it: " + I_("2", "5") + " − 2" + I_("2", "5", GX) + " + " + I_("2", "5", "1") + ".", "The lone 1 integrates to 1 × (5 − 2) = 3.", "9 − 2(4) + 3 = 9 − 8 + 3 = 4."],
+    "B8-q52": ["An interval can be cut into pieces: " + I_("0", "7") + " = " + I_("0", "3") + " + " + I_("3", "7") + ".", "10 = 4 + " + I_("3", "7") + ".", I_("3", "7") + " = 10 − 4 = 6."],
+    "B8-q53": ["Flipping the limits flips the sign: " + I_("4", "1") + " = −" + I_("1", "4") + " = −(−2) = 2.", "The 3 pulls out: " + I_("4", "1", "3" + FX) + " = 3 × 2.", "= 6."],
+    "B8-q54": ["Even means f(−x) = f(x): the graph is mirrored across the y-axis.", "So " + I_("-6", "0") + " = " + I_("0", "6") + " = 8.", I_("-6", "6") + " = 8 + 8 = 16."],
+    "B8-q55": ["Bounding rule: if g(x) ≥ m on [a, b], then " + I_("a", "b", GX) + " ≥ m(b − a).", "The smallest g can be is −1, the whole way across.", "−1 × (7 − 2) = −5."],
+    "B8-q56": ["Average = integral ÷ width, so " + I_("0", "8") + " = 3 × 8 = 24.", "Split: " + I_("0", "8") + " + " + I_("0", "8", "1") + " = 24 + 1 × (8 − 0).", "= 24 + 8 = 32."],
+    "B8-q57": ["Constants pull out: " + I_("a", "b", "2<i>x</i>") + " = 2" + I_("a", "b", "<i>x</i>") + " = 16, so " + I_("a", "b", "<i>x</i>") + " = 8.", I_("a", "b", "5") + " = 5(b − a) = 10, so b − a = 2, and " + I_("a", "b", "1") + " = 2.", "Split what you want: 3" + I_("a", "b", "<i>x</i>") + " − " + I_("a", "b", "1") + " = 3(8) − 2.", "= 22."],
+    "B8-q58": ["y = √(16 − x²) is the top half of a circle: x² + y² = 16, radius 4.", "From −4 to 4 the region is the whole top half.", "½ · π · 4² = 8π."],
+    "B8-q59": ["y = √(4 − x²) is the top half of a circle of radius 2.", "From 0 to 2 is only the right half of that: a quarter circle.", "¼ · π · 2² = π."],
+    "B8-q60": ["|x| is a V with its point at the origin. It’s never below the axis.", "From −4 to 0: a triangle with base 4 and height |−4| = 4, area ½ · 4 · 4 = 8.", "From 0 to 2: a triangle with base 2 and height 2, area ½ · 2 · 2 = 2.", "Total: 8 + 2 = 10."],
+    "B8-q61": ["y = 5 is a flat line, so the region is a rectangle.", "Width 9 − 2 = 7, height 5.", "7 × 5 = 35."],
+    "B8-q62": ["y = 2x is a straight line through the origin, so the region is a triangle.", "Base 5. Height at x = 5: 2(5) = 10.", "½ · 5 · 10 = 25."],
+    "B8-q63": ["y = 6 − 2x starts at height 6 and hits 0 when 6 − 2x = 0, at x = 3.", "From 0 to 3 that’s a triangle with base 3 and height 6.", "½ · 3 · 6 = 9."],
+    "B8-q65": ["|x − 2| is a V with its point at x = 2. It’s never below the axis.", "From 0 to 2: a triangle with base 2 and height |0 − 2| = 2, area 2.", "From 2 to 5: a triangle with base 3 and height |5 − 2| = 3, area 4.5.", "Total: 2 + 4.5 = 6.5 = 13/2."],
+    "B8-q66": ["y = −√(9 − x²) is the bottom half of a circle of radius 3.", "From −3 to 3 that’s the whole bottom half, with area ½ · π · 3² = 9π/2.", "It’s below the axis, so it counts as negative: −9π/2."],
+    "B8-q104": ["cos(−x) = cos x, so cos is even: double the integral from 0 to π.", "2" + DI("0", "pi", "cos(x)") + " = 2 sin x from 0 to π.", "2(sin π − sin 0) = 2(0 − 0) = 0.", "That makes sense: the area above the axis from 0 to π/2 cancels the area below it from π/2 to π."],
+    "C1-4": ["Displacement only compares where it ended with where it started. Distance adds up every meter moved, in either direction.", "Displacement 0: it ended where it started.", "Distance 10: it moved 10 m in total. So it went 5 m one way and 5 m back.", "Forward 5 and back 5 cancel in the displacement (5 − 5 = 0) but add up in the distance (5 + 5 = 10)."],
+    "C2-5": ["Pick a test x between the crossing points 0 and 2, like x = 1.", "Line: 2x = 2(1) = 2. Parabola: x² = 1² = 1.", "2 is bigger, so the line y = 2x is on top from 0 to 2."],
+    "C2-7": ["Get x² by itself: subtract 1 from both sides. y − 1 = x².", "Take the square root of both sides: x = ±√(y − 1).", "The problem says x ≥ 0, so keep the positive root: x = √(y − 1)."],
+    "C3-3": ["Find where they cross: x² = 2x, so x² − 2x = 0, x(x − 2) = 0: x = 0 and x = 2.", "Which is on top? At x = 1: 2x = 2 and x² = 1, so the line is on top.", "Area = top minus bottom: " + DI("0", "2", "2x - x^2") + " = " + M("x^2 - x^3/3") + " from 0 to 2.", "(4 − 8/3) − 0 = 4/3."],
+    "C5-8": ["The curve is given as y = 2x − x² (y in terms of x). To slice horizontally you’d have to solve it for x, which is messy.", "So slice vertically, in x. Around the y-axis, vertical strips are parallel to the axis of rotation.", "Strips parallel to the axis sweep out shells. Use shells, integrating in x."],
+    "C7-1": ["Mass = the integral of the density along the bar: " + DI("0", "2", "4 + 3x^2") + ".", "Antiderivative: " + M("4x + x^3") + ".", "At 2: 4(2) + 2³ = 8 + 8 = 16. At 0: 0.", "Mass = 16 − 0 = 16 kg."],
+    "C7-2": ["Hooke’s law: force = k × stretch, F = kx.", "Here F = 30 N and x = 0.5 m: 30 = k × 0.5.", "k = 30 ÷ 0.5 = 60 N/m."],
+    "C7-3": ["Work = the integral of force over the distance. The spring pulls back with force 60x at stretch x.", DI("0", "0.5", "60x") + " = " + M("30x^2") + " from 0 to 0.5.", "30(0.5)² − 0 = 30(0.25) = 7.5 J."],
+    "C7-4": ["Same force, 60x, but now from x = 0.5 to x = 1.", DI("0.5", "1", "60x") + " = " + M("30x^2") + " from 0.5 to 1.", "30(1)² − 30(0.5)² = 30 − 7.5 = 22.5 J."],
+    "C7-5": ["Slice the rope. A piece y feet below the roof is dy long, weighs 0.5 dy lb, and has to be lifted y feet.", "Its work is 0.5y dy. Add up all the pieces: " + DI("0", "40", "0.5x", "y") + ".", "= 0.25y² from 0 to 40 = 0.25 × 1600.", "= 400 ft·lb."],
+    "C7-6": ["The water leaves over the top of the tank, at height 5.", "A layer at height y has to rise from y up to 5.", "Distance = 5 − y meters."],
+    "B3-1": CH("2x + 1", "4(2x + 1)³", "2", "8(2x + 1)³"),
+    "B3-3": CH("5x", "e^(5x) (eˣ is its own derivative)", "5", "5e^(5x)"),
+    "B6-1": U("x² + 3", "du = 2x dx, which is exactly the 2x dx in the problem", "∫ u⁴ du", "u⁵/5", "(x² + 3)⁵/5 + C"),
+    "B6-3": U("2x", "du = 2 dx, so dx = du/2", "∫ eᵘ · du/2 = (1/2) ∫ eᵘ du", "(1/2)eᵘ", "e^(2x)/2 + C"),
+    "B6-4": U("x³ + 1", "du = 3x² dx, so x² dx = du/3", "(1/3) ∫ u³ du", "(1/3) · u⁴/4 = u⁴/12", "(x³ + 1)⁴/12 + C"),
+    "B6-5": U("x² + 1", "du = 2x dx, which is exactly the top", "∫ du/u", "ln|u|", "ln(x² + 1) + C. No bars needed: x² + 1 is always positive"),
+    "B6-6": U("x²", "du = 2x dx, so x dx = du/2", "(1/2) ∫ eᵘ du", "(1/2)eᵘ", "e^(x²)/2 + C"),
+    "B6-7": U("2x + 1", "du = 2 dx, so dx = du/2", "(1/2) ∫ u^(1/2) du", "(1/2) · u^(3/2)/(3/2) = (1/2)(2/3)u^(3/2) = u^(3/2)/3", "(2x + 1)^(3/2)/3 + C"),
+    "B6-8": U("x³", "du = 3x² dx, so x² dx = du/3. Also x⁶ = (x³)² = u²", "(1/3) ∫ 1/(u² + 1) du", "(1/3) arctan u", "(1/3) arctan(x³) + C"),
+    "B6-9": U("x²", "du = 2x dx, so x dx = du/2. Also x⁴ = (x²)² = u²", "(1/2) ∫ 1/√(1 − u²) du", "(1/2) arcsin u", "(1/2) arcsin(x²) + C"),
+    "B6-11": U("eˣ + 1", "du = eˣ dx, which is exactly the top", "∫ du/u", "ln|u|", "ln(eˣ + 1) + C. No bars needed: eˣ + 1 is always positive"),
+    "B6-12": U("sin x + 4", "du = cos x dx, which is exactly the top", "∫ du/u", "ln|u|", "ln(sin x + 4) + C. No bars needed: sin x + 4 is at least 3"),
+    "B6-13": U("sin² x + 3", "du = 2 sin x cos x dx, so sin x cos x dx = du/2", "(1/2) ∫ du/u", "(1/2) ln|u|", "(1/2) ln(sin² x + 3) + C"),
+    "B6-14": U("ln x", "du = (1/x) dx, and the problem has (1/x) dx", "∫ u³ du", "u⁴/4", "(ln x)⁴/4 + C"),
+    "B7-1": UD("x² + 1", "du = 2x dx, exactly what is in the problem", "x = 0 gives u = 1, x = 1 gives u = 2", "∫₁² u² du", "u³/3", "8/3 − 1/3 = 7/3"),
+    "B7-q7": U("x² − 4", "du = 2x dx, so 6x dx = 3 du", "3 ∫ u² du", "3 · u³/3 = u³", "(x² − 4)³ + C"),
+    "B7-q8": U("4x", "du = 4 dx, so dx = du/4", "(1/4) ∫ sin u du", "(1/4)(−cos u) = −(1/4) cos u", "−cos(4x)/4 + C"),
+    "B7-q9": UD("x² + 1", "du = 2x dx, so x dx = du/2", "x = 0 gives u = 1, x = 1 gives u = 2", "(1/2) ∫₁² u³ du", "(1/2) · u⁴/4 = u⁴/8", "16/8 − 1/8 = 15/8"),
+    "B7-q55": U("x³ + 5", "du = 3x² dx, exactly what is in the problem", "∫ u⁴ du", "u⁵/5", "(x³ + 5)⁵/5 + C"),
+    "B7-q56": U("7x", "du = 7 dx, so dx = du/7", "(1/7) ∫ cos u du", "(1/7) sin u", "sin(7x)/7 + C"),
+    "B7-q57": U("x² − 1", "du = 2x dx, so x dx = du/2", "(1/2) ∫ u³ du", "(1/2) · u⁴/4 = u⁴/8", "(x² − 1)⁴/8 + C"),
+    "B7-q58": U("−2x", "du = −2 dx, so dx = −du/2", "−(1/2) ∫ eᵘ du", "−(1/2)eᵘ", "−e^(−2x)/2 + C"),
+    "B7-q59": U("x² + 3", "du = 2x dx, so 4x dx = 2 du", "2 ∫ du/u", "2 ln|u|", "2 ln(x² + 3) + C. No bars needed: x² + 3 is always positive"),
+    "B7-q60": U("x³", "du = 3x² dx, so x² dx = du/3", "(1/3) ∫ eᵘ du", "(1/3)eᵘ", "e^(x³)/3 + C"),
+    "B7-q61": U("3x", "du = 3 dx, so dx = du/3", "(1/3) ∫ sec² u du", "(1/3) tan u", "tan(3x)/3 + C"),
+    "B7-q62": U("x² + 1", "du = 2x dx, so x dx = du/2", "(1/2) ∫ u^(1/2) du", "(1/2) · u^(3/2)/(3/2) = (1/2)(2/3)u^(3/2) = u^(3/2)/3", "(x² + 1)^(3/2)/3 + C"),
+    "B7-q63": UD("x² + 1", "du = 2x dx, exactly what is in the problem", "x = 0 gives u = 1, x = 1 gives u = 2", "∫₁² u³ du", "u⁴/4", "16/4 − 1/4 = 15/4"),
+    "B7-q64": UD("2x", "du = 2 dx, so dx = du/2", "x = 0 gives u = 0, x = 1 gives u = 2", "(1/2) ∫₀² eᵘ du", "(1/2)eᵘ", "(1/2)(e² − e⁰) = (e² − 1)/2"),
+    "B7-q65": UD("x² + 9", "du = 2x dx, so x dx = du/2", "x = 0 gives u = 9, x = 4 gives u = 25", "(1/2) ∫₉²⁵ u^(−1/2) du", "(1/2) · 2u^(1/2) = √u", "√25 − √9 = 5 − 3 = 2"),
+    "B7-q66": UD("3x", "du = 3 dx, so dx = du/3", "x = 0 gives u = 0, x = π/6 gives u = π/2", "(1/3) ∫₀^(π/2) cos u du", "(1/3) sin u", "(1/3)(sin(π/2) − sin 0) = (1/3)(1 − 0) = 1/3"),
+    "B7-q67": UD("x³ − 1", "du = 3x² dx, so x² dx = du/3", "x = 1 gives u = 0, x = 2 gives u = 8 − 1 = 7", "(1/3) ∫₀⁷ u² du", "(1/3) · u³/3 = u³/9", "343/9 − 0 = 343/9"),
+    "B7-q68": UD("2x + 1", "du = 2 dx, so dx = du/2", "x = 0 gives u = 1, x = 1 gives u = 3", "(1/2) ∫₁³ du/u", "(1/2) ln u", "(1/2)(ln 3 − ln 1) = (ln 3)/2"),
+    "B7-q69": UD("cos x", "du = −sin x dx, so sin x dx = −du", "x = 0 gives u = cos 0 = 1, x = π/2 gives u = cos(π/2) = 0", "−∫₁⁰ u² du, and flipping the limits removes the minus: ∫₀¹ u² du", "u³/3", "1/3 − 0 = 1/3"),
+    "B7-q70": UD("x²", "du = 2x dx, so x dx = du/2", "x = 0 gives u = 0, x = 1 gives u = 1", "(1/2) ∫₀¹ eᵘ du", "(1/2)eᵘ", "(1/2)(e − 1)"),
+    "B7-q71": UD("ln x", "du = (1/x) dx", "x = 1 gives u = ln 1 = 0, x = e gives u = ln e = 1", "∫₀¹ u² du", "u³/3", "1/3 − 0 = 1/3"),
+    "B8-q18": U("x³ + 1", "du = 3x² dx, so x² dx = du/3", "(1/3) ∫ u⁴ du", "(1/3) · u⁵/5 = u⁵/15", "(x³ + 1)⁵/15 + C"),
+    "B8-q19": U("x² + 4", "du = 2x dx, so x dx = du/2", "(1/2) ∫ u^(−1/2) du", "(1/2) · 2u^(1/2) = √u", "√(x² + 4) + C"),
+    "B8-q20": U("5x", "du = 5 dx, so dx = du/5", "(1/5) ∫ eᵘ du", "(1/5)eᵘ", "e^(5x)/5 + C"),
+    "B8-q21": UD("1 − x²", "du = −2x dx, so x dx = −du/2", "x = 0 gives u = 1, x = 1 gives u = 0", "−(1/2) ∫₁⁰ u³ du, and flipping the limits removes the minus: (1/2) ∫₀¹ u³ du", "(1/2) · u⁴/4 = u⁴/8", "1/8 − 0 = 1/8"),
+    "B8-q27": U("x⁴ + 1", "du = 4x³ dx, so x³ dx = du/4", "(1/4) ∫ du/u", "(1/4) ln|u|", "(1/4) ln(x⁴ + 1) + C"),
+    "B8-q107": U("2x + 1", "du = 2 dx, so dx = du/2", "(1/2) ∫ u⁵ du", "(1/2) · u⁶/6 = u⁶/12", "(2x + 1)⁶/12 + C"),
+    "B8-q108": U("x⁴", "du = 4x³ dx, so x³ dx = du/4", "(1/4) ∫ cos u du", "(1/4) sin u", "sin(x⁴)/4 + C"),
+    "B8-q109": U("tan x + 2", "du = sec² x dx, which is exactly the top", "∫ du/u", "ln|u|", "ln|tan x + 2| + C"),
+    "B8-q110": U("x³ + 1", "du = 3x² dx, so 6x² dx = 2 du", "2 ∫ u^(−2) du", "2 · u^(−1)/(−1) = −2/u", "−2/(x³ + 1) + C"),
+    "B8-q111": U("cos x", "du = −sin x dx, so sin x dx = −du", "−∫ u^(−3) du", "−u^(−2)/(−2) = u^(−2)/2 = 1/(2u²)", "1/(2cos² x) + C"),
+    "B8-q112": ["Write tan x = sin x / cos x.", "Pick u = cos x. Its derivative, −sin x, is on top (up to a sign).", "du = −sin x dx, so sin x dx = −du.", "Rewrite in u: −∫ du/u.", "Integrate: −ln|u|.", "Put x back in for u: −ln|cos x| + C."],
+    "B8-q113": UD("x³ + 1", "du = 3x² dx, exactly what is in the problem", "x = 0 gives u = 1, x = 2 gives u = 9", "∫₁⁹ u^(1/2) du", "u^(3/2)/(3/2) = (2/3)u^(3/2)", "(2/3)(9^(3/2) − 1) = (2/3)(27 − 1) = 52/3"),
+    "B8-q114": UD("2x", "du = 2 dx, so dx = du/2", "x = 0 gives u = 0, x = π/2 gives u = π", "(1/2) ∫₀^π sin u du", "(1/2)(−cos u)", "(1/2)(−cos π + cos 0) = (1/2)(1 + 1) = 1"),
+    "B8-q115": UD("x² + 1", "du = 2x dx, so x dx = du/2", "x = 0 gives u = 1, x = 2 gives u = 5", "(1/2) ∫₁⁵ du/u", "(1/2) ln u", "(1/2)(ln 5 − ln 1) = (ln 5)/2"),
+    "B8-q116": UD("x/2", "du = dx/2, so dx = 2 du", "x = 0 gives u = 0, x = 2 gives u = 1", "2 ∫₀¹ eᵘ du", "2eᵘ", "2(e − 1) = 2e − 2"),
+    "B8-q117": UD("2x − 1", "du = 2 dx, so dx = du/2", "x = 0 gives u = −1, x = 1 gives u = 1", "(1/2) ∫₋₁¹ u⁴ du", "(1/2) · u⁵/5 = u⁵/10", "1/10 − (−1/10) = 2/10 = 1/5"),
+    "B8-q118": UD("x³ + 1", "du = 3x² dx, so x² dx = du/3", "x = 0 gives u = 1, x = 1 gives u = 2", "(1/3) ∫₁² du/u", "(1/3) ln u", "(1/3)(ln 2 − ln 1) = (ln 2)/3"),
+    "B8-q119": UD("sin x", "du = cos x dx", "x = 0 gives u = 0, x = π/2 gives u = 1", "∫₀¹ eᵘ du", "eᵘ", "e¹ − e⁰ = e − 1"),
+    "B8-q120": UD("ln x", "du = (1/x) dx", "x = e gives u = ln e = 1, x = e² gives u = ln e² = 2", "∫₁² du/u", "ln u", "ln 2 − ln 1 = ln 2"),
+    "A5-9": ["Set the velocity equal to 20: 20 = e^(2t)/2 + 9/2.", "Multiply both sides by 2 to clear the fractions: 40 = e^(2t) + 9.", "Get e^(2t) by itself: e^(2t) = 31.", "Undo e with ln on both sides: 2t = ln 31.", "Divide by 2: t = (ln 31)/2 ≈ 3.434/2 ≈ 1.7170."],
+    "A5-10": ["Rewrite as a power: 6/x³ = 6x⁻³.", "Power rule for integrals: add 1 to the power (−3 + 1 = −2) and divide by −2: 6x⁻²/(−2) = −3x⁻².", "So F(x) = −3x⁻² + C = −3/x² + C.", "Use F(1) = 0: −3/1² + C = 0, so −3 + C = 0 and C = 3.", "F(x) = −3/x² + 3."],
+    "B5-11": ["“Between its zeros”: first solve 4√x − x = 0.", "4√x = x. Square both sides: 16x = x², so x² − 16x = 0 and x(x − 16) = 0: x = 0 and x = 16.", "Average = (1/(16 − 0)) × " + DI("0", "16", "4x^(1/2) - x") + ".", "Antiderivative: 4x^(1/2) → 4 · x^(3/2)/(3/2) = (8/3)x^(3/2), and −x → −x²/2.", "At 16: (8/3)(16^(3/2)) − 16²/2 = (8/3)(64) − 128 = 512/3 − 384/3 = 128/3. At 0: 0.", "Average: (128/3) ÷ 16 = 128/48 = 8/3."],
+    "B5-12": ["Average = (1/(e − 1)) × " + DI("1", "e", "6/x") + ".", "The antiderivative of 6/x is 6 ln|x|.", "At e: 6 ln e = 6 · 1 = 6. At 1: 6 ln 1 = 0. So the integral is 6.", "Divide by the width e − 1: average = 6/(e − 1) (about 3.49)."],
+    "B7-q5": CH("5x² − 1", "3(5x² − 1)²", "10x", "3(5x² − 1)² · 10x = 30x(5x² − 1)²"),
+    "C3-5": ["Find where they cross: x³ = 4x, so x³ − 4x = 0 and x(x − 2)(x + 2) = 0: x = −2, 0, 2.", "Two regions. On [0, 2], test x = 1: 4x = 4 and x³ = 1, so the line is on top. On [−2, 0] the cubic is on top (test x = −1: −1 vs −4).", "Right piece: " + DI("0", "2", "4x - x^3") + " = " + M("2x^2 - x^4/4") + " from 0 to 2 = (8 − 4) − 0 = 4.", "Left piece: " + DI("-2", "0", "x^3 - 4x") + " = " + M("x^4/4 - 2x^2") + " from −2 to 0 = 0 − (4 − 8) = 4. (Same size, by symmetry.)", "Total area: 4 + 4 = 8."],
+    "C3-6": ["Which is on top? On [0, 1], eˣ ≥ e⁰ = 1, so y = eˣ is on top and y = 1 is the bottom.", "Area = " + DI("0", "1", "e^x - 1") + ".", "Antiderivative: eˣ − x.", "At 1: e − 1. At 0: e⁰ − 0 = 1.", "Area = (e − 1) − 1 = e − 2 (about 0.718)."],
+    "C3-8": ["Which is on top? At x = 0, cos 0 = 1 and sin 0 = 0, so cos x is on top until they meet at π/4.", "Area = " + DI("0", "pi/4", "cos(x) - sin(x)") + ".", "Antiderivative: sin x + cos x (the antiderivative of −sin x is +cos x).", "At π/4: √2/2 + √2/2 = √2. At 0: 0 + 1 = 1.", "Area = √2 − 1 (about 0.414)."],
+    "C4-2": ["Disks around the x-axis: radius = the curve’s height, eˣ.", "Radius² = (eˣ)² = e^(2x). Volume = π" + DI("0", "1", "e^(2x)") + ".", "Antiderivative of e^(2x): e^(2x)/2 (divide by the 2 in front of x).", "At 1: e²/2. At 0: e⁰/2 = 1/2.", "Volume = π(e²/2 − 1/2) = π(e² − 1)/2."],
+    "C5-3": ["Shells around the y-axis: radius x, height e^(−x²). Volume = 2π" + DI("0", "1", "x e^(-x^2)") + ".", "Substitute u = −x². Then du = −2x dx, so x dx = −du/2.", "New limits: x = 0 gives u = 0, x = 1 gives u = −1. The integral becomes 2π · (−1/2)∫₀⁻¹ eᵘ du = −π ∫₀⁻¹ eᵘ du.", "eᵘ from 0 to −1: e⁻¹ − e⁰ = 1/e − 1.", "Volume = −π(1/e − 1) = π(1 − 1/e)."],
+    "C5-5": ["Shells around the y-axis: radius x, height sin(x²). Volume = 2π" + DI("0", "sqrt(pi)", "x sin(x^2)") + ".", "Substitute u = x². Then du = 2x dx, so x dx = du/2.", "New limits: x = 0 gives u = 0, x = √π gives u = π. The integral becomes 2π · (1/2)∫₀^π sin u du = π ∫₀^π sin u du.", "∫₀^π sin u du = −cos u from 0 to π = −cos π + cos 0 = 1 + 1 = 2.", "Volume = π · 2 = 2π."],
+    "C6-1": ["Arc length: L = " + DIH("a", "b", "√(1 + (<i>f</i>′(<i>x</i>))²)") + ".", "f(x) = 2x + 1, so f′(x) = 2 and (f′)² = 4.", "1 + 4 = 5, so L = " + DI("0", "3", "sqrt(5)") + ".", "√5 is a constant: L = √5 × (3 − 0) = 3√5.", "Check with the distance formula from (0, 1) to (3, 7): √(3² + 6²) = √45 = 3√5. ✓"],
+    "C6-2": ["Arc length: L = " + DIH("a", "b", "√(1 + (<i>f</i>′(<i>x</i>))²)") + ".", "f(x) = (2/3)x^(3/2), so f′(x) = (2/3)(3/2)x^(1/2) = x^(1/2) and (f′)² = x.", "L = " + DI("0", "8", "sqrt(1 + x)") + ".", "Antiderivative of (1 + x)^(1/2): (1 + x)^(3/2)/(3/2) = (2/3)(1 + x)^(3/2).", "At 8: (2/3)(9)^(3/2) = (2/3)(27) = 18. At 0: (2/3)(1) = 2/3.", "L = 18 − 2/3 = 52/3."],
+    "C6-3": ["Arc length: L = " + DIH("a", "b", "√(1 + (<i>f</i>′(<i>x</i>))²)") + ".", "f(x) = (x² + 2)^(3/2)/3. Chain rule: f′(x) = (1/3)(3/2)(x² + 2)^(1/2)(2x) = x(x² + 2)^(1/2).", "(f′)² = x²(x² + 2) = x⁴ + 2x². Add 1: x⁴ + 2x² + 1 = (x² + 1)², a perfect square.", "So the root comes off: L = " + DI("0", "3", "x^2 + 1") + ".", "Antiderivative: x³/3 + x. At 3: 9 + 3 = 12. At 0: 0.", "L = 12."],
+    "C6-6": ["Arc length needs √(1 + (f′)²).", "f(x) = x², so f′(x) = 2x.", "(f′)² = (2x)² = 4x².", "So the inside of the integral is √(1 + 4x²)."],
+    "C6-7": ["Surface area around the x-axis: S = 2π" + DIH("a", "b", "<i>f</i>(<i>x</i>) √(1 + (<i>f</i>′(<i>x</i>))²)") + ".", "f(x) = 3x, so f′(x) = 3 and √(1 + 9) = √10.", "S = 2π" + DI("0", "2", "3x sqrt(10)") + " = 6π√10 " + DI("0", "2", "x") + ".", DI("0", "2", "x") + " = x²/2 from 0 to 2 = 2.", "S = 6π√10 × 2 = 12π√10."],
+    "C8-q7": ["Which is on top? At x = 1: eˣ = e ≈ 2.72 and e⁻ˣ = 1/e ≈ 0.37, so eˣ is on top on [0, 1] (they meet at x = 0).", "Area = " + DI("0", "1", "e^x - e^(-x)") + ".", "Antiderivative: eˣ + e⁻ˣ (the antiderivative of −e⁻ˣ is +e⁻ˣ).", "At 1: e + 1/e. At 0: 1 + 1 = 2.", "Area = e + 1/e − 2 (about 1.086)."],
+    "C8-q14": ["Arc length: L = " + DIH("a", "b", "√(1 + (<i>f</i>′(<i>x</i>))²)") + ".", "f(x) = (2/3)(x − 1)^(3/2), so f′(x) = (2/3)(3/2)(x − 1)^(1/2) = (x − 1)^(1/2).", "(f′)² = x − 1, so 1 + (f′)² = 1 + (x − 1) = x.", "L = " + DI("1", "4", "sqrt(x)") + ". Antiderivative: (2/3)x^(3/2).", "At 4: (2/3)(8) = 16/3. At 1: 2/3.", "L = 16/3 − 2/3 = 14/3."],
+    "C8-q1": ["Displacement = the integral of the velocity: " + DI("0", "4", "6 - 2x", "t") + ".", "Antiderivative: " + M("6x - x^2", "t") + ".", "At 4: 24 − 16 = 8. At 0: 0.", "Displacement = 8 − 0 = 8 m."]
+  };
+  var CHK = { "B5-4": [["2x", "0", "4", "1/4"]], "B5-5": [["x^2", "0", "6", "1/6"]], "B8-q14": [["x^2 + 1", "0", "3", "1/3"]], "B7-q10": [["3x^2", "0", "2", "1/2"]], "B8-q15": [["3x^2 - 6x", "0", "3"]] };
+  var IVP = { "A5-7": ["6x", "0", "2"], "A5-8": ["e^(2x)", "0", "5"], "C1-5": ["4x + 1", "0", "3"], "C1-6": ["-32", "0", "48"], "C8-q3": ["6x", "0", "2"] }; // word-problem initial value problems, so steps.js writes them out
+  var PRE = { // a missing first step, put in front of the existing ones
+    "C2-1": "Set the two formulas equal: x² = 2x. Then move everything to one side.",
+    "C2-2": "Set the two formulas equal: x² = x + 6. Then move everything to one side.",
+    "C2-3": "Set the two formulas equal: x³ = 4x. Move everything to one side. Don’t divide by x: you’d lose the answer x = 0.",
+    "C2-4": "Crossing the x-axis means y = 0, so set 9 − x² = 0.",
+    "C2-6": "Set the two formulas equal: √x = x/2.",
+    "C2-8": "Set the two formulas equal: y² = y + 6. Then move everything to one side."
+  };
+  SESSIONS.forEach(function (s) {
+    (s.probs || []).forEach(function (p, i) { var id = s.id + "-" + (i + 1); if (PRE[id] && p.sol) { p.sol = [PRE[id]].concat(p.sol); p.keepSol = true; } if (FIX[id]) { p.sol = FIX[id]; p.keepSol = true; } if (CHK[id]) p.chk = CHK[id]; if (IVP[id]) p.chkIvp = IVP[id]; });
+    ((s.quiz && s.quiz.pool) || []).forEach(function (p, i) { var id = s.id + "-q" + (i + 1); if (FIX[id]) { p.sol = FIX[id]; p.keepSol = true; } if (CHK[id]) p.chk = CHK[id]; if (IVP[id]) p.chkIvp = IVP[id]; });
+  });
+})();
+
+/* ================= Full worked steps =================
+   Added Oct 17, 2026 at the user's request: "make it so all steps are shown for every problem".
+   For problems that are mechanical (sums of powers of x, roots, e^x, e^(kx), ln, the basic trig
+   functions, 1/(x^2 + 1)), this writes the solution out step by step from the problem itself: the
+   rewrite, every term with the rule used and the exponent arithmetic, each substitution and each
+   subtraction. A generated solution replaces the hand-written one only when its answer matches the
+   answer key (checked here and in tests/check-answers.js). Problems whose method is the point (geometry,
+   symmetry) keep their own steps. Everything else keeps its hand-written steps. Calc build only. */
+(function () {
+  function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { var t = a % b; a = b; b = t; } return a || 1; }
+  function R(p, q) { q = q === undefined ? 1 : q; if (q < 0) { p = -p; q = -q; } var g = gcd(p, q); return { p: p / g, q: q / g }; }
+  function add(a, b) { return R(a.p * b.q + b.p * a.q, a.q * b.q); }
+  function mul(a, b) { return R(a.p * b.p, a.q * b.q); }
+  function div(a, b) { return R(a.p * b.q, a.q * b.p); }
+  function neg(a) { return R(-a.p, a.q); }
+  function rs(r) { return r.q === 1 ? String(r.p) : r.p + "/" + r.q; }
+  function ts(r) { return rs(r).replace("-", "−"); }                               // for plain text
+  function rp(r) { return r.p < 0 || r.q !== 1 ? "(" + ts(r) + ")" : ts(r); }
+  function rat(v) { if (!isFinite(v)) return null; for (var q = 1; q <= 200; q++) { var p = Math.round(v * q); if (Math.abs(p / q - v) < 1e-9 * Math.max(1, Math.abs(v))) return R(p, q); } return null; }
+  function key(r) { return rs(r); }
+
+  /* ---- an expression as a sum of known pieces: { "p:2": 3, "f:sin": -1, ... } (coefficients are fractions) ---- */
+  function only(a, pre) { return Object.keys(a).every(function (k) { return k.indexOf(pre) === 0; }); }
+  function isConst(a) { var k = Object.keys(a); return k.length === 0 || (k.length === 1 && k[0] === "p:0"); }
+  function cval(a) { return a["p:0"] || R(0); }
+  function plus(a, b, s) { var o = {}, k; for (k in a) o[k] = a[k]; for (k in b) { var v = s < 0 ? neg(b[k]) : b[k]; o[k] = o[k] ? add(o[k], v) : v; if (o[k].p === 0) delete o[k]; } return o; }
+  function scale(a, r) { var o = {}; for (var k in a) { var v = mul(a[k], r); if (v.p) o[k] = v; } return o; }
+  function expOf(k) { var s = k.slice(2).split("/"); return R(+s[0], s[1] ? +s[1] : 1); }
+  function pk(r) { return "p:" + key(r); }
+  function times(a, b) {
+    if (isConst(a)) return scale(b, cval(a));
+    if (isConst(b)) return scale(a, cval(b));
+    var ka = Object.keys(a), kb = Object.keys(b);
+    if (ka.length === 1 && kb.length === 1 && ((ka[0] === "f:sec" && kb[0] === "f:tan") || (ka[0] === "f:tan" && kb[0] === "f:sec"))) return { "f:sectan": mul(a[ka[0]], b[kb[0]]) };
+    if (!only(a, "p:") || !only(b, "p:")) return null;
+    var o = {};
+    ka.forEach(function (x) { kb.forEach(function (y) { var e = pk(add(expOf(x), expOf(y))), v = mul(a[x], b[y]); o[e] = o[e] ? add(o[e], v) : v; if (!o[e].p) delete o[e]; }); });
+    return o;
+  }
+  function ratOf(n) {
+    if (!n) return null;
+    if (n.t === "num") return rat(n.v);
+    if (n.t === "neg") { var r = ratOf(n.a); return r && neg(r); }
+    if (n.t === "bin" && n.op === "/") { var a = ratOf(n.a), b = ratOf(n.b); return a && b && b.p ? div(a, b) : null; }
+    return null;
+  }
+  function single(a) { var k = Object.keys(a); return k.length === 1 ? k[0] : null; }
+  function toLC(n) {
+    if (!n) return null;
+    switch (n.t) {
+      case "num": { var r = rat(n.v); return r ? (r.p ? { "p:0": r } : {}) : null; }
+      case "x": return { "p:1": R(1) };
+      case "neg": { var a = toLC(n.a); return a && scale(a, R(-1)); }
+      case "fn": {
+        if (n.a && n.a.t === "x" && ["sin", "cos", "tan", "sec", "ln"].indexOf(n.name) >= 0) { var o = {}; o["f:" + n.name] = R(1); return o; }
+        if (n.name === "sqrt" || n.name === "cbrt") {
+          var in_ = toLC(n.a), s = in_ && single(in_);
+          if (!s || s.indexOf("p:") !== 0 || in_[s].p !== 1 || in_[s].q !== 1) return null;
+          var o2 = {}; o2[pk(div(expOf(s), R(n.name === "sqrt" ? 2 : 3)))] = R(1); return o2;
+        }
+        return null;
+      }
+      case "bin": {
+        if (n.op === "+" || n.op === "-") { var l = toLC(n.a), rr = toLC(n.b); return l && rr && plus(l, rr, n.op === "-" ? -1 : 1); }
+        if (n.op === "*") { var x = toLC(n.a), y = toLC(n.b); return x && y && times(x, y); }
+        if (n.op === "/") {
+          var top = toLC(n.a), bot = toLC(n.b);
+          if (!top || !bot) return null;
+          if (isConst(bot)) return cval(bot).p ? scale(top, div(R(1), cval(bot))) : null;
+          var bs = single(bot);
+          if (bs && bs.indexOf("p:") === 0 && only(top, "p:")) { var o3 = {}; Object.keys(top).forEach(function (k) { var e = pk(add(expOf(k), neg(expOf(bs)))), v = div(top[k], bot[bs]); o3[e] = o3[e] ? add(o3[e], v) : v; }); return o3; }
+          if (isConst(top) && Object.keys(bot).length === 2 && bot["p:2"] && bot["p:0"] && bot["p:2"].p === 1 && bot["p:2"].q === 1 && bot["p:0"].p === 1 && bot["p:0"].q === 1) return { "f:atan": cval(top) };
+          return null;
+        }
+        if (n.op === "^") {
+          if (n.a.t === "const" && n.a.v === "e") { // e^x, e^(kx)
+            var ex = toLC(n.b), es = ex && single(ex);
+            if (es === "p:1") { var k1 = ex[es]; if (k1.q !== 1) return null; var o4 = {}; o4[k1.p === 1 ? "f:ex" : "f:exp:" + k1.p] = R(1); return o4; }
+            return null;
+          }
+          if (n.a.t === "fn" && n.a.name === "sec" && n.a.a.t === "x" && ratOf(n.b) && rs(ratOf(n.b)) === "2") return { "f:sec2": R(1) };
+          var e = ratOf(n.b), base = toLC(n.a);
+          if (!e || !base) return null;
+          var b1 = single(base);
+          if (b1 && b1.indexOf("p:") === 0 && base[b1].p === 1 && base[b1].q === 1) { var o5 = {}; o5[pk(mul(expOf(b1), e))] = R(1); return o5; }
+          if (only(base, "p:") && e.q === 1 && e.p >= 2 && e.p <= 4) { var acc = base; for (var i = 1; i < e.p; i++) acc = times(acc, base); return acc; }
+          return null;
+        }
+        return null;
+      }
+    }
+    return null;
+  }
+
+  /* ---- writing pieces ---- */
+  function xs(e) { if (e.p === 0) return ""; if (e.q === 1 && e.p === 1) return "x"; if (e.q === 1 && e.p > 0) return "x^" + e.p; return "x^(" + rs(e) + ")"; }
+  function cs(c, body) { var f = rs(c); if (!body) return f; if (f === "1") return body; if (f === "-1") return "-" + body; if (c.q !== 1) return (c.p < 0 ? "-(" + rs(neg(c)) + ")" : "(" + f + ")") + body; return f + body; }
+  function sumT(parts) { return sum(parts).replace(/ - /g, " − ").replace(/^-/, "−"); } // for plain text, not M()
+  function sum(parts) { var s = ""; parts.forEach(function (t, i) { t = String(t); if (!i) s = t; else if (t.charAt(0) === "-") s += " - " + t.slice(1); else s += " + " + t; }); return s || "0"; }
+  var FB = { "f:sin": "sin(x)", "f:cos": "cos(x)", "f:tan": "tan(x)", "f:sec": "sec(x)", "f:sec2": "sec(x)^2", "f:sectan": "sec(x)tan(x)", "f:ex": "e^x", "f:ln": "ln(x)", "f:lnabs": "ln|x|", "f:arctan": "arctan(x)" };
+  function body(k) { if (k.indexOf("f:exp:") === 0) return "e^(" + k.slice(6) + "x)"; return FB[k]; }
+  function term(k, c) { // one piece as it would be typed
+    if (k === "f:atan") return c.q === 1 ? (c.p < 0 ? "-" : "") + Math.abs(c.p) + "/(x^2 + 1)" : cs(c, "1/(x^2 + 1)");
+    if (k.indexOf("p:") === 0) { var e = expOf(k); if (e.p === -1 && e.q === 1 && c.q === 1) return (c.p < 0 ? "-" : "") + Math.abs(c.p) + "/x"; return cs(c, xs(e)); }
+    return cs(c, body(k));
+  }
+  function show(a, order) { return sum(order.filter(function (k) { return a[k]; }).map(function (k) { return term(k, a[k]); })); }
+  function orderOf(a, sorted) {
+    var ks = Object.keys(a);
+    if (!sorted) return ks;
+    return ks.sort(function (x, y) { var px = x.indexOf("p:") === 0, py = y.indexOf("p:") === 0; if (px && py) { var ex = expOf(x), ey = expOf(y); return ey.p / ey.q - ex.p / ex.q; } return px ? -1 : py ? 1 : 0; });
+  }
+
+  /* ---- one piece at a time: antiderivative and derivative, with the reason ---- */
+  function anti1(k, c, v) { // -> { k, c, say }
+    var M_ = function (s) { return M(s, v); }, t = M_(term(k, c));
+    if (k === "p:0") return { k: "p:1", c: c, say: t + ": a constant integrates to itself times " + (v || "x") + " → " + M_(term("p:1", c)) };
+    if (k.indexOf("p:") === 0) {
+      var e = expOf(k), n = add(e, R(1));
+      if (n.p === 0) return { k: "f:lnabs", c: c, say: t + ": the power is −1, so the power rule doesn’t work. " + II("1/x") + " = ln|x| → " + M_(term("f:lnabs", c)) };
+      var nc = div(c, n);
+      return { k: pk(n), c: nc, say: t + ": add 1 to the power (" + ts(e) + " + 1 = " + ts(n) + "), then divide by " + ts(n) + (n.q !== 1 || n.p < 0 ? ", which is the same as multiplying by " + ts(div(R(1), n)) : "") + " → " + M_(term(pk(n), nc)) };
+    }
+    if (k === "f:ex") return { k: k, c: c, say: t + ": eˣ is its own antiderivative → " + M_(term(k, c)) };
+    if (k.indexOf("f:exp:") === 0) { var kk = +k.slice(6), nc2 = div(c, R(kk)); return { k: k, c: nc2, say: t + ": divide by the " + kk + " in front of " + (v || "x") + " (the derivative of " + M_("e^(" + kk + "x)") + " is " + M_(kk + "e^(" + kk + "x)") + ") → " + M_(term(k, nc2)) }; }
+    if (k === "f:cos") return { k: "f:sin", c: c, say: t + ": the antiderivative of cos x is sin x → " + M_(term("f:sin", c)) };
+    if (k === "f:sin") return { k: "f:cos", c: neg(c), say: t + ": the antiderivative of sin x is −cos x (watch the sign) → " + M_(term("f:cos", neg(c))) };
+    if (k === "f:sec2") return { k: "f:tan", c: c, say: t + ": the derivative of tan x is sec² x, so this gives tan x → " + M_(term("f:tan", c)) };
+    if (k === "f:sectan") return { k: "f:sec", c: c, say: t + ": the derivative of sec x is sec x tan x, so this gives sec x → " + M_(term("f:sec", c)) };
+    if (k === "f:atan") return { k: "f:arctan", c: c, say: t + ": " + II("1/(x^2 + 1)") + " = arctan x → " + M_(term("f:arctan", c)) };
+    return null;
+  }
+  function der1(k, c, v) {
+    var M_ = function (s) { return M(s, v); }, t = M_(term(k, c));
+    if (k === "p:0") return { k: "p:0", c: R(0), say: t + ": a constant’s derivative is 0" };
+    if (k.indexOf("p:") === 0) { var e = expOf(k), nc = mul(c, e), ne = add(e, R(-1)); return { k: pk(ne), c: nc, say: t + ": bring the power down and lower it by 1 (" + ts(e) + " × " + rp(c) + " = " + ts(nc) + ", and " + ts(e) + " − 1 = " + ts(ne) + ") → " + M_(term(pk(ne), nc)) }; }
+    if (k === "f:ex") return { k: k, c: c, say: t + ": eˣ is its own derivative → " + M_(term(k, c)) };
+    if (k.indexOf("f:exp:") === 0) { var kk = +k.slice(6), nc2 = mul(c, R(kk)); return { k: k, c: nc2, say: t + ": chain rule, multiply by the " + kk + " in front of " + (v || "x") + " → " + M_(term(k, nc2)) }; }
+    if (k === "f:ln") return { k: "p:-1", c: c, say: t + ": the derivative of ln x is 1/x → " + M_(term("p:-1", c)) };
+    if (k === "f:sin") return { k: "f:cos", c: c, say: t + ": the derivative of sin x is cos x → " + M_(term("f:cos", c)) };
+    if (k === "f:cos") return { k: "f:sin", c: neg(c), say: t + ": the derivative of cos x is −sin x → " + M_(term("f:sin", neg(c))) };
+    if (k === "f:tan") return { k: "f:sec2", c: c, say: t + ": the derivative of tan x is sec² x → " + M_(term("f:sec2", c)) };
+    if (k === "f:sec") return { k: "f:sectan", c: c, say: t + ": the derivative of sec x is sec x tan x → " + M_(term("f:sectan", c)) };
+    return null;
+  }
+
+  /* ---- how the problem has to be rewritten first ---- */
+  function walk(n, f) { if (!n || typeof n !== "object") return; f(n); walk(n.a, f); walk(n.b, f); }
+  function rewriteNote(ast) {
+    var root = false, frac = false, expand = false, prod = false, negp = false, sumInProd = false;
+    function lone(n) { return n.t === "x"; }
+    walk(ast, function (n) {
+      if (n.t === "fn" && (n.name === "sqrt" || n.name === "cbrt")) root = true;
+      if (n.t === "bin" && n.op === "/" && !(n.b.t === "num") && !(n.b.t === "bin" && n.b.op === "+")) {
+        if (n.a.t === "num" || (n.a.t === "neg" && n.a.a.t === "num")) { if (!lone(n.b)) negp = true; } // c/x needs nothing: it's the ln rule
+        else frac = true;
+      }
+      if (n.t === "bin" && n.op === "^" && n.a.t === "bin" && (n.a.op === "+" || n.a.op === "-")) expand = true;
+      if (n.t === "bin" && n.op === "*" && n.a.t !== "num" && n.b.t !== "num" && !(n.a.t === "fn" && n.b.t === "fn")) { prod = true; if ([n.a, n.b].some(function (m) { return m.t === "bin" && (m.op === "+" || m.op === "-"); })) sumInProd = true; }
+    });
+    if (expand) return "Expand first (multiply it out)";
+    if (frac && root) return "Write the roots as powers (√x = x^(1/2), ∛x = x^(1/3)), then divide each term on top by the bottom (subtract the exponents)";
+    if (frac) return "Split the fraction: divide each term on top by the bottom (subtract the exponents)";
+    if (root && prod) return "Write the roots as powers (√x = x^(1/2)), then combine powers by adding the exponents";
+    if (root) return "Write the roots as powers (√x = x^(1/2), ∛x = x^(1/3))";
+    if (prod && sumInProd) return "Multiply it out";
+    if (prod) return "Multiply the powers together (add the exponents)";
+    if (negp) return "Write it with a negative power (1/xⁿ = x^(−n))";
+    return null;
+  }
+
+  /* ---- exact values at a point ---- */
+  function valueAt(k, c, a) { // -> { show, val } with val a fraction, or null when it isn't one
+    var x = MathEngine.ev(MathEngine.parse(a), 0, 0), str = term(k, c), v = MathEngine.ev(MathEngine.parse(str.replace(/\|([^|]+)\|/g, "abs($1)")), x, 0), r = rat(v);
+    if (!r) return null;
+    return { val: r, raw: str };
+  }
+  function evalLine(order, F, a) { // -> { tot, say: "(substituted) = values = total" } or null when a value isn't a fraction
+    var parts = [], tot = R(0);
+    for (var i = 0; i < order.length; i++) { var k = order[i]; if (!F[k]) continue; var r = valueAt(k, F[k], a); if (!r) return null; parts.push(r.val); tot = add(tot, r.val); }
+    var sub = M(sum(order.filter(function (k) { return F[k]; }).map(function (k) { return term(k, F[k]); })).replace(/x/g, "(" + a + ")"));
+    return { tot: tot, say: sub + " = " + sumT(parts.map(rs)) + (parts.length > 1 ? " = " + ts(tot) : "") };
+  }
+
+  /* ---- whole solutions ---- */
+  function prep(p) {
+    var ast; try { ast = MathEngine.parse(p.q); } catch (e) { return null; }
+    var a = toLC(ast); if (!a || !Object.keys(a).length) return null;
+    var note = rewriteNote(ast), order = orderOf(a, !!note);
+    return { a: a, order: order, note: note };
+  }
+  function solveAnti(p, v) {
+    var P = prep(p); if (!P) return null;
+    var steps = [], out = {}, outOrder = [];
+    if (P.note) steps.push(P.note + ": " + M(show(P.a, P.order), v));
+    if (P.order.length > 1) steps.push("Integrate one term at a time (constants stay in front).");
+    else if (!P.note) steps.push(P.order[0].indexOf("p:") === 0 ? "Power rule for integrals: " + II("x^n") + " = xⁿ⁺¹/(n + 1) + C (for any n except −1). Constants stay in front." : "Use the reverse derivative table: find the function whose derivative is this one.");
+    for (var i = 0; i < P.order.length; i++) { var r = anti1(P.order[i], P.a[P.order[i]], v); if (!r) return null; steps.push(r.say); out[r.k] = r.c; outOrder.push(r.k); }
+    var F = show(out, outOrder);
+    steps.push((P.order.length > 1 ? "Put the pieces together and add C: " : "Add C: ") + M(F + " + C", v));
+    return { F: F, Fmap: out, Forder: outOrder, steps: steps };
+  }
+  function solveDer(p, v) {
+    var P = prep(p); if (!P) return null;
+    var steps = [], out = {}, outOrder = [];
+    if (P.note) steps.push(P.note + ": " + M(show(P.a, P.order), v));
+    if (P.order.length > 1) steps.push("Take the derivative one term at a time.");
+    else if (!P.note) steps.push(P.order[0].indexOf("p:") === 0 ? "Power rule: the derivative of xⁿ is n·xⁿ⁻¹. A constant in front stays in front." : "Use the derivative table.");
+    for (var i = 0; i < P.order.length; i++) { var r = der1(P.order[i], P.a[P.order[i]], v); if (!r) return null; steps.push(r.say); if (r.c.p) { out[r.k] = out[r.k] ? add(out[r.k], r.c) : r.c; if (outOrder.indexOf(r.k) < 0) outOrder.push(r.k); } }
+    var D = show(out, outOrder);
+    steps.push(P.order.length > 1 ? "Put the pieces together: " + M(D, v) : "So the derivative is " + M(D, v) + ".");
+    return { D: D, steps: steps };
+  }
+  function gen(p) {
+    var v = p.v || null, s;
+    if (p.k === "i") { s = solveAnti(p, v); return s && { ans: s.F + " + C", sol: s.steps }; }
+    if (p.k === "d") { s = solveDer(p, v); return s && { ans: s.D, sol: s.steps }; }
+    if (p.k === "di") {
+      s = solveAnti(p, v); if (!s) return null;
+      var top = evalLine(s.Forder, s.Fmap, p.b), bot = evalLine(s.Forder, s.Fmap, p.a);
+      if (!top || !bot) return null;
+      var res = add(top.tot, neg(bot.tot)), st = s.steps.slice(0, -1);
+      st.push("So F(x) = " + M(s.F, v) + ". No +C needed: it cancels when you subtract.");
+      st.push("Top limit, F(" + MI(p.b) + ") = " + top.say, "Bottom limit, F(" + MI(p.a) + ") = " + bot.say, "Subtract, top minus bottom: " + rp(top.tot) + " − " + rp(bot.tot) + " = " + ts(res));
+      return { ans: rs(res), sol: st };
+    }
+    if (p.k === "ivp") {
+      s = solveAnti(p, v); if (!s) return null;
+      var at = evalLine(s.Forder, s.Fmap, p.at); if (!at) return null;
+      var val = rat(MathEngine.ev(MathEngine.parse(p.val), 0, 0)); if (!val) return null;
+      var C = add(val, neg(at.tot)), st2 = s.steps.slice(0, -1), fin = C.p ? sum([s.F, rs(C)]) : s.F;
+      st2.push("So f(x) = " + M(s.F + " + C", v) + ".");
+      st2.push("Use the point f(" + MI(p.at) + ") = " + MI(p.val) + ": put x = " + MI(p.at) + " into everything except C: " + at.say);
+      st2.push(ts(at.tot) + " + C = " + ts(val) + ", so C = " + ts(val) + " − " + rp(at.tot) + " = " + ts(C));
+      st2.push("Put C back in: " + M(fin, v));
+      return { ans: fin, sol: st2 };
+    }
+    if (p.k === "ftc") return ftcSteps(p);
+    if (p.k === "txt" && p.chkIvp) { // velocity → position, acceleration → velocity: an initial value problem in t
+      var vel = /acceleration/i.test(String(p.text)) ? "v" : "s", q = { k: "ivp", q: p.chkIvp[0], at: p.chkIvp[1], val: p.chkIvp[2], v: "t" }, g2 = gen(q);
+      if (!g2) return null;
+      var lead = vel === "s" ? "Position is the antiderivative of velocity: s(t) = ∫ v(t) dt." : "Velocity is the antiderivative of acceleration: v(t) = ∫ a(t) dt.";
+      return { ans: g2.ans, sol: [lead].concat(g2.sol.map(function (x) { return x.replace(/f\(x\)/g, vel + "(t)").replace(/\bf\(/g, vel + "(").replace(/put x = /, "put t = "); })) };
+    }
+    if (p.k === "txt" && p.chk && !/average value/i.test(String(p.text).replace(/<[^>]+>/g, ""))) { var cs_ = chkSteps(p); if (cs_) return cs_; }
+    if (p.k === "txt" && p.chk && p.chk.length === 1 && /^1\/\(?[\d.]+\)?$/.test(String(p.chk[0][3] || "")) && /average value/i.test(String(p.text).replace(/<[^>]+>/g, ""))) return avgSteps(p);
+    if (p.k === "sum") {
+      var from = +p.from, to = +p.to, n = to - from + 1; if (!(n >= 1)) return null;
+      var vals = []; for (var kk = from; kk <= to; kk++) { var r = rat(MathEngine.ev(MathEngine.parse(p.q), kk, 0)); if (!r) return null; vals.push(r); }
+      var tot = vals.reduce(add, R(0));
+      if (n <= 8) return { ans: rs(tot), sol: ["Σ from k = " + from + " to " + to + " means: put in each whole number k from " + from + " to " + to + ", then add the results.", "Plug in k = " + from + ", " + (from + 1) + (n > 2 ? ", …, " : ", ") + to + " one at a time: " + vals.map(ts).join(", "), "Add them: " + sumT(vals.map(rs)) + " = " + ts(tot)] };
+      return null; // longer sums keep their formula steps
+    }
+    return null;
+  }
+  function dOf(g) { if (g === "x") return "1"; var d = solveDer({ q: g }, null); return d ? d.D : null; }
+  function ftcSteps(p) {
+    var lowX = /x/.test(p.a), highX = /x/.test(p.b), f = M(p.q, "t");
+    var put = function (g) { return g === "x" ? p.q : p.q.replace(/x/g, "(" + g + ")"); };
+    var st = ["FTC part 1: " + DDX + " " + DIH("a", "g(x)", "<i>f</i>(<i>t</i>)", "t") + " = <i>f</i>(<i>g</i>(<i>x</i>)) · <i>g</i>′(<i>x</i>) when the bottom limit is a constant. Put the top limit in for t, then multiply by the top limit’s derivative."];
+    if (lowX && highX) {
+      var gt = dOf(p.b), gb = dOf(p.a); if (!gt || !gb) return null;
+      st.push("Both limits have x in them, so split at a constant, 0: " + DI(p.a, p.b, p.q, "t") + " = " + DI("0", p.b, p.q, "t") + " − " + DI("0", p.a, p.q, "t") + ".");
+      st.push("Top part: put " + M(p.b) + " in for t → " + M(put(p.b)) + ", times the derivative of " + M(p.b) + ", which is " + M(gt) + ".");
+      st.push("Bottom part: put " + M(p.a) + " in for t → " + M(put(p.a)) + ", times the derivative of " + M(p.a) + ", which is " + M(gb) + ". It gets subtracted.");
+      st.push("Top part minus bottom part: " + M(p.ans));
+      return { ans: p.ans, sol: st };
+    }
+    var g = lowX ? p.a : p.b, gp = dOf(g); if (!gp) return null;
+    if (lowX) st.push("Here x is in the <b>bottom</b> limit. Flip the limits to put it on top. Flipping adds a minus sign: " + DI(p.a, p.b, p.q, "t") + " = −" + DI(p.b, p.a, p.q, "t") + ".");
+    st.push("Here f(t) = " + f + " and the limit with x is " + M(g) + ".");
+    st.push("Put " + M(g) + " in for t: " + M(put(g)) + (lowX ? ", with the minus sign in front" : "") + ".");
+    st.push(g === "x" ? "The limit is just x, and the derivative of x is 1, so there is nothing to multiply by." : "Multiply by the derivative of " + M(g) + ", which is " + M(gp) + ".");
+    st.push("Answer: " + M(p.ans));
+    return { ans: p.ans, sol: st };
+  }
+  function avgSteps(p) {
+    var c = p.chk[0], s2 = solveAnti({ q: c[0] }, null); if (!s2) return null;
+    var A = c[1], B = c[2], w = rat(MathEngine.ev(MathEngine.parse(B + "-(" + A + ")"), 0, 0)); if (!w) return null;
+    var top = evalLine(s2.Forder, s2.Fmap, B), bot = evalLine(s2.Forder, s2.Fmap, A); if (!top || !bot) return null;
+    var I = add(top.tot, neg(bot.tot)), avgV = div(I, w);
+    var st = ["Average value = (1/(b − a)) × " + DIH("a", "b", FX) + ". Here the interval is [" + MI(A) + ", " + MI(B) + "], so b − a = " + MI(B) + " − " + rp(rat(MathEngine.ev(MathEngine.parse(A), 0, 0)) || R(0)) + " = " + rs(w) + "."];
+    st.push("First find the integral " + DI(A, B, c[0]) + ".");
+    s2.steps.slice(0, -1).forEach(function (x) { if (!/^Integrate one term/.test(x)) st.push(x); });
+    st.push("So F(x) = " + M(s2.F) + ".");
+    st.push("Top limit, F(" + MI(B) + ") = " + top.say, "Bottom limit, F(" + MI(A) + ") = " + bot.say);
+    st.push("Integral: " + rp(top.tot) + " − " + rp(bot.tot) + " = " + ts(I));
+    st.push("Average: " + ts(I) + " ÷ " + ts(w) + " = " + ts(avgV));
+    return { ans: rs(avgV), sol: st };
+  }
+  // A word problem whose answer is (multiplier ×) one or more mechanical integrals: keep its own setup steps
+  // (everything before its first integral), then write the computation out in full.
+  function chkSteps(p) {
+    var old = p.sol || [], cut = 0;
+    while (cut < old.length && !/class="intl"|∫/.test(old[cut])) cut++;
+    var v = null, all = old.join(" ");
+    if (/d<\/?i>?y<\/i>|<i>dy<\/i>/.test(all)) v = "y"; else if (/<i>dt<\/i>/.test(all)) v = "t";
+    var pieces = [], total = 0, piK = null, steps = old.slice(0, cut);
+    for (var i = 0; i < p.chk.length; i++) {
+      var c = p.chk[i], mStr = c[3] === undefined ? "1" : String(c[3]), s2 = solveAnti({ q: c[0] }, v); if (!s2) return null;
+      var top = evalLine(s2.Forder, s2.Fmap, c[2]), bot = evalLine(s2.Forder, s2.Fmap, c[1]); if (!top || !bot) return null;
+      var mv = MathEngine.ev(MathEngine.parse(mStr), 0, 0), mr = rat(mv), mpi = mr ? null : rat(mv / Math.PI); if (!mr && !mpi) return null;
+      if (piK === null) piK = !!mpi; else if (piK !== !!mpi) return null;
+      pieces.push({ c: c, s2: s2, top: top, bot: bot, I: add(top.tot, neg(bot.tot)), m: mr || mpi, mStr: mStr });
+    }
+    var piStr = function (r) { var a = Math.abs(r.p), sg = r.p < 0 ? "−" : ""; return sg + (a === 1 ? "" : a) + "π" + (r.q === 1 ? "" : "/" + r.q); };
+    if (!cut && p.hint) steps.push("Set it up: " + String(p.hint).replace(/\s*Type [^.]*\./g, ""));
+    else if (!cut && /displacement/i.test(String(p.text))) steps.push("Displacement is the integral of the velocity: " + DIH("a", "b", "<i>v</i>(<i>t</i>)", "t") + ".");
+    var showM = function (pc) { return piK ? (rs(pc.m) === "1" ? "π" : ts(pc.m) + "π") : (rs(pc.m) === "1" ? "" : rp(pc.m) + " × "); };
+    steps.push("The integral to compute: " + pieces.map(function (pc) { return showM(pc) + DI(pc.c[1], pc.c[2], pc.c[0], v || undefined); }).join(" + ") + ".");
+    var sumR = R(0);
+    pieces.forEach(function (pc, k) {
+      var lead = pieces.length > 1 ? (k ? "Next piece. " : "First piece. ") : "";
+      pc.s2.steps.slice(0, -1).forEach(function (x, j) { steps.push((j ? "" : lead) + x); });
+      steps.push("So the antiderivative is " + M(pc.s2.F, v) + ".");
+      steps.push("Top limit: " + pc.top.say + ". Bottom limit: " + pc.bot.say + ".");
+      steps.push("Top minus bottom: " + rp(pc.top.tot) + " − " + rp(pc.bot.tot) + " = " + ts(pc.I) + ".");
+      var val = mul(pc.I, pc.m); sumR = add(sumR, val);
+      if (rs(pc.m) !== "1") steps.push("Multiply by " + (piK ? showM(pc) : ts(pc.m)) + ": " + (piK ? piStr(val) : ts(val)) + ".");
+      else if (piK) steps.push("Multiply by π: " + piStr(pc.I) + ".");
+    });
+    if (pieces.length > 1) steps.push("Add the pieces: " + (piK ? piStr(sumR) : ts(sumR)) + ".");
+    var ans = piK ? "(" + rs(sumR) + ")*pi" : rs(sumR);
+    return { ans: ans, sol: steps, numeric: true };
+  }
+  function same(p, ans) {
+    if (p.k === "ftc") return true; // the answer shown is the key's own (verified by check-answers)
+    if (p.k === "txt" && p.type === "number") { try { return Math.abs(MathEngine.ev(MathEngine.parse(ans), 0, 0) - MathEngine.ev(MathEngine.parse(p.ans), 0, 0)) < 1e-9; } catch (e) { return false; } } try { return MathEngine.check(p.v ? MathEngine.subVar(ans, p.v) : ans, p).status === "correct"; } catch (e) { return false; } }
+
+  var KEEP_G = { sym: 1, geom: 1, chain: 1, usub: 1, usubdef: 1 }; // the method is the lesson there (multiplying out would be right but skip it)
+  var KEEP_S = { B3: 1, B6: 1, B7: 1 };                             // chain rule and substitution sessions: same reason
+  function evenSteps(p) { // symmetric limits, even function: keep the reasoning, write out the half integral
+    var s2 = solveAnti(p, null); if (!s2) return null;
+    var top = evalLine(s2.Forder, s2.Fmap, p.b), bot = evalLine(s2.Forder, s2.Fmap, "0"); if (!top || !bot) return null;
+    var half = add(top.tot, neg(bot.tot)), tot = mul(half, R(2)), st = ["Test for symmetry: put in −x and compare with the original.", "Putting in −x changes nothing, so " + M(p.q) + " is even: its graph is mirrored across the y-axis.", "So the integral is twice the integral from 0 to " + MI(p.b) + ": 2" + DI("0", p.b, p.q) + "."];
+    s2.steps.slice(0, -1).forEach(function (x) { st.push(x); });
+    st.push("So F(x) = " + M(s2.F) + ".", "From 0 to " + MI(p.b) + ": F(" + MI(p.b) + ") − F(0) = " + top.say + " − " + rp(bot.tot) + " = " + ts(half) + ".", "Double it: 2 × " + rp(half) + " = " + ts(tot) + ".");
+    return { ans: rs(tot), sol: st };
+  }
+  var stats = { replaced: 0, kept: 0, mismatch: [] };
+  SESSIONS.forEach(function (s) {
+    var all = (s.probs || []).map(function (p, i) { return [s.id + "-" + (i + 1), p, i]; }).concat(((s.quiz && s.quiz.pool) || []).map(function (p, i) { return [s.id + "-q" + (i + 1), p, -1]; }));
+    all.forEach(function (row) {
+      var id = row[0], p = row[1];
+      if (p.g === "sym" && /even/.test((p.sol || []).join(" "))) { var ev2 = null; try { ev2 = evenSteps(p); } catch (e) {} if (ev2 && same(p, ev2.ans)) { p.sol = ev2.sol; p.auto = true; stats.replaced++; return; } }
+      if (p.keepSol || KEEP_G[p.g] || (KEEP_S[s.id] && row[2] >= 0) || (s.id === "B2" && p.k === "di") || (s.id === "B5" && row[2] >= 0 && row[2] <= 2)) { stats.kept++; return; }
+      var g = null; try { g = gen(p); } catch (e) { g = null; }
+      if (!g) { stats.kept++; return; }
+      if (!same(p, g.ans)) { stats.mismatch.push(id); stats.kept++; return; }
+      p.sol = g.sol; p.auto = true; stats.replaced++;
+    });
+  });
+  if (typeof window !== "undefined") window.__stepStats = stats;
+  if (typeof module !== "undefined" && module.exports) module.exports.__stepStats = stats;
 })();
 
 /* ===== Handwriting reader (web build only): the last line written on a scratch pad -> a typed answer =====
