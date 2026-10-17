@@ -2599,6 +2599,7 @@ CONFIG.web = true;
         tool: function (t) {
           tool = t; $$('[data-act="scr-tool"]', el).forEach(function (b) { b.classList.toggle("on", b.dataset.tool === t); });
           cv.style.touchAction = t === "select" ? "none" : "";
+          if (t !== "select" && sel) { setSel(null); draw(); } // picking Pen or Eraser drops the box
           if (t === "select" && !sel) toast("Drag a box around what you want read. Drag its corners to resize it. Tap outside it to clear it.", 6000);
         },
         undo: function () { if (undo.length) { sc.strokes = JSON.parse(undo.pop()); SCR[pid] = sc; draw(); saveScratch(pid); } },
