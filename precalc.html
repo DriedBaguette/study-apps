@@ -347,6 +347,7 @@ input[type="checkbox"].ck:checked::after { content: ""; position: absolute; left
 .calc-lims { gap: 8px; flex-wrap: nowrap; }
 .calc-lims input { flex: 1; min-width: 0; }
 .calc-note { margin: 6px 0 0; font-size: 13px; }
+.calc-from { margin-top: 10px; }
 .calc-out { margin-top: 10px; font-size: 15px; line-height: 1.5; }
 .calc-plot svg { display: block; width: 100%; height: auto; margin-top: 8px; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); opacity: 0; background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 10px; font-size: 14px; z-index: 50; transition: all .25s; pointer-events: none; max-width: calc(100% - 32px); box-shadow: 0 8px 30px rgba(0,0,0,.25); }
@@ -1734,10 +1735,11 @@ var Reader = (function () {
     });
     return { bs: bs, H: H, bar: bar, flat: flat, side: side };
   }
-  function lastLine(strokes) {
+  function lastLine(strokes, whole) { // whole: the user boxed what to read, so every stroke is the line
     strokes = strokes.filter(function (s) { return s.pts && s.pts.length; });
     var sh = shape(strokes), bs = sh.bs, H = sh.H, bar = sh.bar, n = bs.length;
     if (!n) return null;
+    if (whole) { var all = [], bx = [1e9, 1e9, -1e9, -1e9]; for (var w = 0; w < n; w++) { all.push(w); bx[0] = Math.min(bx[0], bs[w].x0); bx[1] = Math.min(bx[1], bs[w].y0); bx[2] = Math.max(bx[2], bs[w].x1); bx[3] = Math.max(bx[3], bs[w].y1); } return { idx: all, box: bx }; }
     function joined(i, j) {
       var a = bs[i], b = bs[j], vg = gap(a.y0, a.y1, b.y0, b.y1), hg = gap(a.x0, a.x1, b.x0, b.x1);
       if (!vg && Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) >= 0.3 * Math.max(4, Math.min(a.h, b.h))) return true;
@@ -2070,9 +2072,9 @@ var Reader = (function () {
   // The line as a tree: a list of items left to right, each { box, sup: [raised items] } and either
   // idx (the strokes of one symbol) with an optional forced label, or num and den (a stacked fraction).
   // Returns { line, items, leaves }, leaves being the symbols in reading order, or null.
-  function sketch(strokes) {
+  function sketch(strokes, whole) {
     strokes = strokes.filter(function (s) { return s.pts && s.pts.length; });
-    var line = lastLine(strokes);
+    var line = lastLine(strokes, whole);
     if (!line) return null;
     var sh = shape(strokes), bs = sh.bs, flat = sh.flat, side = sh.side;
     var isBar = {}; // the fraction bars of this line (shape() also counts ink from other lines)
@@ -2151,7 +2153,7 @@ var Reader = (function () {
   // sure means every symbol was close to a learned one and opt.valid (if given) accepts the text.
   function quick(strokes, opt) {
     if (!hw.length) return null;
-    var sk = sketch(strokes);
+    var sk = sketch(strokes, opt && opt.whole);
     if (!sk || !sk.leaves.length) return null;
     var known = true;
     sk.leaves.forEach(function (lf) {
@@ -2163,8 +2165,8 @@ var Reader = (function () {
   }
   // Does a reading have as many symbols as the line has? (The model can return valid math that isn't what
   // was written, like an extra "sin x +".) true when it can't be counted.
-  function fits(strokes, text) {
-    var sk = sketch(strokes), sizes = {};
+  function fits(strokes, text, whole) {
+    var sk = sketch(strokes, whole), sizes = {};
     if (!sk) return true;
     [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(function (v) { var sp = spell(text, v[0], v[1]); if (sp) sizes[sp.length] = true; });
     return !Object.keys(sizes).length || !!sizes[sk.leaves.length];
@@ -2188,7 +2190,7 @@ var Reader = (function () {
   // names put on its fractions and exponents, means the same as the answer (opt.same(a, b) decides), so a
   // pad that holds something else can't teach wrong names. Returns how many symbols were learned.
   function learn(strokes, typed, opt) {
-    var sk = sketch(strokes);
+    var sk = sketch(strokes, opt && opt.whole);
     if (!sk || !sk.leaves.length || !opt || !opt.same) return 0;
     var fits = {};
     [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(function (v) { var sp = spell(typed, v[0], v[1]); if (sp && sp.length === sk.leaves.length) fits[sp.join(" ")] = sp; });
@@ -2312,7 +2314,7 @@ var Reader = (function () {
   // the personal reader off), opt.pen, opt.pad and opt.minAspect are for experiments.
   function read(strokes, opt) {
     strokes = strokes.filter(function (s) { return s.pts && s.pts.length; });
-    var line = lastLine(strokes);
+    var line = lastLine(strokes, opt && opt.whole);
     if (!line) return Promise.resolve(null);
     function readPiece(piece) { // -> Promise of that piece's LaTeX
       return st.enc.run({ pixel_values: new ort.Tensor("float32", picture(strokes, piece, opt), [1, 3, SIDE, SIDE]) }).then(function (eo) {
@@ -2347,7 +2349,7 @@ var Reader = (function () {
         return new Promise(function (res) { setTimeout(res, m ? 30 : 0); }).then(function () { return next(0); }).then(function () {
           var latex = out.join(" "), res = { text: toTyped(latex, opt && opt.vars), latex: latex, box: line.box, mode: modes[m], sure: false };
           if (!first) first = res;
-          if (ok(res.text)) { if (fits(strokes, res.text)) { res.sure = true; return res; } if (!parsed) parsed = res; }
+          if (ok(res.text)) { if (fits(strokes, res.text, opt && opt.whole)) { res.sure = true; return res; } if (!parsed) parsed = res; }
           return attempt(m + 1);
         });
       }
@@ -2641,29 +2643,35 @@ CONFIG.web = true;
     scrTimers[pid] = setTimeout(function () {
       var enc = encodeScratch(SCR[pid]);
       try { localStorage.setItem(scratchKey(pid), JSON.stringify(enc)); } catch (e) {}
+      if (pid.charAt(0) === "_") return; // the calculator's own pad stays on this device
       if (CONFIG.web) { GH.scrDirty[pid] = 1; queueGH(); }
       else if (CLOUD.db && !CLOUD.readOnly) CLOUD.db.doc("scratch/" + scratchDocId(pid)).set(enc).catch(function () {});
     }, 1200);
   }
-  var READ_LABEL = "Read my answer";
+  var READ_LABEL = "Read my answer", SEL = {}, CALC = null, LAST_PAD = null; // LAST_PAD: the problem pad last drawn or boxed on // SEL: the box the user dragged on each pad (this visit only)
+  function readLabel(pid) { return pid === "__calc" ? "Read into calculator" : READ_LABEL; }
   function scratchHTML(p) {
     if (CONFIG.noPad) return ""; // history app: no math to work out by hand
     var open = SCR_OPEN[p.pid] !== undefined ? SCR_OPEN[p.pid] : COARSE;
     return '<div class="scratch-wrap" data-pid="' + p.pid + '"><button class="link-btn scratch-toggle" data-act="scratch-toggle" data-pid="' + p.pid + '">' + (open ? "Hide scratch pad" : "✎ Work it out by hand") + "</button>" +
       (open ? '<div class="scratch" data-pid="' + p.pid + '"><div class="scr-tools">' +
-        '<div class="seg"><button class="on" data-act="scr-tool" data-tool="pen" aria-label="Pen">✎ Pen</button><button data-act="scr-tool" data-tool="erase" aria-label="Eraser">Eraser</button></div>' +
+        '<div class="seg"><button class="on" data-act="scr-tool" data-tool="pen" aria-label="Pen">✎ Pen</button><button data-act="scr-tool" data-tool="erase" aria-label="Eraser">Eraser</button>' + (CONFIG.web && typeof Reader !== "undefined" && p.type !== "choice" ? '<button data-act="scr-tool" data-tool="select" aria-label="Select what to read" title="Drag a box around what you want read">⬚ Select</button>' : "") + "</div>" +
         '<button class="btn small ghost" data-act="scr-undo">Undo</button><button class="btn small ghost" data-act="scr-clear">Clear</button><button class="btn small ghost" data-act="scr-taller">More room</button>' +
         (COARSE ? '<label class="row scr-finger" style="gap:6px;font-size:13px"><input type="checkbox" class="ck" data-act="scr-finger"> Finger draws</label>' : "") +
-        '<span class="spacer"></span>' + (CONFIG.web && typeof Reader !== "undefined" && p.type !== "choice" ? '<button class="btn small" data-act="scr-read" data-pid="' + p.pid + '" title="Types the last line you wrote into the answer box">' + READ_LABEL + "</button>" : "") +
-        (p.quiz ? "" : '<button class="btn small" data-act="scr-ask" data-pid="' + p.pid + '"' + (CONFIG.web ? "" : " hidden") + ">" + (CONFIG.web ? "Ask Claude to check" : "Check my work") + "</button>") + "</div>" +
+        '<span class="spacer"></span>' + (CONFIG.web && typeof Reader !== "undefined" && p.type !== "choice" ? '<button class="btn small" data-act="scr-read" data-pid="' + p.pid + '" title="Types what you boxed (or the last line you wrote) into the answer box">' + readLabel(p.pid) + "</button>" +
+          (p.calc ? "" : '<button class="btn small ghost" data-act="scr-calc" data-pid="' + p.pid + '" title="Reads what you boxed (or the last line) into the calculator">→ Calculator</button>') : "") +
+        (p.quiz || p.calc ? "" : '<button class="btn small" data-act="scr-ask" data-pid="' + p.pid + '"' + (CONFIG.web ? "" : " hidden") + ">" + (CONFIG.web ? "Ask Claude to check" : "Check my work") + "</button>") + "</div>" +
         '<div class="scr-canvas"><canvas></canvas></div><div class="scr-fb" hidden></div></div>' : "") + "</div>";
+  }
+  function inBox(strokes, b) { // strokes with most of their points inside the box
+    return strokes.filter(function (st) { var k = 0; st.pts.forEach(function (q) { if (q[0] >= b[0] && q[0] <= b[2] && q[1] >= b[1] && q[1] <= b[3]) k++; }); return k >= 0.6 * st.pts.length; });
   }
   function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#000"; }
   function mountScratches() {
     $$(".scratch").forEach(function (el) {
       if (el.__mounted) return; el.__mounted = true;
       var pid = el.dataset.pid, cv = $("canvas", el), box = $(".scr-canvas", el), ctx = cv.getContext("2d");
-      var tool = "pen", finger = false, cur = null, undo = [], sc = { h: 420, strokes: [] }, readBox = null, readT = null;
+      var tool = "pen", finger = false, cur = null, undo = [], sc = { h: 420, strokes: [] }, readBox = null, readT = null, sel = SEL[pid] || null, drag = null;
       function scale() { return box.clientWidth / 1000; }
       function size() {
         var w = box.clientWidth, dpr = window.devicePixelRatio || 1, hpx = Math.round(sc.h * scale());
@@ -2690,21 +2698,46 @@ CONFIG.web = true;
         var ink = cssVar("--ink");
         sc.strokes.forEach(function (s) { drawStroke(ctx, s, ink); });
         if (cur) drawStroke(ctx, cur, ink);
+        if (sel) { // the box the user dragged: only what's inside gets read
+          ctx.save(); ctx.fillStyle = cssVar("--accent"); ctx.globalAlpha = 0.07; ctx.fillRect(sel[0], sel[1], sel[2] - sel[0], sel[3] - sel[1]);
+          ctx.globalAlpha = 1; ctx.setLineDash([9, 6]); ctx.lineWidth = 2; ctx.strokeStyle = cssVar("--accent"); ctx.strokeRect(sel[0], sel[1], sel[2] - sel[0], sel[3] - sel[1]);
+          ctx.setLineDash([]); corners().forEach(function (c) { ctx.fillRect(c[0] - 7, c[1] - 7, 14, 14); }); ctx.restore();
+        }
         if (readBox) { // what "Read my answer" just read
           ctx.save(); ctx.setLineDash([7, 5]); ctx.lineWidth = 1.5; ctx.strokeStyle = cssVar("--accent");
           ctx.strokeRect(readBox[0] - 10, readBox[1] - 10, readBox[2] - readBox[0] + 20, readBox[3] - readBox[1] + 20); ctx.restore();
         }
       }
       function pt(e) { var r = cv.getBoundingClientRect(), k = 1000 / r.width; return [(e.clientX - r.left) * k, (e.clientY - r.top) * k, e.pointerType === "pen" ? (e.pressure || 0.5) : 0.5]; }
+      function corners() { return [[sel[0], sel[1]], [sel[2], sel[1]], [sel[2], sel[3]], [sel[0], sel[3]]]; }
+      function setSel(b) { sel = b; if (b) SEL[pid] = b; else delete SEL[pid]; }
+      function selStart(q) {
+        var hit = -1, near = COARSE ? 34 : 22;
+        if (sel) corners().forEach(function (c, i) { if (Math.abs(c[0] - q[0]) < near && Math.abs(c[1] - q[1]) < near) hit = i; });
+        if (hit >= 0) drag = { m: "corner", i: hit };
+        else if (sel && q[0] > sel[0] && q[0] < sel[2] && q[1] > sel[1] && q[1] < sel[3]) drag = { m: "move", q: q, o: sel.slice() };
+        else { drag = { m: "new", q: q }; setSel([q[0], q[1], q[0], q[1]]); }
+      }
+      function selMove(q) {
+        if (!drag) return;
+        var x = Math.max(0, Math.min(1000, q[0])), y = Math.max(0, Math.min(sc.h, q[1]));
+        if (drag.m === "new") setSel([Math.min(drag.q[0], x), Math.min(drag.q[1], y), Math.max(drag.q[0], x), Math.max(drag.q[1], y)]);
+        else if (drag.m === "move") { var dx = x - drag.q[0], dy = y - drag.q[1]; setSel([drag.o[0] + dx, drag.o[1] + dy, drag.o[2] + dx, drag.o[3] + dy]); }
+        else { var c = corners(); c[drag.i] = [x, y]; var o = c[(drag.i + 2) % 4]; setSel([Math.min(o[0], x), Math.min(o[1], y), Math.max(o[0], x), Math.max(o[1], y)]); }
+      }
+      function selEnd() { if (drag && sel && (sel[2] - sel[0] < 16 || sel[3] - sel[1] < 16)) setSel(null); drag = null; } // a tap clears the box
       function eraseAt(q) { var hit = false; sc.strokes = sc.strokes.filter(function (s) { var near = s.pts.some(function (p) { return Math.abs(p[0] - q[0]) < 14 && Math.abs(p[1] - q[1]) < 14; }); if (near) hit = true; return !near; }); return hit; }
       cv.addEventListener("pointerdown", function (e) {
-        if (e.pointerType === "touch" && !finger) return; // palm rests and scrolling fingers don't draw
+        if (e.pointerType === "touch" && !finger && tool !== "select") return; // palm rests and scrolling fingers don't draw
         e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (err) {} el.classList.add("drawing");
+        if (pid.charAt(0) !== "_") LAST_PAD = el;
+        if (tool === "select") { selStart(pt(e)); draw(); return; }
         undo.push(JSON.stringify(sc.strokes)); if (undo.length > 40) undo.shift();
         if (tool === "pen") cur = { pts: [pt(e)] }; else if (eraseAt(pt(e))) draw();
       });
       cv.addEventListener("pointermove", function (e) {
         if (!el.classList.contains("drawing")) return;
+        if (tool === "select") { selMove(pt(e)); draw(); return; }
         var evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e]; if (!evs.length) evs = [e];
         evs.forEach(function (ev) {
           var q = pt(ev);
@@ -2716,19 +2749,25 @@ CONFIG.web = true;
       function end() {
         if (!el.classList.contains("drawing")) return;
         el.classList.remove("drawing");
+        if (tool === "select") { selEnd(); draw(); if (CLOUD.pendingRender) { CLOUD.pendingRender = false; setTimeout(render, 30); } return; }
         if (cur && cur.pts.length) sc.strokes.push(cur);
         cur = null; draw(); saveScratch(pid); mark();
         if (CLOUD.pendingRender) { CLOUD.pendingRender = false; setTimeout(render, 30); }
       }
       cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end); cv.addEventListener("lostpointercapture", end);
       el.__api = {
-        tool: function (t) { tool = t; $$('[data-act="scr-tool"]', el).forEach(function (b) { b.classList.toggle("on", b.dataset.tool === t); }); },
+        tool: function (t) {
+          tool = t; $$('[data-act="scr-tool"]', el).forEach(function (b) { b.classList.toggle("on", b.dataset.tool === t); });
+          cv.style.touchAction = t === "select" ? "none" : "";
+          if (t === "select" && !sel) toast("Drag a box around what you want read. Drag its corners to resize it. Tap outside it to clear it.", 6000);
+        },
         undo: function () { if (undo.length) { sc.strokes = JSON.parse(undo.pop()); SCR[pid] = sc; draw(); saveScratch(pid); } },
         clear: function () { if (!sc.strokes.length) return; undo.push(JSON.stringify(sc.strokes)); sc.strokes = []; SCR[pid] = sc; draw(); saveScratch(pid); toast("Cleared. Undo brings it back."); },
         taller: function () { sc.h = Math.min(sc.h + 260, 2400); SCR[pid] = sc; size(); saveScratch(pid); },
         finger: function (on) { finger = on; },
         isEmpty: function () { return !sc.strokes.length; },
         strokes: function () { return sc.strokes; },
+        selected: function () { return sel ? inBox(sc.strokes, sel) : null; }, // strokes inside the box, or null when there's no box
         flash: function (b) { readBox = b; draw(); clearTimeout(readT); readT = setTimeout(function () { readBox = null; draw(); }, 3500); },
         reload: function (d) { sc = d; SCR[pid] = sc; undo = []; size(); },
         dataURL: function () {
@@ -2947,7 +2986,7 @@ CONFIG.web = true;
   function initGH() {
     var c = ghCfg();
     GH.token = c.token || ""; GH.gist = c.gist || ""; GH.login = c.login || "";
-    try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i), pre = KEY + ":scratch:"; if (k && k.indexOf(pre) === 0) GH.scrDirty[k.slice(pre.length)] = 1; } } catch (e) {}
+    try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i), pre = KEY + ":scratch:"; if (k && k.indexOf(pre) === 0 && k.charAt(pre.length) !== "_") GH.scrDirty[k.slice(pre.length)] = 1; } } catch (e) {}
     if (!GH.token) { GH.state = "setup"; fileChip(); }
     else if (!GH.gist) { GH.state = "connecting"; fileChip(); ghConnect(GH.token); }
     else { GH.state = "saving"; fileChip(); ghSync(true); }
@@ -3014,9 +3053,10 @@ CONFIG.web = true;
     if (!CONFIG.web || typeof Reader === "undefined" || !PROB[pid] || PROB[pid].type === "choice" || PROB[pid].type === "set") return 0;
     var sc = SCR[pid] || decodeScratch(scratchLocal(pid));
     if (!sc || !sc.strokes.length) return 0;
-    var o = readOpts(pid); o.same = function (a, b) { return sameMath(pid, a, b); };
+    var o = readOpts(pid), strokes = sc.strokes; o.same = function (a, b) { return sameMath(pid, a, b); };
+    if (SEL[pid]) { strokes = inBox(strokes, SEL[pid]); o.whole = true; } // the user boxed the answer
     var n = 0;
-    try { n = Reader.learn(sc.strokes, typed, o); } catch (e) {}
+    try { n = Reader.learn(strokes, typed, o); } catch (e) {}
     if (n && !quiet) saveLearned();
     return n;
   }
@@ -3030,21 +3070,29 @@ CONFIG.web = true;
     Object.keys(S.ans).forEach(function (pid) { if (S.ans[pid] && S.ans[pid].status === "correct") n += learnFrom(pid, S.ans[pid].val, true); });
     saveLearned();
   }
-  function showRead(el, inp, r) {
+  function showRead(el, inp, r, toCalc) {
     el.__api.flash(r.box);
-    inp.value = r.text; preview(inp); inp.focus({ preventScroll: true });
+    inp.value = r.text;
+    if (toCalc) { inp.dispatchEvent(new Event("input", { bubbles: true })); toast((r.sure ? "Put “" : "Not sure I read that right: “") + r.text + "” in the calculator." + (r.sure ? "" : " Fix it there if needed."), 6000); return; }
+    preview(inp); inp.focus({ preventScroll: true });
     toast(r.sure ? "I read “" + r.text + "”. Fix anything I got wrong, then press Check." : "I’m not sure I read that right: “" + r.text + "”. Fix it, or write it again a little larger.", 8000);
     mark();
   }
-  function readAnswer(pid, btn) {
-    var el = btn.closest(".scratch"), inp = $(".ans", btn.closest(".prob"));
+  // Reads the pad into the problem's answer box, or into the calculator when toCalc is set (and always for
+  // the calculator's own pad). If the user dragged a box, only what's inside it is read.
+  function readAnswer(pid, btn, toCalc, padEl) {
+    toCalc = toCalc || pid === "__calc";
+    var el = padEl || btn.closest(".scratch"), inp = toCalc ? CALC && CALC.target() : $(".ans", btn.closest(".prob"));
     if (!el || !el.__api || !inp || btn.disabled) return;
-    if (el.__api.isEmpty()) { toast("Write your answer on the scratch pad first."); return; }
-    function reset() { btn.disabled = false; btn.textContent = READ_LABEL; btn.dataset.confirm = ""; }
+    if (el.__api.isEmpty()) { toast("Write on the pad first."); return; }
+    var picked = el.__api.selected(), strokes = picked || el.__api.strokes(), opts = readOpts(pid), label = btn.textContent;
+    if (picked && !picked.length) { toast("Nothing is inside the box. Drag it over what you want read."); return; }
+    if (picked) opts.whole = true;
+    function reset() { btn.disabled = false; btn.textContent = label; btn.dataset.confirm = ""; }
     // when every symbol is one the reader has learned from this user, the answer is instant and needs no download
     var fast = null;
-    try { fast = Reader.quick(el.__api.strokes(), readOpts(pid)); } catch (e) {}
-    if (fast && fast.sure) { reset(); showRead(el, inp, fast); return; }
+    try { fast = Reader.quick(strokes, opts); } catch (e) {}
+    if (fast && fast.sure) { reset(); showRead(el, inp, fast, toCalc); return; }
     Reader.stored().then(function (have) {
       if (!have && !btn.dataset.confirm) { // first time on this device: ask before the big download
         btn.dataset.confirm = "1"; btn.textContent = "Download the reader (" + Reader.megabytes + " MB)";
@@ -3058,11 +3106,11 @@ CONFIG.web = true;
         return new Promise(function (res) { setTimeout(res, 60); }); // let "Reading…" show: the reader holds the page for a second or two
       }).then(function () {
         // the reader tries another way of reading when the result isn't something Check can parse
-        return Reader.read(el.__api.strokes(), readOpts(pid));
+        return Reader.read(strokes, opts);
       }).then(function (r) {
         reset();
-        if (!r || !r.text) { toast("I couldn’t read that. Try writing the answer again, a little larger."); return; }
-        showRead(el, inp, r);
+        if (!r || !r.text) { toast("I couldn’t read that. Try writing it again, a little larger."); return; }
+        showRead(el, inp, r, toCalc);
       });
     }).catch(function (e) {
       reset();
@@ -3833,6 +3881,7 @@ CONFIG.web = true;
       case "scr-clear": t.closest(".scratch").__api.clear(); break;
       case "scr-taller": t.closest(".scratch").__api.taller(); break;
       case "scr-read": readAnswer(t.dataset.pid, t); break;
+      case "scr-calc": if (CALC) { CALC.open(); readAnswer(t.dataset.pid, t, true); } break;
       case "scr-ask": if (CONFIG.web) handoff(t.dataset.pid, t); else askClaude(t.dataset.pid, t); break;
       case "gh-connect": ghConnect(($("#ghToken") || {}).value); break;
       case "gh-off": ghDisconnect(); break;
@@ -3925,9 +3974,16 @@ CONFIG.web = true;
       '<div data-p="val"><input class="calc-in" data-f="e" placeholder="e.g. ln(865)/9 or sin(2)" aria-label="Expression" autocomplete="off" autocapitalize="off" spellcheck="false"></div>' +
       '<div data-p="int" hidden><input class="calc-in" data-f="f" placeholder="f(x), e.g. sqrt(1 + 4x^2)" aria-label="Function to integrate" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="row calc-lims"><input class="calc-in" data-f="a" placeholder="from" aria-label="Lower limit"><input class="calc-in" data-f="b" placeholder="to" aria-label="Upper limit"></div></div>' +
       '<div data-p="gr" hidden><input class="calc-in" data-f="g1" placeholder="y = …, e.g. x^3/10 + 1" aria-label="First curve" autocomplete="off" autocapitalize="off" spellcheck="false"><input class="calc-in" data-f="g2" placeholder="second curve (optional)" aria-label="Second curve" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="row calc-lims"><input class="calc-in" data-f="ga" value="-5" aria-label="x from"><input class="calc-in" data-f="gb" value="5" aria-label="x to"></div><div class="calc-plot"></div></div>' +
+      (CONFIG.web && typeof Reader !== "undefined" ? '<div class="row calc-from"><button class="btn small" data-from-pad title="Reads what you boxed on the problem’s scratch pad (or its last line) into the box above">Read from the problem’s scratch pad</button></div>' : "") +
+      '<div class="calc-pad"></div>' +
       '<p class="muted calc-note">Radians. Type pi for π and e for Euler’s number, the same way as in answer boxes.</p><div class="calc-out" aria-live="polite"></div>';
     document.body.appendChild(box);
-    var mode = "val", out = box.querySelector(".calc-out"), plot = box.querySelector(".calc-plot");
+    var mode = "val", out = box.querySelector(".calc-out"), plot = box.querySelector(".calc-plot"), lastIn = null;
+    if (CONFIG.web && typeof Reader !== "undefined") { // the calculator's own pad, with the same tools and reader
+      PROB.__calc = { pid: "__calc", type: "calc", calc: true };
+      box.querySelector(".calc-pad").innerHTML = scratchHTML(PROB.__calc);
+    }
+    box.addEventListener("focusin", function (ev) { if (ev.target.classList.contains("calc-in")) lastIn = ev.target; });
     function v(n) { return box.querySelector('[data-f="' + n + '"]').value.trim(); }
     function num(s) { return E.ev(E.parse(s), 0, 0); }
     function fn(s) { var a = E.parse(s); return function (x) { return E.ev(a, x, 0); }; }
@@ -3953,7 +4009,12 @@ CONFIG.web = true;
     }
     function run() {
       try {
-        if (mode === "val") { if (!v("e")) { out.textContent = ""; return; } out.innerHTML = '<span class="m">' + E.pretty(E.parse(v("e"))) + "</span> = <b>" + r(num(v("e"))) + "</b>"; return; }
+        if (mode === "val") {
+          if (!v("e")) { out.textContent = ""; return; }
+          var ast = E.parse(v("e")), pv = '<span class="m">' + E.pretty(ast) + "</span>", g1 = E.ev(ast, 0.3, 0.37), g2 = E.ev(ast, 0.7, 0.91);
+          if (g1 !== g2 && !(isNaN(g1) && isNaN(g2))) { out.innerHTML = pv + '<br><span class="muted">This has x (or C) in it, so it isn’t a single number. Put a number in place of x, or use the Integral or Graph tab.</span>'; return; }
+          out.innerHTML = pv + " = <b>" + r(g1) + "</b>"; return;
+        }
         if (mode === "int") {
           if (!v("f") || !v("a") || !v("b")) { out.textContent = "Enter the function and both limits."; return; }
           var f = fn(v("f")), a = num(v("a")), b = num(v("b")), s1 = simpson(f, a, b, 2000), s2 = simpson(f, a, b, 4000);
@@ -3980,6 +4041,12 @@ CONFIG.web = true;
     box.addEventListener("click", function (ev) {
       var t = ev.target.closest("button"); if (!t) return;
       if (t.hasAttribute("data-x")) { box.hidden = true; return; }
+      if (t.hasAttribute("data-from-pad")) { // the pad under a problem: the one last used, else the first open one on the page
+        var pad = LAST_PAD && LAST_PAD.isConnected && LAST_PAD.__api ? LAST_PAD : null;
+        if (!pad) pad = $$("#page .scratch").filter(function (x) { return x.__api && !x.__api.isEmpty(); })[0] || null;
+        if (!pad) { toast("Open a problem’s scratch pad and write on it first."); return; }
+        readAnswer(pad.dataset.pid, t, true, pad); return;
+      }
       if (t.dataset.m) {
         mode = t.dataset.m;
         box.querySelectorAll("[data-m]").forEach(function (b) { b.classList.toggle("on", b === t); });
@@ -3987,7 +4054,16 @@ CONFIG.web = true;
         run();
       }
     });
-    btn.addEventListener("click", function () { box.hidden = !box.hidden; if (!box.hidden) { var i = box.querySelector('[data-p="' + mode + '"] input'); if (i) i.focus(); } });
+    function open() { box.hidden = false; mountScratches(); }
+    btn.addEventListener("click", function () { box.hidden = !box.hidden; if (!box.hidden) { mountScratches(); var i = box.querySelector('[data-p="' + mode + '"] input'); if (i) i.focus(); } });
+    CALC = {
+      open: open,
+      target: function () { // the box last typed in, if it's on the tab showing; else the first box of that tab
+        var pane = box.querySelector('[data-p="' + mode + '"]');
+        if (lastIn && pane.contains(lastIn)) return lastIn;
+        return pane.querySelector("input");
+      }
+    };
   })();
   initReader();
   lastJSON = fingerprint();
