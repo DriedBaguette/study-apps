@@ -1,0 +1,28 @@
+{
+ "id": "./scratch.html",
+ "name": "Scratch Pad",
+ "short_name": "Scratch",
+ "start_url": "./scratch.html",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#EEF2F7",
+ "theme_color": "#2F6F5E",
+ "icons": [
+  {
+   "src": "icons/scratch-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icons/scratch-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "icons/scratch-maskable.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}

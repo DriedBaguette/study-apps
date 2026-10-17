@@ -1,8 +1,8 @@
 // Offline support: always try the network first so updates show up right away,
 // fall back to the saved copy when offline. GitHub sync calls are never cached.
 const CACHE = 'study-apps-2026-10-15';
-const CORE = ['./', 'index.html', 'calc.html', 'precalc.html', 'history.html', 'calc.webmanifest', 'precalc.webmanifest', 'history.webmanifest',
-  'icons/calc-192.png', 'icons/precalc-192.png', 'icons/history-192.png'];
+const CORE = ['./', 'index.html', 'calc.html', 'precalc.html', 'history.html', 'scratch.html', 'calc.webmanifest', 'precalc.webmanifest', 'history.webmanifest', 'scratch.webmanifest',
+  'icons/calc-192.png', 'icons/precalc-192.png', 'icons/history-192.png', 'icons/scratch-192.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
 });

@@ -1,0 +1,2034 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scratch Pad</title>
+<link rel="manifest" href="scratch.webmanifest">
+<meta name="theme-color" content="#2F6F5E">
+<link rel="icon" type="image/png" href="icons/scratch-192.png">
+<link rel="apple-touch-icon" href="icons/scratch-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Scratch">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+:root {
+  --bg: #EEF2F7; --bg-grid: #E0E7F1; --surface: #FFFFFF; --surface-2: #F6F8FB; --sunken: #E9EEF5;
+  --border: #D4DCE8; --border-strong: #B9C5D6;
+  --ink: #18202F; --ink-soft: #465169; --ink-faint: #67728A;
+  --accent: #C24E1A; --accent-hover: #A8410F; --accent-ink: #FFFFFF; --accent-soft: #FBE7DC; --accent-soft-border: #EFC3A7;
+  --good: #1B7A55; --good-soft: #DDF1E7; --good-border: #9FD3BB;
+  --warn: #8A5D00; --warn-soft: #FBF0D6; --warn-border: #E7CB86;
+  --bad: #B3261E; --bad-soft: #FBE3E1; --bad-border: #EDB1AC;
+  --break: #2E6DB4; --break-soft: #DDEAF8;
+  --shadow: 0 1px 2px rgba(24,32,47,.06), 0 4px 14px rgba(24,32,47,.05);
+  --focus: #C24E1A;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0C0F15; --bg-grid: #141924; --surface: #141923; --surface-2: #10141C; --sunken: #0E121A;
+    --border: #252D3B; --border-strong: #354055;
+    --ink: #E8ECF3; --ink-soft: #AAB4C6; --ink-faint: #8792A6;
+    --accent: #F0844C; --accent-hover: #F59B6A; --accent-ink: #1A0E05; --accent-soft: #2B1A10; --accent-soft-border: #4C301C;
+    --good: #52C495; --good-soft: #11261D; --good-border: #24543F;
+    --warn: #E6B85A; --warn-soft: #2A2110; --warn-border: #574320;
+    --bad: #F28B82; --bad-soft: #2E1514; --bad-border: #5C2B28;
+    --break: #7FB3EE; --break-soft: #13233A;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.25);
+    --focus: #F0844C;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0C0F15; --bg-grid: #141924; --surface: #141923; --surface-2: #10141C; --sunken: #0E121A;
+  --border: #252D3B; --border-strong: #354055;
+  --ink: #E8ECF3; --ink-soft: #AAB4C6; --ink-faint: #8792A6;
+  --accent: #F0844C; --accent-hover: #F59B6A; --accent-ink: #1A0E05; --accent-soft: #2B1A10; --accent-soft-border: #4C301C;
+  --good: #52C495; --good-soft: #11261D; --good-border: #24543F;
+  --warn: #E6B85A; --warn-soft: #2A2110; --warn-border: #574320;
+  --bad: #F28B82; --bad-soft: #2E1514; --bad-border: #5C2B28;
+  --break: #7FB3EE; --break-soft: #13233A;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.25);
+  --focus: #F0844C;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; color: var(--ink); background: var(--bg);
+  font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { font-family: "IBM Plex Serif", Georgia, serif; margin: 0; text-wrap: balance; line-height: 1.2; }
+a { color: inherit; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- math ---------- */
+.m { font-family: "IBM Plex Serif", "Cambria Math", Georgia, serif; font-size: 1.06em; white-space: nowrap; }
+.m i, .pv i, .fb i { font-style: italic; }
+.fn { font-style: normal; }
+.frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: .9em; margin: 0 .12em; line-height: 1.15; }
+.frac > span:first-child { border-bottom: 1px solid currentColor; padding: 0 .2em .05em; }
+.frac > span:last-child { padding: .05em .2em 0; }
+.ov { border-top: 1px solid currentColor; padding: 0 .1em; margin-left: .05em; }
+sup { font-size: .72em; line-height: 0; }
+sup sup { font-size: .85em; }
+.is { font-size: 1.45em; line-height: 1; vertical-align: -.18em; margin-right: .08em; font-weight: 300; }
+.sg { font-size: 1.25em; line-height: 1; }
+.intl { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin-right: .15em; line-height: 1; }
+.intl .ib, .intl .ia { font-size: .66em; line-height: 1.2; }
+.intl .is { vertical-align: 0; margin: 0; }
+
+/* ---------- app frame ---------- */
+.app { display: grid; grid-template-columns: 284px minmax(0, 1fr); min-height: 100vh; }
+.side {
+  position: sticky; top: 0; height: 100vh; overflow-y: auto; background: var(--surface);
+  border-right: 1px solid var(--border); padding: 20px 14px 40px; display: flex; flex-direction: column; gap: 18px;
+}
+.brand { display: flex; flex-direction: column; gap: 2px; padding: 0 8px; }
+.brand b { font-family: "IBM Plex Serif", Georgia, serif; font-size: 19px; font-weight: 600; }
+.brand span { font-size: 12.5px; color: var(--ink-faint); }
+.nav-main { display: flex; flex-direction: column; gap: 2px; }
+.nav-main a {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 8px;
+  text-decoration: none; font-weight: 500; color: var(--ink-soft);
+}
+.nav-main a:hover { background: var(--surface-2); color: var(--ink); }
+.nav-main a.on { background: var(--accent-soft); color: var(--ink); }
+.badge { font-family: "IBM Plex Mono", monospace; font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--bad-soft); color: var(--bad); border: 1px solid var(--bad-border); }
+.nav-phase { display: flex; flex-direction: column; gap: 1px; }
+.nav-ph { padding: 4px 10px 6px; display: flex; flex-direction: column; }
+.nav-ph b { font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-faint); font-family: "IBM Plex Mono", monospace; font-weight: 600; }
+.nav-ph span { font-size: 12.5px; color: var(--ink-soft); }
+.nav-s {
+  display: grid; grid-template-columns: 10px 36px 1fr auto; align-items: center; gap: 6px; padding: 6px 10px;
+  border-radius: 7px; text-decoration: none; font-size: 13.5px; color: var(--ink-soft);
+}
+.nav-s:hover { background: var(--surface-2); color: var(--ink); }
+.nav-s.on { background: var(--sunken); color: var(--ink); box-shadow: inset 0 0 0 1px var(--border); }
+.nav-s .sid { font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 600; color: var(--ink-faint); }
+.nav-s .stt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav-s .sd { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--ink-faint); }
+.dot { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--border-strong); background: transparent; }
+.dot.done { background: var(--good); border-color: var(--good); }
+.dot.active { border-color: var(--accent); background: var(--accent-soft); }
+.dot.behind { border-color: var(--warn); background: var(--warn-soft); }
+.dot.today { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+.main { min-width: 0; display: flex; flex-direction: column; }
+.top {
+  position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 28px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+.icon-btn.menu-btn { display: none; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; font-size: 13px;
+  background: var(--surface); border: 1px solid var(--border); color: var(--ink-soft); white-space: nowrap; text-decoration: none;
+}
+.chip b { color: var(--ink); font-weight: 600; }
+.chip.hot { background: var(--accent-soft); border-color: var(--accent-soft-border); }
+.chip.warn { background: var(--warn-soft); border-color: var(--warn-border); color: var(--warn); }
+.spacer { flex: 1; }
+.timer { display: inline-flex; align-items: center; gap: 0; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); overflow: hidden; }
+.timer button { border: 0; background: transparent; padding: 6px 12px; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+.timer button:hover { background: var(--surface-2); }
+.timer .tm { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; font-weight: 600; }
+.timer.focus { border-color: var(--accent); background: var(--accent-soft); }
+.timer.break { border-color: var(--break); background: var(--break-soft); }
+.timer .sep { width: 1px; align-self: stretch; background: var(--border); }
+.icon-btn { border: 1px solid var(--border); background: var(--surface); border-radius: 999px; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.icon-btn:hover { background: var(--surface-2); }
+
+.page { width: 100%; max-width: 820px; margin: 0 auto; padding: 32px 28px 120px; display: flex; flex-direction: column; gap: 22px; }
+.eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+.page h1 { font-size: clamp(26px, 3.6vw, 34px); font-weight: 600; }
+.lede { color: var(--ink-soft); font-size: 15.5px; max-width: 64ch; margin: 6px 0 0; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; box-shadow: var(--shadow); }
+.card h2 { font-size: 18px; font-weight: 600; }
+.card-h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.muted { color: var(--ink-faint); font-size: 13.5px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 16px; border-radius: 9px; cursor: pointer;
+  border: 1px solid var(--border-strong); background: var(--surface); font-weight: 500; font-size: 14px; text-decoration: none; white-space: nowrap;
+}
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn.good { background: var(--good); border-color: var(--good); color: #fff; }
+.btn.small { padding: 6px 11px; font-size: 13px; border-radius: 8px; }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--ink-soft); }
+.btn.ghost:hover { background: var(--surface-2); color: var(--ink); }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.link-btn { border: 0; background: none; padding: 0; color: var(--ink-soft); cursor: pointer; font-size: 13.5px; text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
+.link-btn:hover { color: var(--accent); text-decoration-color: var(--accent); }
+
+/* ---------- today ---------- */
+.next { border: 1px solid var(--accent-soft-border); background: linear-gradient(var(--accent-soft), var(--surface) 70%); }
+.next .big { font-family: "IBM Plex Serif", Georgia, serif; font-size: 24px; font-weight: 600; margin: 6px 0 4px; }
+.next .where { color: var(--ink-soft); margin-bottom: 16px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.count { font-family: "IBM Plex Mono", monospace; font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.hw-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.hw-list li { display: grid; grid-template-columns: 22px 44px 1fr auto; gap: 8px; align-items: center; padding: 6px 4px; border-radius: 6px; font-size: 14px; }
+.hw-list li.done .hw-t { color: var(--ink-faint); text-decoration: line-through; }
+.hw-list .hw-id { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 13px; }
+.hw-list a { font-size: 12px; color: var(--ink-faint); text-decoration: none; font-family: "IBM Plex Mono", monospace; }
+.hw-list a:hover { color: var(--accent); }
+.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.wd { border: 1px solid var(--border); border-radius: 9px; padding: 8px 6px; text-align: center; background: var(--surface-2); text-decoration: none; min-height: 74px; display: flex; flex-direction: column; gap: 3px; align-items: center; }
+.wd .wdn { font-size: 11px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .06em; font-family: "IBM Plex Mono", monospace; }
+.wd .wdd { font-size: 15px; font-weight: 600; }
+.wd .wds { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; font-weight: 600; padding: 1px 6px; border-radius: 5px; }
+.wd.is-today { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); background: var(--surface); }
+.wds.done { background: var(--good-soft); color: var(--good); }
+.wds.todo { background: var(--sunken); color: var(--ink-soft); }
+.wds.behind { background: var(--warn-soft); color: var(--warn); }
+.streak { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; }
+.streak span { width: 16px; height: 16px; border-radius: 4px; background: var(--sunken); border: 1px solid var(--border); }
+.streak span.on { background: var(--good); border-color: var(--good); }
+.streak span.today { outline: 2px solid var(--accent); outline-offset: 1px; }
+.tip { font-size: 13.5px; color: var(--ink-soft); }
+.tip summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+.tip ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+
+/* ---------- plan ---------- */
+.phase-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.phase-h h2 { font-size: 21px; }
+.blk { display: flex; flex-direction: column; gap: 8px; }
+.blk-h { font-weight: 600; font-size: 15px; margin-top: 4px; }
+.blk-g { font-size: 13.5px; color: var(--ink-soft); max-width: 66ch; margin: 0 0 4px; }
+.prow {
+  display: grid; grid-template-columns: 12px 42px 1fr auto auto; gap: 10px; align-items: center; padding: 10px 14px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; text-decoration: none;
+}
+.prow:hover { border-color: var(--border-strong); }
+.prow .sid { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 13px; color: var(--ink-faint); }
+.prow .pt { font-weight: 500; }
+.prow .pd { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--ink-faint); }
+.tag { font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: .03em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--ink-faint); white-space: nowrap; }
+.tag.ok { color: var(--good); border-color: var(--good-border); background: var(--good-soft); }
+.tag.star { color: var(--accent); border-color: var(--accent-soft-border); background: var(--accent-soft); }
+
+/* ---------- session ---------- */
+.crumb { font-size: 13px; color: var(--ink-faint); }
+.crumb a { color: inherit; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); overflow-x: auto; position: sticky; top: var(--topH, 55px); z-index: 10; background: var(--bg); padding-top: 4px; }
+.tab {
+  border: 0; background: none; padding: 10px 14px; cursor: pointer; font-weight: 500; color: var(--ink-soft); border-bottom: 2px solid transparent;
+  margin-bottom: -1px; display: inline-flex; gap: 7px; align-items: center; white-space: nowrap; font-size: 14px;
+}
+.tab:hover { color: var(--ink); }
+.tab.on { color: var(--ink); border-bottom-color: var(--accent); }
+.tab .tc { font-family: "IBM Plex Mono", monospace; font-size: 11px; padding: 1px 6px; border-radius: 999px; background: var(--sunken); color: var(--ink-faint); }
+.tab .tc.full { background: var(--good-soft); color: var(--good); }
+
+.parts { display: flex; flex-direction: column; gap: 10px; }
+.part { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.part.open { box-shadow: var(--shadow); border-color: var(--border-strong); }
+.part-h { width: 100%; border: 0; background: none; padding: 14px 18px; display: grid; grid-template-columns: 26px 1fr auto; gap: 12px; align-items: center; cursor: pointer; text-align: left; }
+.part-h .pn { width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 600; border: 1.5px solid var(--border-strong); color: var(--ink-faint); }
+.part.read .pn { background: var(--good); border-color: var(--good); color: #fff; }
+.part-h .ptl { font-weight: 600; font-size: 15.5px; }
+.part-h .chev { color: var(--ink-faint); transition: transform .2s; }
+.part.open .chev { transform: rotate(90deg); }
+.part-b { padding: 0 22px 20px 56px; font-size: 15.5px; line-height: 1.7; }
+.part-b p { margin: 0 0 12px; max-width: 64ch; }
+.part-f { display: flex; gap: 10px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
+.rule { border: 1px solid var(--accent-soft-border); background: var(--accent-soft); border-radius: 10px; padding: 12px 16px; margin: 12px 0; line-height: 1.8; }
+.steps { margin: 8px 0 12px; padding-left: 22px; display: grid; gap: 6px; }
+.steps li { padding-left: 4px; }
+.steps li::marker { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--ink-faint); }
+.tbl-wrap { overflow-x: auto; margin: 10px 0 14px; border: 1px solid var(--border); border-radius: 10px; }
+.tbl { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+.tbl th { text-align: left; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); font-family: "IBM Plex Mono", monospace; font-weight: 600; background: var(--surface-2); }
+.tbl th, .tbl td { padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: 0; }
+
+/* ---------- problems ---------- */
+.prob-nav { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+.pdots { display: flex; gap: 6px; flex-wrap: wrap; }
+.pdot { width: 30px; height: 30px; border-radius: 8px; border: 1.5px solid var(--border-strong); background: var(--surface); cursor: pointer; font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 600; color: var(--ink-faint); }
+.pdot.cur { border-color: var(--accent); color: var(--ink); box-shadow: 0 0 0 2px var(--accent-soft); }
+.pdot.correct { background: var(--good); border-color: var(--good); color: #fff; }
+.pdot.almost { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+.pdot.wrong { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
+.prob { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); transition: border-color .25s; }
+.prob.correct { border-color: var(--good); }
+.prob.almost { border-color: var(--warn); }
+.prob.wrong { border-color: var(--bad-border); }
+.prob-q { display: flex; gap: 12px; align-items: baseline; font-size: 17px; line-height: 1.9; }
+.prob-q .qn { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--ink-faint); font-weight: 600; flex: none; }
+.ans-row { display: flex; gap: 8px; }
+.ans, .calc-in {
+  flex: 1; min-width: 0; font-family: "IBM Plex Mono", monospace; font-size: 16px; padding: 10px 12px; border-radius: 9px;
+  border: 1.5px solid var(--border-strong); background: var(--surface-2); color: var(--ink);
+}
+.ans:focus, .calc-in:focus { outline: none; border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 3px var(--accent-soft); }
+.pv { min-height: 26px; font-size: 14px; color: var(--ink-faint); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pv .m { color: var(--ink); font-size: 1.15em; }
+.pv.err { color: var(--warn); }
+.fb { border-radius: 9px; padding: 10px 14px; font-size: 14.5px; display: flex; gap: 10px; align-items: flex-start; }
+.fb.correct { background: var(--good-soft); color: var(--good); border: 1px solid var(--good-border); }
+.fb.almost { background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn-border); }
+.fb.wrong, .fb.error { background: var(--bad-soft); color: var(--bad); border: 1px solid var(--bad-border); }
+.fb b { font-weight: 600; }
+.fb .fbm { color: var(--ink); }
+.prob-tools { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+.reveal { background: var(--surface-2); border: 1px dashed var(--border-strong); border-radius: 9px; padding: 10px 14px; font-size: 14.5px; }
+.reveal .steps { margin: 4px 0; }
+.howto { font-size: 13.5px; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+.howto summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+.howto table { margin-top: 8px; border-collapse: collapse; }
+.howto td { padding: 3px 14px 3px 0; }
+.howto code { font-family: "IBM Plex Mono", monospace; background: var(--sunken); padding: 1px 6px; border-radius: 5px; color: var(--ink); }
+.pop { animation: pop .45s ease; }
+@keyframes pop { 0% { transform: scale(1); } 35% { transform: scale(1.012); } 100% { transform: scale(1); } }
+
+/* flashcards */
+.flash { display: flex; flex-direction: column; gap: 14px; align-items: stretch; }
+.fcard {
+  min-height: 190px; border-radius: 14px; border: 1px solid var(--border-strong); background: var(--surface); box-shadow: var(--shadow);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; font-size: 26px; cursor: pointer; padding: 24px; text-align: center;
+}
+.fcard .side-lbl { font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); }
+.fcard.back { background: var(--surface-2); border-color: var(--accent-soft-border); }
+
+/* quiz */
+.qbar { position: sticky; top: calc(var(--topH, 55px) + 50px); z-index: 9; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-radius: 10px; background: var(--ink); color: var(--bg); }
+.qbar .btn { background: var(--surface); color: var(--ink); border-color: var(--surface); }
+.qbar .tm { font-family: "IBM Plex Mono", monospace; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.qbar.low { background: var(--bad); color: #fff; }
+.score { font-family: "IBM Plex Mono", monospace; font-size: 40px; font-weight: 600; }
+
+/* notes, resources */
+.res { display: grid; gap: 8px; }
+.res a { display: flex; justify-content: space-between; gap: 10px; padding: 11px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); text-decoration: none; }
+.res a:hover { border-color: var(--accent-soft-border); background: var(--accent-soft); }
+.res a span:last-child { color: var(--ink-faint); }
+textarea.notes { width: 100%; min-height: 140px; resize: vertical; border-radius: 10px; border: 1.5px solid var(--border-strong); background: var(--surface); color: var(--ink); padding: 12px 14px; font: inherit; line-height: 1.6; }
+textarea.notes:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.sfoot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; border-top: 1px solid var(--border); padding-top: 18px; }
+.done-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: var(--good-soft); border: 1px solid var(--good-border); color: var(--good); border-radius: 12px; padding: 14px 18px; }
+.done-banner b { color: var(--ink); }
+.empty { border: 1px dashed var(--border-strong); border-radius: 12px; padding: 22px; text-align: center; color: var(--ink-soft); background: var(--surface-2); }
+
+/* mistakes */
+.mist { display: flex; flex-direction: column; gap: 10px; }
+.mrow { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; display: grid; gap: 8px; }
+.mrow.res-ok { opacity: .62; }
+.mrow-h { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center; }
+.mq { font-size: 16px; line-height: 1.9; }
+.mcmp { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 14px; align-items: baseline; }
+.mcmp .l { font-family: "IBM Plex Mono", monospace; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); }
+select { font: inherit; font-size: 13px; padding: 5px 8px; border-radius: 7px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink); }
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 9px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); padding: 6px 12px; cursor: pointer; font-size: 13px; }
+.seg button.on { background: var(--ink); color: var(--bg); }
+
+input[type="checkbox"].ck { appearance: none; width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--border-strong); background: var(--surface); cursor: pointer; position: relative; margin: 0; flex: none; }
+input[type="checkbox"].ck:checked { background: var(--good); border-color: var(--good); }
+input[type="checkbox"].ck:checked::after { content: ""; position: absolute; left: 5px; top: 1px; width: 5px; height: 10px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(40deg); }
+
+.calc { position: fixed; right: 16px; bottom: 16px; width: min(380px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 12px; z-index: 45; }
+.calc-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.calc input { width: 100%; box-sizing: border-box; margin-top: 8px; }
+.calc-lims { gap: 8px; flex-wrap: nowrap; }
+.calc-lims input { flex: 1; min-width: 0; }
+.calc-note { margin: 6px 0 0; font-size: 13px; }
+.calc-from { margin-top: 10px; }
+.calc-out { margin-top: 10px; font-size: 15px; line-height: 1.5; }
+.calc-plot svg { display: block; width: 100%; height: auto; margin-top: 8px; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); opacity: 0; background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 10px; font-size: 14px; z-index: 50; transition: all .25s; pointer-events: none; max-width: calc(100% - 32px); box-shadow: 0 8px 30px rgba(0,0,0,.25); }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.scrim { display: none; }
+
+@media (max-width: 860px) {
+  .app { grid-template-columns: 1fr; }
+  .side { position: fixed; z-index: 40; left: 0; top: 0; width: 300px; max-width: 86vw; transform: translateX(-102%); transition: transform .22s; box-shadow: var(--shadow); }
+  .app.nav-open .side { transform: none; }
+  .app.nav-open .scrim { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 35; }
+  .icon-btn.menu-btn { display: inline-flex; }
+  .timer [data-act="timer-len"], .timer .sep:first-of-type { display: none; }
+  .top { gap: 8px; }
+  .top { padding: 10px 16px; }
+  .page { padding: 22px 16px 100px; }
+  .part-b { padding: 0 16px 18px 16px; }
+  .week { grid-template-columns: repeat(7, minmax(40px, 1fr)); overflow-x: auto; }
+  .prow { grid-template-columns: 12px 30px 1fr auto; }
+  .prow .tag { display: none; }
+  .hide-sm { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+.ulist { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.urow { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; font-size: 14px; }
+.urow .bar { grid-column: 1 / -1; height: 6px; border-radius: 4px; background: var(--sunken); overflow: hidden; }
+.urow .bar span { display: block; height: 100%; background: var(--good); border-radius: 4px; }
+
+.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+.choice { text-align: left; padding: 11px 14px; border-radius: 9px; border: 1.5px solid var(--border-strong); background: var(--surface-2); cursor: pointer; font-size: 15px; line-height: 1.5; }
+.choice:hover { border-color: var(--accent); background: var(--surface); }
+.choice.sel { border-color: var(--accent); background: var(--accent-soft); }
+.choice.sel.correct { border-color: var(--good); background: var(--good-soft); }
+.choice.sel.wrong { border-color: var(--bad); background: var(--bad-soft); }
+
+.chip.ok { background: var(--good-soft); border-color: var(--good-border); color: var(--good); cursor: pointer; }
+button.chip { font: inherit; font-size: 13px; cursor: pointer; }
+
+.scratch-wrap { display: flex; flex-direction: column; gap: 8px; }
+.scratch-toggle { align-self: flex-start; }
+.scratch { border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); overflow: hidden; }
+.scr-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.scr-tools .seg button { padding: 5px 10px; }
+.scr-canvas { width: 100%; }
+.scr-canvas canvas { display: block; touch-action: none; cursor: crosshair; background: var(--surface-2); }
+.scr-fb { padding: 12px 14px; border-top: 1px solid var(--border); font-size: 14.5px; line-height: 1.6; white-space: pre-wrap; color: var(--ink-soft); background: var(--surface); }
+.scr-fb.done { color: var(--ink); }
+
+/* exams */
+.dl-wrap { display: inline-flex; gap: 8px; align-items: center; min-width: 0; }
+.exam-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: var(--accent-soft); border: 1px solid var(--accent-soft-border); font-size: 14px; }
+.exam-row.soon { background: var(--warn-soft); border-color: var(--warn-border); }
+.exam-row .exam-a { display: inline-flex; gap: 10px; align-items: baseline; }
+.exam-row a { color: var(--accent); font-weight: 600; text-decoration: none; }
+.exam-row a:hover { text-decoration: underline; }
+.wds.exam { background: var(--accent); color: var(--accent-ink); }
+.hw-list .hw-links { display: inline-flex; gap: 10px; }
+ul.wamap { margin: 0 0 10px; padding-left: 20px; line-height: 1.7; }
+@media (max-width: 700px) { .hw-list .hw-links a[title="Open on Canvas"] { display: none; } }
+
+/* ---------- Scratch Pad app (added Oct 17): only what style.css doesn't already cover ---------- */
+.pad-title { font-family: "IBM Plex Serif", Georgia, serif; font-size: 18px; font-weight: 600; }
+.pad-page { max-width: 1100px; gap: 14px; }
+.pad-pages { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pad-pages .seg { flex-wrap: wrap; }
+.pad-pages .spacer { flex: 1; }
+.pad-out { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.pad-out[hidden] { display: none; }
+.pad-out-msg { font-size: 14px; }
+.pad-out-row { gap: 8px; flex-wrap: nowrap; }
+.pad-out-row input { flex: 1; min-width: 0; }
+.calc-copy { margin-left: 8px; vertical-align: 1px; }
+@media (max-width: 860px) {
+  .top { padding: 10px 16px; }
+  .page.pad-page { padding: 16px 16px 100px; }
+}
+
+</style>
+</head>
+<body>
+<div class="main">
+  <header class="top">
+    <b class="pad-title">Scratch Pad</b>
+    <span class="spacer"></span>
+    <button id="syncChip" class="chip" hidden></button>
+    <button class="icon-btn" id="calcBtn" aria-label="Calculator" title="Calculator"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="14" height="18" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 7h8M8 12h2M14 12h2M8 16h2M14 16h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <button class="icon-btn" id="themeBtn" aria-label="Switch theme"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/></svg></button>
+  </header>
+  <main class="page pad-page">
+    <div class="pad-pages" id="pages" role="tablist" aria-label="Pages"></div>
+    <div class="pad-out" id="padOut" hidden>
+      <span class="muted pad-out-msg" id="padOutMsg"></span>
+      <div class="row pad-out-row"><input class="calc-in" id="padOutText" aria-label="What the reader read" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn small primary" id="padCopy">Copy</button></div>
+    </div>
+    <div id="padHost"></div>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+/* ===== Math engine: parse, pretty-print, evaluate, compare ===== */
+var MathEngine = (function () {
+  var NAMES = ["arcsin", "arccos", "arctan", "sqrt", "cbrt", "sin", "cos", "tan", "sec", "csc", "cot", "exp", "abs", "log", "ln", "pi", "e", "x", "c"];
+  var FNS = { arcsin: 1, arccos: 1, arctan: 1, sqrt: 1, cbrt: 1, sin: 1, cos: 1, tan: 1, sec: 1, csc: 1, cot: 1, exp: 1, abs: 1, log: 1, ln: 1 };
+
+  function normalize(s) {
+    return String(s)
+      .replace(/[−–—]/g, "-")
+      .replace(/[×·⋅∙]/g, "*")
+      .replace(/÷/g, "/")
+      .replace(/π/g, "pi")
+      .replace(/√/g, "sqrt")
+      .replace(/∛/g, "cbrt")
+      .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹⁻]+/g, function (m) { return "^(" + m.split("").map(function (ch) { return ch === "⁻" ? "-" : "⁰¹²³⁴⁵⁶⁷⁸⁹".indexOf(ch); }).join("") + ")"; })
+      .replace(/\*\*/g, "^")
+      .replace(/[\[{]/g, "(").replace(/[\]}]/g, ")")
+      .replace(/\s*d\s*x\s*$/i, "");
+  }
+
+  function tokenize(src, sym) {
+    var s = normalize(src), out = [], i = 0;
+    while (i < s.length) {
+      var c = s[i];
+      if (/\s/.test(c)) { i++; continue; }
+      if (/[0-9.]/.test(c)) {
+        var m = /^\d*\.?\d+|^\d+\.?/.exec(s.slice(i));
+        if (!m) throw new Error('Check the number near "' + s.slice(i, i + 4) + '"');
+        out.push({ k: "num", v: parseFloat(m[0]) }); i += m[0].length; continue;
+      }
+      if (/[a-zA-Z]/.test(c)) {
+        var run = /^[a-zA-Z]+/.exec(s.slice(i))[0];
+        var low = run.toLowerCase(), j = 0;
+        while (j < low.length) {
+          var hit = null;
+          for (var n = 0; n < NAMES.length; n++) {
+            if (low.substr(j, NAMES[n].length) === NAMES[n]) { if (!hit || NAMES[n].length > hit.length) hit = NAMES[n]; }
+          }
+          if (!hit && sym) { out.push({ k: "sym", v: run[j] }); j++; continue; }
+          if (!hit) throw new Error('I don’t recognize "' + run + '". Use x as the variable.');
+          if (FNS[hit]) out.push({ k: "fn", v: hit });
+          else if (hit === "x") out.push({ k: "x" });
+          else if (hit === "c") out.push({ k: "C" });
+          else out.push({ k: "const", v: hit });
+          j += hit.length;
+        }
+        i += run.length; continue;
+      }
+      if ("+-*/^()|_".indexOf(c) >= 0) { out.push({ k: "op", v: c }); i++; continue; }
+      if (c === "'") throw new Error("Type the answer itself, not f′(x).");
+      if (c === "=") throw new Error("Leave out the “y =” part and type only the right side.");
+      throw new Error('Unexpected "' + c + '"');
+    }
+    return out;
+  }
+
+  function parse(src, opts) {
+    if (!String(src).trim()) throw new Error("Type an answer first.");
+    var t = tokenize(src, opts && opts.sym), p = 0;
+    if (!t.length) throw new Error("Type an answer first.");
+    function peek() { return t[p]; }
+    function isOp(v) { var x = t[p]; return x && x.k === "op" && x.v === v; }
+    function expect(v) {
+      if (!isOp(v)) throw new Error(v === ")" ? "A closing parenthesis is missing." : 'Expected "' + v + '"');
+      p++;
+    }
+    function startsPrimary(x) {
+      return x && (x.k === "num" || x.k === "x" || x.k === "const" || x.k === "C" || x.k === "fn" || x.k === "sym" || (x.k === "op" && x.v === "("));
+    }
+    function expr() {
+      var n = term();
+      while (isOp("+") || isOp("-")) { var op = t[p++].v; n = { t: "bin", op: op, a: n, b: term() }; }
+      return n;
+    }
+    function term() {
+      var n = unary();
+      for (;;) {
+        if (isOp("*") || isOp("/")) { var op = t[p++].v; n = { t: "bin", op: op, a: n, b: unary() }; }
+        else if (startsPrimary(peek())) { n = { t: "bin", op: "*", a: n, b: power(), imp: true }; }
+        else break;
+      }
+      return n;
+    }
+    function unary() {
+      if (isOp("-")) { p++; return { t: "neg", a: unary() }; }
+      if (isOp("+")) { p++; return unary(); }
+      return power();
+    }
+    function power() {
+      var b = primary();
+      if (isOp("^")) { p++; return { t: "bin", op: "^", a: b, b: unary() }; }
+      return b;
+    }
+    function primary() {
+      var x = t[p++];
+      if (!x) throw new Error("The answer ends too early. Is something missing?");
+      if (x.k === "num") return { t: "num", v: x.v };
+      if (x.k === "x") return { t: "x" };
+      if (x.k === "C") return { t: "C" };
+      if (x.k === "const") return { t: "const", v: x.v };
+      if (x.k === "sym") {
+        if ("fghFG".indexOf(x.v) >= 0 && isOp("(")) { p++; var sa = expr(); expect(")"); return { t: "fn", name: x.v, sym: true, a: sa }; }
+        return { t: "sym", v: x.v };
+      }
+      if (x.k === "op" && x.v === "(") { var e = expr(); expect(")"); return e; }
+      if (x.k === "op" && x.v === "|") { var a = expr(); expect("|"); return { t: "fn", name: "abs", a: a }; }
+      if (x.k === "fn") {
+        var pw = null, base = null;
+        if (x.v === "log" && isOp("_")) { p++; base = primary(); }
+        if (isOp("^")) { p++; pw = unary(); }
+        var arg;
+        if (isOp("(")) { p++; arg = expr(); expect(")"); }
+        else if (isOp("|")) { arg = primary(); }
+        else if (!peek()) throw new Error(x.v + " needs something after it, like " + x.v + "(x).");
+        else arg = power();
+        var node = { t: "fn", name: x.v, a: arg };
+        if (base) node.base = base;
+        return pw ? { t: "bin", op: "^", a: node, b: pw } : node;
+      }
+      throw new Error('Unexpected "' + (x.v || x.k) + '"');
+    }
+    var root = expr();
+    if (p < t.length) {
+      var bad = t[p];
+      if (bad.k === "op" && bad.v === ")") throw new Error("There’s an extra closing parenthesis.");
+      throw new Error('Unexpected "' + (bad.v || bad.k) + '"');
+    }
+    return root;
+  }
+
+  function ev(n, x, C) {
+    switch (n.t) {
+      case "num": return n.v;
+      case "x": return x;
+      case "C": return C;
+      case "sym": return NaN;
+      case "const": return n.v === "pi" ? Math.PI : Math.E;
+      case "neg": return -ev(n.a, x, C);
+      case "bin":
+        var a = ev(n.a, x, C), b = ev(n.b, x, C);
+        if (n.op === "+") return a + b;
+        if (n.op === "-") return a - b;
+        if (n.op === "*") return a * b;
+        if (n.op === "/") return a / b;
+        if (a < 0 && Math.abs(b) < 1 && !Number.isInteger(b)) {
+          for (var d = 1; d <= 9; d += 2) { var nu = b * d; if (Math.abs(nu - Math.round(nu)) < 1e-9) { var r = Math.pow(-a, b); return Math.round(nu) % 2 ? -r : r; } }
+        }
+        return Math.pow(a, b);
+      case "fn":
+        var v = ev(n.a, x, C);
+        switch (n.name) {
+          case "sin": return Math.sin(v); case "cos": return Math.cos(v); case "tan": return Math.tan(v);
+          case "sec": return 1 / Math.cos(v); case "csc": return 1 / Math.sin(v); case "cot": return Math.cos(v) / Math.sin(v);
+          case "exp": return Math.exp(v); case "ln": return Math.log(v);
+          case "log": return n.base ? Math.log(v) / Math.log(ev(n.base, x, C)) : Math.log10(v);
+          case "sqrt": return Math.sqrt(v); case "cbrt": return Math.cbrt(v); case "abs": return Math.abs(v);
+          case "arcsin": return Math.asin(v); case "arccos": return Math.acos(v); case "arctan": return Math.atan(v);
+        }
+    }
+    return NaN;
+  }
+
+  /* ---------- pretty printing ---------- */
+  function fmtNum(v) {
+    if (Number.isInteger(v)) return String(v);
+    return String(parseFloat(v.toPrecision(6)));
+  }
+  function startsWithNum(n) {
+    if (n.t === "num" || n.t === "neg") return true;
+    if (n.t === "bin") return n.op === "/" ? true : startsWithNum(n.a);
+    return false;
+  }
+  function wrap(r, minP) { return r.p < minP ? "(" + r.h + ")" : r.h; }
+  function P(n, inl) {
+    switch (n.t) {
+      case "num": return { h: fmtNum(n.v), p: 4 };
+      case "x": return { h: "<i>x</i>", p: 4 };
+      case "C": return { h: "<i>C</i>", p: 4 };
+      case "sym": return { h: "<i>" + n.v + "</i>", p: 4 };
+      case "const": return { h: n.v === "pi" ? "π" : "<i>e</i>", p: 4 };
+      case "neg": return { h: "−" + wrap(P(n.a, inl), 2.5), p: 2.5 };
+      case "bin":
+        if (n.op === "+") {
+          var A = P(n.a, inl);
+          if (n.b.t === "neg") return { h: A.h + " − " + wrap(P(n.b.a, inl), 2), p: 1 };
+          return { h: A.h + " + " + P(n.b, inl).h, p: 1 };
+        }
+        if (n.op === "-") return { h: P(n.a, inl).h + " − " + wrap(P(n.b, inl), 1.5), p: 1 };
+        if (n.op === "*") {
+          var a = P(n.a, inl), b = P(n.b, inl);
+          var wa = wrap(a, 2), wb = n.b.t === "neg" ? "(" + b.h + ")" : wrap(b, 2.01);
+          if (!startsWithNum(n.b)) return { h: wa + (n.b.t === "fn" || (n.b.t === "bin" && n.b.op === "^" && n.b.a.t === "fn") ? "&thinsp;" : "") + wb, p: 2 };
+          return { h: wa + "·" + wb, p: 2 };
+        }
+        if (n.op === "/") {
+          if (inl) return { h: wrap(P(n.a, true), 2) + "/" + wrap(P(n.b, true), 2.01), p: 2 };
+          return { h: '<span class="frac"><span>' + P(n.a).h + "</span><span>" + P(n.b).h + "</span></span>", p: 3.5 };
+        }
+        if (n.op === "^") {
+          var ex = P(n.b, true).h;
+          if (n.a.t === "fn" && ["sqrt", "cbrt", "abs", "exp"].indexOf(n.a.name) < 0) {
+            var arg = P(n.a.a);
+            return { h: '<span class="fn">' + n.a.name + "</span><sup>" + ex + "</sup>&thinsp;" + (arg.p >= 4 ? arg.h : "(" + arg.h + ")"), p: 3 };
+          }
+          return { h: wrap(P(n.a, inl), 4) + "<sup>" + ex + "</sup>", p: 3 };
+        }
+        break;
+      case "fn":
+        var r = P(n.a, inl);
+        if (n.sym) return { h: "<i>" + n.name + "</i>(" + r.h + ")", p: 4 };
+        if (n.base) return { h: '<span class="fn">log</span><sub>' + P(n.base, true).h + "</sub>" + (r.p >= 4 ? "&thinsp;" + r.h : "(" + r.h + ")"), p: 3 };
+        if (n.name === "sqrt") return { h: '√<span class="ov">' + r.h + "</span>", p: 4 };
+        if (n.name === "cbrt") return { h: '∛<span class="ov">' + r.h + "</span>", p: 4 };
+        if (n.name === "abs") return { h: "|" + r.h + "|", p: 4 };
+        if (n.name === "exp") return { h: "<i>e</i><sup>" + P(n.a, true).h + "</sup>", p: 3 };
+        return { h: '<span class="fn">' + n.name + "</span>" + (r.p >= 4 ? (n.a.t === "fn" && n.a.name === "abs" ? "" : "&thinsp;") + r.h : "(" + r.h + ")"), p: 3 };
+    }
+    return { h: "?", p: 4 };
+  }
+  function pretty(src, opts) {
+    var h = P(typeof src === "string" ? parse(src, { sym: true }) : src).h;
+    if (opts && opts.v) h = h.replace(/<i>x<\/i>/g, "<i>" + opts.v + "</i>");
+    return h;
+  }
+
+  /* ---------- comparison ---------- */
+  var PTS = [0.35, 0.8, 1.15, 1.4, 2.05, 2.7, 3.3];
+  function fin(v) { return typeof v === "number" && isFinite(v); }
+  function close(a, b, rel) { return Math.abs(a - b) <= (rel || 1e-6) * Math.max(1, Math.abs(a), Math.abs(b)); }
+  function dependsOn(ast, which) {
+    for (var i = 0; i < PTS.length; i++) {
+      var x = PTS[i];
+      var a = which === "C" ? ev(ast, x, 0) : ev(ast, x, 0);
+      var b = which === "C" ? ev(ast, x, 2.37) : ev(ast, x + 0.731, 0);
+      if (fin(a) && fin(b)) return !close(a, b, 1e-9);
+    }
+    return false;
+  }
+  function nd(ast, x) { var h = 1e-5; return (ev(ast, x + h, 0) - ev(ast, x - h, 0)) / (2 * h); }
+
+  function subVar(input, v) {
+    if (!v || v === "x") return input;
+    return String(input).replace(new RegExp("(^|[^a-zA-Z])" + v + "(?![a-zA-Z])", "g"), "$1x");
+  }
+  function checkSet(input, spec) {
+      if (spec.ordered) input = String(input).trim().replace(/^\(/, "").replace(/\)$/, "");
+      var want = spec.ans.split(",").map(function (s) { return ev(parse(s), 1, 0); });
+      if (!spec.ordered) want.sort(function (a, b) { return a - b; });
+      var parts = String(input).split(/,|\bor\b|\band\b|;/).map(function (s) { return s.trim(); }).filter(Boolean);
+      var got = [];
+      for (var gi = 0; gi < parts.length; gi++) {
+        var pp; try { pp = parse(parts[gi]); } catch (e2) { return { status: "error", msg: e2.message }; }
+        if (dependsOn(pp, "x")) return { status: "error", msg: "Type only the values, separated by commas, like -2, 3." };
+        got.push(ev(pp, 1, 0));
+      }
+      if (spec.ordered) {
+        if (got.length !== want.length) return { status: "error", msg: "Type " + want.length + " values in order, separated by commas." };
+        var okc = 0; for (var oi = 0; oi < want.length; oi++) if (close(got[oi], want[oi], 5e-4)) okc++;
+        if (okc === want.length) return { status: "correct" };
+        var sw = want.length === 2 && close(got[0], want[1], 5e-4) && close(got[1], want[0], 5e-4);
+        return { status: okc ? "almost" : "wrong", msg: sw ? "Right numbers, wrong order." : okc ? okc + " of " + want.length + " right." : "" };
+      }
+      got.sort(function (a, b) { return a - b; });
+      var matched = 0, used = [];
+      want.forEach(function (w) { for (var q = 0; q < got.length; q++) if (!used[q] && close(got[q], w, 5e-4)) { used[q] = 1; matched++; break; } });
+      if (matched === want.length && got.length === want.length) return { status: "correct" };
+      if (matched === want.length) return { status: "almost", msg: "All the right values are there, plus some extra. Check each one in the original equation." };
+      if (matched > 0) return { status: "almost", msg: matched + " of " + want.length + " solutions right. " + (got.length < want.length ? "There\u2019s at least one more." : "One of yours doesn\u2019t work. Plug it back in to check.") };
+      return { status: "wrong", msg: want.length > 1 ? "This one has " + want.length + " solutions. Type them separated by commas." : "" };
+      }
+  function check(input, spec) {
+    if (spec.v) input = subVar(input, spec.v);
+    if (spec.type === "set") return checkSet(input, spec);
+    var user;
+    try { user = parse(input); } catch (e) { return { status: "error", msg: e.message }; }
+    var exp = parse(spec.ans), pts = spec.pts || PTS;
+    var hasC = dependsOn(user, "C");
+
+    if (spec.type === "number") {
+      if (dependsOn(user, "x")) return { status: "wrong", msg: "This answer should be a number, but yours still has an x in it." };
+      var u = ev(user, 1, 0), e = ev(exp, 1, 0);
+      if (!fin(u)) return { status: "error", msg: "That doesn’t evaluate to a number. Check for a typo." };
+      if (close(u, e, 1e-9)) return { status: "correct" };
+      if (close(u, e, 5e-4)) return { status: "correct", msg: "Correct to the decimals you gave. Exact form: " + pretty(exp) };
+      if (close(u, e, 1e-2)) return { status: "almost", msg: "Very close. Give a couple more decimal places, or the exact form." };
+      if (close(u, -e, 1e-6) && e !== 0) return { status: "wrong", msg: "Right size, wrong sign. Check which limit you subtracted from which, or whether the area is below the axis." };
+      return { status: "wrong" };
+    }
+
+    var ue = [], ee = [];
+    for (var i = 0; i < pts.length; i++) {
+      var a = ev(user, pts[i], 0), b = ev(exp, pts[i], 0);
+      if (fin(b)) { if (!fin(a)) return { status: "wrong", msg: "Your answer breaks at x = " + pts[i] + " where the right answer doesn’t. Check your parentheses." }; ue.push(a); ee.push(b); }
+    }
+    if (ue.length < 4) return { status: "error", msg: "I couldn’t evaluate this answer. Check for a typo." };
+
+    if (spec.type === "antideriv") {
+      var d0 = ue[0] - ee[0], same = true;
+      for (var k = 1; k < ue.length; k++) if (!close(ue[k] - ee[k], d0, 1e-6)) { same = false; break; }
+      if (same) {
+        if (spec.requireC !== false && !hasC) return { status: "almost", msg: "Right antiderivative, but you left off +C. Every indefinite integral needs it." };
+        return { status: "correct", msg: Math.abs(d0) > 1e-6 ? "Correct. It looks different from the answer key, but it differs by a constant, so both are right." : "" };
+      }
+      // diagnostics: compare derivative of the user's answer to the integrand
+      var ratios = [], okR = true;
+      for (var q = 0; q < pts.length; q++) {
+        var gu = nd(user, pts[q]), gi = nd(exp, pts[q]);
+        if (fin(gu) && fin(gi) && Math.abs(gi) > 1e-6) ratios.push(gu / gi);
+      }
+      if (ratios.length >= 4) {
+        for (var r = 1; r < ratios.length; r++) if (!close(ratios[r], ratios[0], 1e-4)) { okR = false; break; }
+        if (okR && close(ratios[0], -1, 1e-4)) return { status: "wrong", msg: "Sign error: the derivative of your answer is the negative of the integrand. Check ∫ sin x dx = −cos x + C." };
+        if (okR) return { status: "wrong", msg: "Close. The derivative of your answer is " + fmtNum(+ratios[0].toPrecision(4)) + "× the integrand, so a constant factor is off. Check the “divide by the new exponent” step." };
+      }
+      var same2 = true;
+      for (var z = 0; z < ue.length; z++) if (!close(ue[z], nd(exp, pts[z]), 1e-4)) { same2 = false; break; }
+      if (same2) return { status: "wrong", msg: "That’s the integrand itself, or its equivalent. You need a function whose derivative equals it." };
+      return { status: "wrong", msg: "Check it by differentiating: the derivative of your answer should equal the integrand." };
+    }
+
+    // plain expression
+    var eq = true;
+    for (var m = 0; m < ue.length; m++) if (!close(ue[m], ee[m], 1e-6)) { eq = false; break; }
+    if (eq && hasC) return { status: "almost", msg: spec.ivp ? "Solve for C and put in its number, so the answer has no C left." : "Derivatives don’t get +C. Drop it." };
+    if (eq) return { status: "correct" };
+    var dd = ue[0] - ee[0], sh = true;
+    for (var w = 1; w < ue.length; w++) if (!close(ue[w] - ee[w], dd, 1e-6)) { sh = false; break; }
+    if (sh && spec.ivp) return { status: "wrong", msg: "Your function has the right shape but the wrong constant. Plug the given point back in and solve for C again." };
+    if (sh) return { status: "wrong", msg: "Off by a constant. Check whether a term should have disappeared." };
+    var rr = ue[0] / ee[0], prop = fin(rr);
+    for (var y = 1; y < ue.length && prop; y++) if (!close(ue[y] / ee[y], rr, 1e-6)) prop = false;
+    if (prop && close(rr, -1, 1e-6)) return { status: "wrong", msg: "Right size, wrong sign somewhere." };
+    if (prop) return { status: "wrong", msg: "Right shape, but the coefficient is off by a factor of " + fmtNum(+rr.toPrecision(4)) + "." };
+    return { status: "wrong" };
+  }
+
+  function isSum(src) { try { var n = parse(src, { sym: true }); return n.t === "bin" && (n.op === "+" || n.op === "-"); } catch (e) { return false; } }
+  return { parse: parse, pretty: pretty, check: check, ev: ev, isSum: isSum, subVar: subVar };
+})();
+
+/* helpers for writing content */
+function M(s, v) { return '<span class="m">' + MathEngine.pretty(s, v ? { v: v } : null) + "</span>"; }
+function MI(s, v) { return MathEngine.pretty(s, v ? { v: v } : null); }
+var DDX = '<span class="frac"><span>d</span><span>dx</span></span>';
+function lim(s) { return s === "" ? "" : /^[a-z]$/i.test(s) && s !== "x" && s !== "e" ? "<i>" + s + "</i>" : MathEngine.pretty(s); }
+function body(s, v) { var h = MathEngine.pretty(s, v ? { v: v } : null); return MathEngine.isSum(s) ? "(" + h + ")" : h; }
+function DI(a, b, b2, v) {
+  return '<span class="m"><span class="intl"><span class="ib">' + lim(String(b)) + '</span><span class="is">∫</span><span class="ia">' + lim(String(a)) + "</span></span>" + body(b2, v) + "&thinsp;<i>d" + (v || "x") + "</i></span>";
+}
+function II(b2) { return '<span class="m"><span class="is">∫</span>' + body(b2) + "&thinsp;<i>dx</i></span>"; }
+function DD(body) { return '<span class="m">' + DDX + "&thinsp;[&thinsp;" + MathEngine.pretty(body) + "&thinsp;]</span>"; }
+function SIG(from, to, body) {
+  return '<span class="m"><span class="intl"><span class="ib">' + to + '</span><span class="sg">Σ</span><span class="ia"><i>k</i>=' + from + "</span></span>" + MathEngine.pretty(body, { v: "k" }) + "</span>";
+}
+
+if (typeof module !== "undefined") module.exports = { MathEngine: MathEngine, M: M, MI: MI, DI: DI, II: II, DD: DD, SIG: SIG, DDX: DDX };
+
+/* ===== Handwriting reader (web build only): the last line written on a scratch pad -> a typed answer =====
+   Runs in the browser, so nothing the user writes leaves the device.
+   Model: Pix2Text MFR 1.5 (breezedeus/pix2text-mfr-1.5, MIT), fetched once from Hugging Face and kept in the browser.
+   Runtime: ONNX Runtime Web 1.19.2 (MIT), served from vendor/ next to the app. */
+var Reader = (function () {
+  var ORT_DIR = "vendor/ort-1.19.2/";
+  // pinned to one commit, and each file is checked against its SHA-256 before use
+  var MODEL = "https://huggingface.co/breezedeus/pix2text-mfr-1.5/resolve/1cef9f0bdcd6a4c63df7de1311fb0894593340cc/";
+  var FILES = [
+    { name: "tokenizer.json", size: 113168, sha: "" },
+    { name: "encoder_model.onnx", size: 87510770, sha: "080a3f660f08bc9ebcacdd96e34be6b6400f8c7e62d7cd0dd8251badc37f610b" },
+    { name: "decoder_model.onnx", size: 32026253, sha: "917deb98e91a0453c5f234f58a0f32f9fb037de8527c7eb4ed394daf9e692f2a" }
+  ];
+  var TOTAL = FILES.reduce(function (n, f) { return n + f.size; }, 0);
+  // a new model means a new cache name; OLD_CACHES are deleted so a device doesn't keep both
+  var CACHE = "study-reader-v2", OLD_CACHES = ["study-reader-v1"], SIDE = 384, PAD = 16, START = 1, EOS = 2, MAX_TOKENS = 96;
+
+  /* ---------- which strokes are the answer: the line the last stroke belongs to ---------- */
+  function bbox(s) {
+    var b = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9 };
+    s.pts.forEach(function (p) { b.x0 = Math.min(b.x0, p[0]); b.y0 = Math.min(b.y0, p[1]); b.x1 = Math.max(b.x1, p[0]); b.y1 = Math.max(b.y1, p[1]); });
+    b.w = b.x1 - b.x0; b.h = b.y1 - b.y0; b.cx = (b.x0 + b.x1) / 2; b.cy = (b.y0 + b.y1) / 2;
+    return b;
+  }
+  function gap(a0, a1, b0, b1) { return a1 < b0 ? b0 - a1 : b1 < a0 ? a0 - b1 : 0; }
+  // Returns { idx: [stroke indexes], box: [x0, y0, x1, y1] }, or null when there is nothing to read.
+  // Strokes join a line when they overlap vertically or nearly touch. A fraction bar also pulls in what is
+  // written right above and below it, so a stacked fraction stays in one piece.
+  // the usual height of a written symbol: the median stroke height, leaving out dots and flat strokes
+  function letterHeight(boxes) {
+    var hs = boxes.filter(function (b) { return b.h >= 8 && b.h >= b.w * 0.4; }).map(function (b) { return b.h; }).sort(function (a, b) { return a - b; });
+    return hs.length ? hs[hs.length >> 1] : 30;
+  }
+  // Every stroke's box, the letter height H, and the fraction bars: flat strokes with ink right over and
+  // right under them. (The crossbars of + and t and the two strokes of = are flat too, but nothing sits
+  // cleanly on both sides of them.) side(i, box) tells whether a box sits over (-1) or under (1) flat stroke
+  // i closely enough to belong to it, 0 when neither. "Closely" scales with the bar, so the small fraction
+  // in an exponent like x^(4/3) counts, and is capped so a long bar can't reach into another line.
+  function shape(strokes) {
+    var bs = strokes.map(bbox), H = Math.max(16, Math.min(90, letterHeight(bs)));
+    function flat(i) { return bs[i].w >= 8 && bs[i].w >= 2.5 * Math.max(bs[i].h, 1); }
+    function barY(i, x) { // the height of the bar at x: bars are often drawn slanted
+      var p = strokes[i].pts, a = p[0], z = p[p.length - 1];
+      return a[0] === z[0] ? a[1] : a[1] + (z[1] - a[1]) * Math.max(0, Math.min(1, (x - a[0]) / (z[0] - a[0])));
+    }
+    function side(i, o, anyDistance) { // anyDistance: within one line, everything over a bar is its numerator
+      var b = bs[i], reach = anyDistance ? 1e9 : Math.min(1.2 * b.w, 1.5 * H);
+      if (o.cx < b.x0 - 0.15 * b.w || o.cx > b.x1 + 0.15 * b.w) return 0;
+      var y = barY(i, o.cx), slack = 0.2 * Math.max(o.y1 - o.y0, 4);
+      if (o.y1 <= y + slack && y - o.y1 <= reach) return -1;
+      if (o.y0 >= y - slack && o.y0 - y <= reach) return 1;
+      return 0;
+    }
+    var bar = bs.map(function (b, i) {
+      if (!flat(i)) return false;
+      var over = false, under = false;
+      bs.forEach(function (o, j) { if (j === i) return; var s = side(i, o); if (s < 0) over = true; if (s > 0) under = true; });
+      return over && under;
+    });
+    return { bs: bs, H: H, bar: bar, flat: flat, side: side };
+  }
+  function lastLine(strokes, whole) { // whole: the user boxed what to read, so every stroke is the line
+    strokes = strokes.filter(function (s) { return s.pts && s.pts.length; });
+    var sh = shape(strokes), bs = sh.bs, H = sh.H, bar = sh.bar, n = bs.length;
+    if (!n) return null;
+    if (whole) { var all = [], bx = [1e9, 1e9, -1e9, -1e9]; for (var w = 0; w < n; w++) { all.push(w); bx[0] = Math.min(bx[0], bs[w].x0); bx[1] = Math.min(bx[1], bs[w].y0); bx[2] = Math.max(bx[2], bs[w].x1); bx[3] = Math.max(bx[3], bs[w].y1); } return { idx: all, box: bx }; }
+    function joined(i, j) {
+      var a = bs[i], b = bs[j], vg = gap(a.y0, a.y1, b.y0, b.y1), hg = gap(a.x0, a.x1, b.x0, b.x1);
+      if (!vg && Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) >= 0.3 * Math.max(4, Math.min(a.h, b.h))) return true;
+      if (vg <= 0.25 * H && hg <= 1.5 * H) return true;
+      return !!(bar[i] && sh.side(i, b)) || !!(bar[j] && sh.side(j, a));
+    }
+    var inLine = [], todo = [n - 1]; inLine[n - 1] = true;
+    while (todo.length) { var k = todo.pop(); for (var m = 0; m < n; m++) if (!inLine[m] && joined(k, m)) { inLine[m] = true; todo.push(m); } }
+    var idx = [], box = [1e9, 1e9, -1e9, -1e9];
+    for (var q = 0; q < n; q++) if (inLine[q]) { idx.push(q); box[0] = Math.min(box[0], bs[q].x0); box[1] = Math.min(box[1], bs[q].y0); box[2] = Math.max(box[2], bs[q].x1); box[3] = Math.max(box[3], bs[q].y1); }
+    return { idx: idx, box: box };
+  }
+  // The line is read in pieces, left to right. Returns a list of { idx, box, pen }; pen is the line width to
+  // draw the piece with. No one way of cutting reads every sample right, so there are three, and read() goes
+  // down MODES until the result is something the answer checker can parse:
+  // - "plain": the whole line with a full-width pen. The model stretches every picture to a square, so a long
+  //   line loses its letter shapes ("sec" came out as "sin"): a run wider than WIDE (width / height, margins
+  //   included) is cut at its widest gap near the middle. This applies in every mode.
+  // - "apart": a stacked fraction becomes its own piece, and each piece gets a pen fitted to its writing
+  //   size. Small writing on a fraction, next to full-size writing, is misread in "plain" ("10x^5" over 5
+  //   came out as "log^5" over 5). On its own this mode misreads short leftovers ("+ c" came out as "tan").
+  // - "thin": like "plain" with the fitted pen.
+  var WIDE = 5, MODES = ["plain", "apart", "thin"];
+  function pieces(strokes, line, mode) {
+    var sh = shape(strokes), bs = sh.bs;
+    function piece(idx) {
+      var b = [1e9, 1e9, -1e9, -1e9];
+      idx.forEach(function (i) { b[0] = Math.min(b[0], bs[i].x0); b[1] = Math.min(b[1], bs[i].y0); b[2] = Math.max(b[2], bs[i].x1); b[3] = Math.max(b[3], bs[i].y1); });
+      return { idx: idx, box: b, pen: mode === "apart" || mode === "thin" ? Math.max(1.4, Math.min(3, letterHeight(idx.map(function (i) { return bs[i]; })) / 10)) : 3 };
+    }
+    function cut(idx) {
+      var one = piece(idx), b = one.box, w = b[2] - b[0], h = b[3] - b[1];
+      if (idx.length < 2 || (w + 2 * PAD) / (h + 2 * PAD) <= WIDE) return [one];
+      var cols = []; // strokes that share a column (a letter, or a whole stacked fraction)
+      idx.slice().sort(function (p, q) { return bs[p].x0 - bs[q].x0; }).forEach(function (i) {
+        var c = cols[cols.length - 1], s = bs[i];
+        if (c && s.x0 <= c.x1 + 1) { c.x1 = Math.max(c.x1, s.x1); c.y0 = Math.min(c.y0, s.y0); c.y1 = Math.max(c.y1, s.y1); c.idx.push(i); }
+        else cols.push({ x0: s.x0, x1: s.x1, y0: s.y0, y1: s.y1, idx: [i] });
+      });
+      var at = 0, widest = 0.25 * h;
+      for (var k = 1; k < cols.length; k++) {
+        var L = cols[k - 1], R = cols[k], where = ((L.x1 + R.x0) / 2 - b[0]) / w;
+        if (where < 0.25 || where > 0.75) continue;
+        if (R.y1 < (L.y0 + L.y1) / 2 && R.y1 - R.y0 < 0.75 * (L.y1 - L.y0)) continue; // never between a base and its exponent
+        if (R.x0 - L.x1 > widest) { widest = R.x0 - L.x1; at = k; }
+      }
+      if (!at) return [one];
+      var left = [], right = [];
+      cols.forEach(function (c, k) { Array.prototype.push.apply(k < at ? left : right, c.idx); });
+      return cut(left).concat(cut(right));
+    }
+    if (mode !== "apart") return cut(line.idx);
+    // fractions first, widest bar first so a fraction inside a fraction stays with the outer one
+    var frac = {}, count = 0;
+    // (only full-size bars: the small fraction of an exponent has to stay with its base)
+    line.idx.filter(function (i) { return sh.bar[i] && bs[i].w >= 0.8 * sh.H; }).sort(function (p, q) { return bs[q].w - bs[p].w; }).forEach(function (i) {
+      if (frac[i]) return;
+      count++;
+      line.idx.forEach(function (j) { if (!frac[j] && (j === i || (bs[j].cx >= bs[i].x0 - 0.2 * sh.H && bs[j].cx <= bs[i].x1 + 0.2 * sh.H))) frac[j] = count; });
+    });
+    var out = [], run = [], done = {};
+    function flush() { if (run.length) out = out.concat(cut(run)); run = []; }
+    line.idx.slice().sort(function (p, q) { return bs[p].x0 - bs[q].x0; }).forEach(function (i) {
+      if (!frac[i]) { run.push(i); return; }
+      if (done[frac[i]]) return;
+      done[frac[i]] = true; flush();
+      out.push(piece(line.idx.filter(function (j) { return frac[j] === frac[i]; })));
+    });
+    flush();
+    return out;
+  }
+
+  /* ---------- the model's LaTeX -> the typed form the answer checker reads ---------- */
+  var FN = ["arcsin", "arccos", "arctan", "sin", "cos", "tan", "sec", "csc", "cot", "exp", "log", "ln"];
+  var IS_FN = {}; FN.forEach(function (f) { IS_FN["\\" + f] = f; });
+  var PLAIN = { "\\mathrm": 1, "\\text": 1, "\\operatorname": 1, "\\mathbf": 1, "\\mathit": 1, "\\mathcal": 1, "\\mathbb": 1, "\\boldsymbol": 1, "\\textbf": 1, "\\mathsf": 1, "\\textrm": 1 };
+  var DROP = { "\\left": 1, "\\right": 1, "\\displaystyle": 1, "\\limits": 1, "\\nolimits": 1, "\\quad": 1, "\\qquad": 1, "\\,": 1, "\\;": 1, "\\:": 1, "\\!": 1, "\\ ": 1, "\\big": 1, "\\Big": 1, "\\bigg": 1, "\\Bigg": 1, "\\bigl": 1, "\\bigr": 1, "\\Bigl": 1, "\\Bigr": 1, "&": 1, "$": 1 };
+  // \times is almost always a handwritten x: nobody writes a times sign in a calculus answer
+  var SWAP = { "\\cdot": "*", "\\times": "x", "\\ast": "*", "\\div": "/", "\\pi": "pi", "\\lvert": "|", "\\rvert": "|", "\\vert": "|", "\\mid": "|", "\\{": "(", "\\}": ")", "\\lbrack": "(", "\\rbrack": ")", "\\pm": "±", "\\infty": "∞", "\\int": "∫", "\\prime": "'", "\\le": "<=", "\\leq": "<=", "\\ge": ">=", "\\geq": ">=" };
+  var OPS = "+-*/=,<>±";
+  // what a misread letter of a function name tends to come out as
+  var LIKE = { s: "53", t: "+", l: "1I|", o: "0", i: "1l" };
+  // The function name spelled by the tokens starting at i ("s i n"), or null. One misread letter is allowed
+  // ("+ a n" is tan, "5 e c x" is sec x) as long as the plain reading wouldn't be math the checker accepts:
+  // it has a letter other than x, e and c, or it would be a product like 5·e·c right before a variable.
+  function fnAt(raw, i) {
+    for (var f = 0; f < FN.length; f++) {
+      var name = FN[f], exact = 0, odd = 0, plain = true, n = 0;
+      for (; n < name.length; n++) {
+        var tk = raw[i + n];
+        if (!tk || tk.length !== 1) break;
+        if (/[a-zA-Z]/.test(tk) && tk.toLowerCase() === name[n]) { exact++; if ("xec".indexOf(name[n]) < 0) plain = false; }
+        else if ((LIKE[name[n]] || "").indexOf(tk) >= 0) odd++;
+        else break;
+      }
+      if (n < name.length || odd > 1 || !exact) continue;
+      if (!odd || !plain || /^([a-zA-Z(^]|\\[a-zA-Z]+)$/.test(raw[i + n] || "")) return { name: name, n: n };
+    }
+    return null;
+  }
+  // A letter that isn't part of a function name and isn't a variable can't be in an answer: it is the
+  // digit or sign it resembles (a plain downstroke gets read as l or I, a 5 as s, a plus as t).
+  // y: the user writes 4 with an open top, which the model reads as y (Oct 16). Never applied when y is the variable.
+  var UNLIKE = { l: "1", I: "1", s: "5", S: "5", o: "0", O: "0", z: "2", Z: "2", t: "+", y: "4" };
+  function lex(s, vars) {
+    var raw = s.match(/\\[a-zA-Z]+|\\.|\S/g) || [], out = [], i = 0;
+    // an absolute-value bar without a partner can only be a 1 too
+    var bars = raw.filter(function (x) { return x === "|"; }).length;
+    if (bars % 2) raw[raw.lastIndexOf("|")] = "1";
+    while (i < raw.length) {
+      var fn = fnAt(raw, i), last = out[out.length - 1];
+      if (!fn && UNLIKE[raw[i]] && vars.indexOf(raw[i].toLowerCase()) < 0) raw[i] = UNLIKE[raw[i]];
+      if (fn) { out.push("\\" + fn.name); i += fn.n; }
+      else if (/^[\d.]$/.test(raw[i]) && last && /^[\d.]+$/.test(last) && /^[\d.]$/.test(raw[i - 1])) out[out.length - 1] += raw[i++]; // "1 2" is 12
+      else out.push(raw[i++]);
+    }
+    // ln|x|: the bars are downstrokes too, so they arrive as 1s. A 1 right after a function name with
+    // another 1 further along the same term is a pair of bars.
+    out.forEach(function (tk, k) {
+      if (!IS_FN[tk] || (out[k + 1] !== "1" && out[k + 1] !== "|")) return;
+      for (var j = k + 3; j < out.length && "+-=".indexOf(out[j]) < 0; j++) if (out[j] === "1" || out[j] === "|") { out[k + 1] = out[j] = "|"; return; }
+    });
+    return out;
+  }
+  function isAtom(s) { return /^(\d+\.?\d*|\.\d+|[a-zA-Z]|pi)$/.test(s); }
+  function closed(s) { // true when s is one parenthesized group, like "(x+1)" but not "(x)(y)"
+    if (s[0] !== "(" || s[s.length - 1] !== ")") return false;
+    for (var i = 0, d = 0; i < s.length - 1; i++) { if (s[i] === "(") d++; else if (s[i] === ")") d--; if (!d) return false; }
+    return true;
+  }
+  function wrap(s) { return !s || isAtom(s) || closed(s) ? s : "(" + s + ")"; }
+  function bare(s, chars) { // true when one of chars sits outside every parenthesis (after the first character)
+    for (var i = 1, d = 0; i < s.length; i++) { var c = s[i]; if (c === "(") d++; else if (c === ")") d--; else if (!d && chars.indexOf(c) >= 0) return true; }
+    return false;
+  }
+  // vars: the letters this problem uses as variables (default "x"), so they aren't mistaken for look-alikes
+  function toTyped(latex, vars) {
+    var s = String(latex);
+    var rows = s.split("\\\\").filter(function (r) { return r.replace(/[\s&]|\\end\{[a-z*]*\}/g, ""); });
+    s = (rows.length ? rows[rows.length - 1] : "").replace(/\\(begin|end)\s*\{[a-z*]*\}(\s*\{[a-z|]*\})?/g, " ");
+    s = s.replace(/\\(mathrm|text|operatorname|textrm)\s*\{([a-zA-Z\s]*)\}/g, " $2 "); // \mathrm{sin} x is sin x
+    var t = lex(s, (vars || "x").toLowerCase()), p = 0;
+    for (var q = 0, inRoot = false; q < t.length; q++) { // square brackets are parentheses, except the root index in \sqrt[3]{x}
+      if (t[q] === "[" && t[q - 1] === "\\sqrt") inRoot = true;
+      else if (t[q] === "]" && inRoot) inRoot = false;
+      else if (t[q] === "[") t[q] = "("; else if (t[q] === "]") t[q] = ")";
+      else if (SWAP[t[q]]) t[q] = SWAP[t[q]];
+    }
+    function arg() {
+      while (DROP[t[p]]) p++;
+      if (t[p] === "{") { p++; var r = seq("}"); if (t[p] === "}") p++; return r; }
+      var it = item(); return it ? it.s : "";
+    }
+    function seq(stop, stopAtOp) { // items up to `stop`; with stopAtOp, also stops before + - = , or another function
+      var items = [];
+      while (p < t.length && t[p] !== stop) {
+        if (stopAtOp && (OPS.indexOf(t[p]) >= 0 || t[p] === ")" || t[p] === "}" || t[p] === "|" || IS_FN[t[p]])) break;
+        var it = item(); if (it) items.push(it);
+      }
+      var out = "";
+      items.forEach(function (it, i) {
+        var prev = items[i - 1], next = items[i + 1], piece = it.s;
+        if (it.k === "frac" && ((prev && prev.k !== "op") || (next && next.k !== "op"))) piece = "(" + piece + ")";
+        if (prev && /\d$/.test(out) && /^\d/.test(piece)) out += "*";
+        out += piece;
+      });
+      return out;
+    }
+    function item() {
+      var x = t[p++], it;
+      if (x === undefined || DROP[x] || x === "}") return null;
+      if (x === "{") { var g = seq("}"); if (t[p] === "}") p++; it = { s: wrap(g), k: "atom" }; }
+      else if (x === "(") { var inner = seq(")"); while (DROP[t[p]]) p++; if (t[p] === ")") p++; it = { s: "(" + inner + ")", k: "atom" }; }
+      else if (x === "|" && t.indexOf("|", p) >= 0) { var ab = seq("|"); p++; it = { s: "|" + ab + "|", k: "atom" }; }
+      else if (x === "\\frac" || x === "\\dfrac" || x === "\\tfrac") {
+        var a = arg(), b = arg();
+        it = { s: (bare(a, "+-") ? "(" + a + ")" : a) + "/" + (/^[a-zA-Z]\^\d+$/.test(b) ? b : wrap(b)), k: "frac" };
+      }
+      else if (x === "\\sqrt") {
+        var root = "";
+        if (t[p] === "[") { p++; while (p < t.length && t[p] !== "]") root += t[p++]; p++; }
+        var rad = arg();
+        it = { s: root === "3" ? "cbrt(" + rad + ")" : root && root !== "2" ? "(" + rad + ")^(1/" + root + ")" : "sqrt(" + rad + ")", k: "atom" };
+      }
+      else if (IS_FN[x]) {
+        var name = IS_FN[x], pw = "", sub = "";
+        for (;;) {
+          while (DROP[t[p]]) p++;
+          if (t[p] === "^") { p++; pw = "^" + wrap(arg()); } else if (t[p] === "_") { p++; sub = "_" + wrap(arg()); } else break;
+        }
+        var fa;
+        if (t[p] === "(" || t[p] === "|") { var one = item(); fa = one ? one.s : ""; }
+        else { fa = seq(null, true); if (fa && !closed(fa)) fa = "(" + fa + ")"; }
+        return { s: name + sub + pw + fa, k: "atom" };
+      }
+      else if (PLAIN[x]) { if (t[p] === "{") { p++; var pl = seq("}"); if (t[p] === "}") p++; it = { s: pl, k: "atom" }; } else return null; }
+      else if (x.length === 1 && OPS.indexOf(x) >= 0 || x === "<=" || x === ">=") return { s: x, k: "op" };
+      else if (x === "^" || x === "_") { p--; it = { s: "", k: "atom" }; }
+      else it = { s: x[0] === "\\" ? x.slice(1) : x, k: "atom" };
+      for (;;) { // powers and subscripts attach to what they follow
+        while (DROP[t[p]]) p++;
+        if (t[p] === "^") { p++; var e = arg(); it = { s: (it.k === "frac" ? "(" + it.s + ")" : it.s) + "^" + wrap(e), k: "atom" }; }
+        else if (t[p] === "_") { p++; it = { s: it.s + "_" + wrap(arg()), k: it.k }; }
+        else break;
+      }
+      return it;
+    }
+    var out = seq(null);
+    if (out.indexOf("=") >= 0) { var sides = out.split("=").filter(Boolean); out = sides.length ? sides[sides.length - 1] : ""; }
+    out = out.replace(/^∫/, "").replace(/[.,]$/, "");
+    var spaced = "";
+    for (var i = 0, d = 0; i < out.length; i++) {
+      var c = out[i];
+      if (c === "(") d++; else if (c === ")") d--;
+      spaced += !d && (c === "+" || c === "-") && i && /[\w)|.]/.test(out[i - 1]) ? " " + c + " " : c;
+    }
+    return spaced.replace(/\+ c$/, "+ C");
+  }
+
+  /* ---------- the personal reader: the user's own symbols, learned from answers they got right ----------
+     The model below was trained on printed formulas and is shaky on mouse handwriting (it read a lone "3"
+     as pi). This reader uses no model. It splits the line into symbols, finds fractions and exponents by
+     geometry, and names each symbol by its nearest match among the symbols it has seen this user write.
+     It knows nothing until learn() has run on a few answers, so the model stays as the fallback. */
+  var NPTS = 24, KEEP = 6;
+  // A symbol counts as recognized when it is within SURE of a learned one and the nearest different-looking
+  // label is at least CLEAR further away. On the user's first repeated symbols, two drawings of the same
+  // symbol were typically 2.0 apart (2.7 at worst) and different symbols at least 3.7. Deliberately strict:
+  // an unsure symbol only costs a few seconds (the model reads instead), a wrong one costs trust.
+  var SURE = 3.0, CLEAR = 0.6;
+  var hw = [];      // what has been learned: [{ l: label, p: [x, y, ...] }], oldest first
+
+  function inkLength(s) { for (var i = 1, n = 0; i < s.pts.length; i++) n += Math.hypot(s.pts[i][0] - s.pts[i - 1][0], s.pts[i][1] - s.pts[i - 1][1]); return n; }
+  function along(s, m) { // m points evenly spaced along one stroke (its middle when m is 1)
+    var p = s.pts, L = inkLength(s), out = [], acc = 0, i = 1, k = 0;
+    while (k < m) {
+      var want = m === 1 ? L / 2 : L * k / (m - 1);
+      if (i >= p.length) { out.push(p[p.length - 1][0], p[p.length - 1][1]); k++; continue; }
+      var d = Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]);
+      if (acc + d < want) { acc += d; i++; continue; }
+      var t = d ? (want - acc) / d : 0;
+      out.push(p[i - 1][0] + t * (p[i][0] - p[i - 1][0]), p[i - 1][1] + t * (p[i][1] - p[i - 1][1])); k++;
+    }
+    return out;
+  }
+  // One symbol as NPTS points spread over its strokes by ink length, centered, scaled so its longer side is 1.
+  function glyph(strokes) {
+    var lens = strokes.map(inkLength), total = lens.reduce(function (a, b) { return a + b; }, 0);
+    var share = lens.map(function (l) { return Math.max(1, Math.round(total ? NPTS * l / total : NPTS / lens.length)); });
+    for (var sum = share.reduce(function (a, b) { return a + b; }, 0); sum !== NPTS; sum += sum < NPTS ? 1 : -1) {
+      var big = share.indexOf(Math.max.apply(null, share)); share[big] += sum < NPTS ? 1 : -1;
+    }
+    var pts = []; strokes.forEach(function (s, i) { if (share[i] > 0) pts = pts.concat(along(s, share[i])); });
+    var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (var i = 0; i < pts.length; i += 2) { x0 = Math.min(x0, pts[i]); x1 = Math.max(x1, pts[i]); y0 = Math.min(y0, pts[i + 1]); y1 = Math.max(y1, pts[i + 1]); }
+    var size = Math.max(x1 - x0, y1 - y0, 1), cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    return pts.map(function (v, j) { return Math.round((j % 2 ? v - cy : v - cx) / size * 1000) / 1000; });
+  }
+  // How different two glyphs are: point k against point k (how far apart, and how differently the pen was
+  // heading there), with the second glyph also tried backwards. One person draws a symbol the same way each
+  // time, so comparing in drawing order tells symbols apart much better than comparing shapes alone: on the
+  // user's first 24 repeated symbols it put the right one nearest every time, where an order-free match
+  // (the $P recognizer) managed 18.
+  function differ(a, b) {
+    var n = a.length / 2, best = 1e9;
+    for (var back = 0; back < 2; back++) {
+      var far = 0, turn = 0;
+      for (var i = 0; i < n; i++) {
+        var j = back ? n - 1 - i : i, j0 = back ? j + 1 : j - 1;
+        far += Math.hypot(a[2 * i] - b[2 * j], a[2 * i + 1] - b[2 * j + 1]);
+        if (i) {
+          var d = Math.abs(Math.atan2(a[2 * i + 1] - a[2 * i - 1], a[2 * i] - a[2 * i - 2]) - Math.atan2(b[2 * j + 1] - b[2 * j0 + 1], b[2 * j] - b[2 * j0]));
+          turn += d > Math.PI ? 2 * Math.PI - d : d;
+        }
+      }
+      best = Math.min(best, far / n * 10 + turn / (n - 1) * 2);
+    }
+    return best;
+  }
+  // symbols that are drawn alike; toTyped() tells them apart by where they stand ("1 n" is ln, "+ a n" is tan)
+  var ALIKE = ["1l|i", "+t", "5s", "0o", "2z", "c("];
+  function alike(a, b) { return ALIKE.some(function (g) { return g.indexOf(a) >= 0 && g.indexOf(b) >= 0; }); }
+  // -> { l: the closest learned label, d: how far, sure }. sure: it is close, and no label that looks
+  // different is nearly as close.
+  function nearest(p) {
+    var by = {}; hw.forEach(function (t) { var d = differ(p, t.p); if (!(by[t.l] <= d)) by[t.l] = d; });
+    var out = { l: "", d: 1e9 }, rival = 1e9, l;
+    for (l in by) if (by[l] < out.d) { out.d = by[l]; out.l = l; }
+    for (l in by) if (l !== out.l && !alike(l, out.l)) rival = Math.min(rival, by[l]);
+    out.sure = out.d <= SURE && rival - out.d >= CLEAR;
+    return out;
+  }
+
+  // Symbols that geometry alone can name, so they never have to be learned: a plus (a flat and an upright
+  // stroke crossing), an x (two slanted strokes crossing near their middles) and a 1 (one straight
+  // downstroke). A minus and an equals sign are named in sketch(), which knows what is flat.
+  function ends(s) { var a = s.pts[0], z = s.pts[s.pts.length - 1]; return { ax: a[0], ay: a[1], dx: z[0] - a[0], dy: z[1] - a[1], len: Math.hypot(z[0] - a[0], z[1] - a[1]) }; }
+  function tilt(s) { var e = ends(s); return Math.atan2(Math.abs(e.dy), Math.abs(e.dx)) * 180 / Math.PI; } // 0 is flat, 90 upright
+  function bulge(s) { // how far the stroke strays from the straight line between its ends, as a share of that line
+    var e = ends(s), worst = 0;
+    if (!e.len) return 1;
+    s.pts.forEach(function (p) { worst = Math.max(worst, Math.abs((p[0] - e.ax) * e.dy - (p[1] - e.ay) * e.dx) / e.len); });
+    return worst / e.len;
+  }
+  function byShape(strokes) {
+    if (strokes.length === 1) return strokes[0].pts.length > 1 && bulge(strokes[0]) < 0.05 && tilt(strokes[0]) >= 78 ? "1" : null;
+    // (the limits come from the user's own strokes: their small x has quite curved strokes, their plus a slanted bar)
+    if (strokes.length !== 2 || strokes[0].pts.length < 2 || strokes[1].pts.length < 2) return null;
+    var curve = Math.max(bulge(strokes[0]), bulge(strokes[1]));
+    var a = ends(strokes[0]), b = ends(strokes[1]), den = a.dx * b.dy - a.dy * b.dx;
+    if (Math.abs(den) < 1e-6) return null;
+    var t = ((b.ax - a.ax) * b.dy - (b.ay - a.ay) * b.dx) / den, u = ((b.ax - a.ax) * a.dy - (b.ay - a.ay) * a.dx) / den; // where they cross, along each
+    var ta = tilt(strokes[0]), tb = tilt(strokes[1]);
+    if (t < 0.1 || t > 0.9 || u < 0.1 || u > 0.9) return null;
+    if (curve <= 0.2 && Math.min(ta, tb) <= 30 && Math.max(ta, tb) >= 72) return "+";
+    if (curve <= 0.35 && ta >= 22 && ta <= 70 && tb >= 22 && tb <= 70 && a.dx * a.dy * b.dx * b.dy < 0 && t >= 0.2 && t <= 0.8 && u >= 0.2 && u <= 0.8) return "x";
+    return null;
+  }
+  function union(boxes) {
+    var b = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9 };
+    boxes.forEach(function (o) { b.x0 = Math.min(b.x0, o.x0); b.y0 = Math.min(b.y0, o.y0); b.x1 = Math.max(b.x1, o.x1); b.y1 = Math.max(b.y1, o.y1); });
+    b.w = b.x1 - b.x0; b.h = b.y1 - b.y0; b.cx = (b.x0 + b.x1) / 2; b.cy = (b.y0 + b.y1) / 2;
+    return b;
+  }
+  function touching(a, b) { // do two strokes come within 3 units of each other?
+    function dense(s) { var o = [s.pts[0]], p = s.pts; for (var i = 1; i < p.length; i++) { var k = Math.ceil(Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]) / 2) || 1; for (var j = 1; j <= k; j++) o.push([p[i - 1][0] + (p[i][0] - p[i - 1][0]) * j / k, p[i - 1][1] + (p[i][1] - p[i - 1][1]) * j / k]); } return o; }
+    var da = dense(a), db = dense(b);
+    for (var i = 0; i < da.length; i++) for (var j = 0; j < db.length; j++) { var dx = da[i][0] - db[j][0], dy = da[i][1] - db[j][1]; if (dx * dx + dy * dy < 9) return true; }
+    return false;
+  }
+  // The line as a tree: a list of items left to right, each { box, sup: [raised items] } and either
+  // idx (the strokes of one symbol) with an optional forced label, or num and den (a stacked fraction).
+  // Returns { line, items, leaves }, leaves being the symbols in reading order, or null.
+  function sketch(strokes, whole) {
+    strokes = strokes.filter(function (s) { return s.pts && s.pts.length; });
+    var line = lastLine(strokes, whole);
+    if (!line) return null;
+    var sh = shape(strokes), bs = sh.bs, flat = sh.flat, side = sh.side;
+    var isBar = {}; // the fraction bars of this line (shape() also counts ink from other lines)
+    line.idx.forEach(function (i) {
+      if (!flat(i)) return;
+      var over = false, under = false;
+      line.idx.forEach(function (j) { if (j === i) return; var s = side(i, bs[j]); if (s < 0) over = true; if (s > 0) under = true; });
+      if (over && under) isBar[i] = true;
+    });
+    // symbols: strokes that touch (the two strokes of x or +), a dot with the stem under it, the bars of =
+    var rest = line.idx.filter(function (i) { return !isBar[i]; }), group = {};
+    rest.forEach(function (i) { group[i] = i; });
+    function root(i) { while (group[i] !== i) i = group[i]; return i; }
+    var equals = {};
+    rest.forEach(function (i, a) {
+      rest.slice(a + 1).forEach(function (j) {
+        var p = bs[i], q = bs[j], join = false;
+        if (gap(p.x0, p.x1, q.x0, q.x1) <= 3 && gap(p.y0, p.y1, q.y0, q.y1) <= 3 && touching(strokes[i], strokes[j])) join = true;
+        var dot = Math.max(p.w, p.h) <= 7 ? p : Math.max(q.w, q.h) <= 7 ? q : null, stem = dot === p ? q : p;
+        if (dot && Math.abs(dot.cx - stem.cx) <= Math.max(8, stem.w / 2) && stem.y0 - dot.y1 > 0 && stem.y0 - dot.y1 <= 30 && stem.h > stem.w) join = true;
+        if (flat(i) && flat(j) && Math.min(p.x1, q.x1) - Math.max(p.x0, q.x0) >= 0.6 * Math.min(p.w, q.w) && gap(p.y0, p.y1, q.y0, q.y1) <= 0.9 * Math.min(p.w, q.w)) { join = true; equals[i] = equals[j] = true; }
+        if (join) group[root(i)] = root(j);
+      });
+    });
+    var bySym = {}, items = [];
+    rest.forEach(function (i) { (bySym[root(i)] = bySym[root(i)] || []).push(i); });
+    Object.keys(bySym).forEach(function (r) {
+      var idx = bySym[r], it = { idx: idx, box: union(idx.map(function (i) { return bs[i]; })), sup: [] };
+      if (idx.every(function (i) { return equals[i]; }) && idx.length === 2) it.forced = "=";
+      else if (idx.length === 1 && flat(idx[0]) && bs[idx[0]].w >= 3 * Math.max(bs[idx[0]].h, 2)) it.forced = "-";
+      else it.forced = byShape(idx.map(function (i) { return strokes[i]; })) || undefined;
+      items.push(it);
+    });
+    // a lone dot: at mid-height it's a multiplication dot, on the baseline a decimal point
+    var dotMax = Math.max(8, 0.22 * sh.H), full = items.filter(function (it) { return Math.max(it.box.w, it.box.h) > dotMax; });
+    if (full.length) {
+      var med = function (a) { a = a.slice().sort(function (p, q) { return p - q; }); return a[Math.floor(a.length / 2)]; };
+      var top = med(full.map(function (it) { return it.box.y0; })), foot = med(full.map(function (it) { return it.box.y1; }));
+      items.forEach(function (it) {
+        if (it.forced || it.idx.length !== 1 || Math.max(it.box.w, it.box.h) > dotMax || foot - top < 4) return;
+        var f = (it.box.cy - top) / (foot - top);
+        if (f > 0.78) it.forced = "."; else if (f >= 0.2) it.forced = "\\cdot";
+      });
+    }
+    Object.keys(isBar).forEach(function (i) { items.push({ bar: +i, box: bs[i], sup: [] }); });
+
+    function row(list) { // a horizontal run: fold fractions (widest bar first), then hang exponents on their bases
+      list = list.slice();
+      list.filter(function (it) { return it.bar !== undefined; }).sort(function (a, b) { return b.box.w - a.box.w; }).forEach(function (B) {
+        if (list.indexOf(B) < 0) return;
+        var over = list.filter(function (it) { return it !== B && side(B.bar, it.box, true) < 0; }), under = list.filter(function (it) { return it !== B && side(B.bar, it.box, true) > 0; });
+        var at = list.indexOf(B);
+        if (!over.length || !under.length) { list[at] = { idx: [B.bar], box: B.box, sup: [], forced: "-" }; return; }
+        list[at] = { num: row(over), den: row(under), box: union([B.box].concat(over.concat(under).map(function (it) { return it.box; }))), sup: [] };
+        list = list.filter(function (it) { return over.indexOf(it) < 0 && under.indexOf(it) < 0; });
+      });
+      list.sort(function (a, b) { return a.box.x0 - b.box.x0; });
+      // handwriting drifts up or down along the line; measure exponents against that drift
+      var n = list.length, sx = 0, sy = 0, sxx = 0, sxy = 0, slope = 0;
+      list.forEach(function (it) { sx += it.box.cx; sy += it.box.cy; sxx += it.box.cx * it.box.cx; sxy += it.box.cx * it.box.cy; });
+      if (n >= 4 && n * sxx - sx * sx > 1) slope = Math.max(-0.2, Math.min(0.2, (n * sxy - sx * sy) / (n * sxx - sx * sx)));
+      var out = [], base = null;
+      list.forEach(function (it) {
+        if (base) {
+          var b = base.box, o = it.box, lift = slope * (o.cx - b.cx), isFrac = !!base.num;
+          var raised = o.cy - lift <= b.y0 + 0.1 * b.h && o.y1 - lift <= b.y0 + (isFrac ? 0.25 : 0.6) * b.h && o.x0 >= b.x0 + 0.4 * b.w;
+          if (raised) { base.sup.push(it); return; }
+        }
+        out.push(it);
+        base = it.forced && ["-", "=", "+", "\\cdot", "."].indexOf(it.forced) >= 0 || (it.idx && it.box.h < 0.35 * it.box.w) ? null : it; // nothing is raised to a sign
+      });
+      out.forEach(function (it) { if (it.sup.length > 1) it.sup = row(it.sup); });
+      return out;
+    }
+    var tree = row(items), leaves = [];
+    (function walk(list) { list.forEach(function (it) { if (it.num) { walk(it.num); walk(it.den); } else leaves.push(it); walk(it.sup); }); })(tree);
+    leaves.forEach(function (lf) { lf.strokes = lf.idx.map(function (i) { return strokes[i]; }); });
+    return { line: line, items: tree, leaves: leaves };
+  }
+  function emit(list) { // the tree as LaTeX, in the spaced form the model writes, so toTyped() takes both
+    return list.map(function (it) {
+      var s = it.num ? "\\frac { " + emit(it.num) + " } { " + emit(it.den) + " }" : it.l;
+      return it.sup.length ? s + " ^ { " + emit(it.sup) + " }" : s;
+    }).join(" ");
+  }
+  // Read the last line with what has been learned. -> { text, latex, box, mode: "personal", sure, worst } or null.
+  // sure means every symbol was close to a learned one and opt.valid (if given) accepts the text.
+  function quick(strokes, opt) {
+    if (!hw.length) return null;
+    var sk = sketch(strokes, opt && opt.whole);
+    if (!sk || !sk.leaves.length) return null;
+    var known = true;
+    sk.leaves.forEach(function (lf) {
+      if (lf.forced) { lf.l = lf.forced; return; }
+      var hit = nearest(glyph(lf.strokes)); lf.l = hit.l; if (!hit.sure) known = false;
+    });
+    var latex = emit(sk.items), text = toTyped(latex, opt && opt.vars);
+    return { text: text, latex: latex, box: sk.line.box, mode: "personal", sure: known && !!text && (!opt || !opt.valid || opt.valid(text)) };
+  }
+  // Does a reading have as many symbols as the line has? (The model can return valid math that isn't what
+  // was written, like an extra "sin x +".) true when it can't be counted.
+  function fits(strokes, text, whole) {
+    var sk = sketch(strokes, whole), sizes = {};
+    if (!sk) return true;
+    [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(function (v) { var sp = spell(text, v[0], v[1]); if (sp) sizes[sp.length] = true; });
+    return !Object.keys(sizes).length || !!sizes[sk.leaves.length];
+  }
+  // The symbols a typed answer is written with, in reading order, or null when it uses something not handled
+  // yet. A stacked fraction has no slash and needs no parentheses, so both are optional.
+  function spell(typed, parens, slash) {
+    var s = String(typed).replace(/\s+/g, ""), out = [];
+    if (/sqrt|cbrt|abs|pi|exp|[=_,<>]/i.test(s)) return null;
+    for (var i = 0; i < s.length; i++) {
+      var c = s[i];
+      if (c === "*") out.push("\\cdot"); // a typed * is a written multiplication dot
+      else if (/[0-9.+\-|]/.test(c)) out.push(c); else if (/[a-zA-Z]/.test(c)) out.push(c.toLowerCase());
+      else if (c === "(" || c === ")") { if (parens) out.push(c); }
+      else if (c === "/") { if (slash) out.push(c); }
+      else if (c !== "^") return null;
+    }
+    return out;
+  }
+  // Learn the user's symbols from an answer they got right: `typed` is the answer, `strokes` the scratch pad.
+  // Nothing is learned unless the pad's last line has exactly the symbols of the answer AND, with those
+  // names put on its fractions and exponents, means the same as the answer (opt.same(a, b) decides), so a
+  // pad that holds something else can't teach wrong names. Returns how many symbols were learned.
+  function learn(strokes, typed, opt) {
+    var sk = sketch(strokes, opt && opt.whole);
+    if (!sk || !sk.leaves.length || !opt || !opt.same) return 0;
+    var fits = {};
+    [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(function (v) { var sp = spell(typed, v[0], v[1]); if (sp && sp.length === sk.leaves.length) fits[sp.join(" ")] = sp; });
+    var keys = Object.keys(fits);
+    if (keys.length !== 1) return 0;
+    var names = fits[keys[0]];
+    for (var i = 0; i < names.length; i++) { // what geometry named has to agree (a plus may be the t of tan, a 1 the l of ln)
+      var f = sk.leaves[i].forced;
+      if (f && f !== names[i] && !alike(f, names[i])) return 0;
+      sk.leaves[i].l = names[i];
+    }
+    if (!opt.same(toTyped(emit(sk.items), opt.vars), typed)) return 0;
+    // and nothing may contradict what is already known: if a symbol is clearly a learned "4", an answer
+    // that calls it "3" was typed from something other than this pad
+    var glyphs = sk.leaves.map(function (lf) { return lf.forced ? null : glyph(lf.strokes); });
+    for (var g = 0; g < glyphs.length; g++) if (glyphs[g]) { var hit = nearest(glyphs[g]); if (hit.sure && hit.l !== names[g] && !alike(hit.l, names[g])) return 0; }
+    var count = 0;
+    sk.leaves.forEach(function (lf, k) {
+      if (lf.forced) return;
+      var p = glyphs[k], mine = hw.filter(function (t) { return t.l === lf.l; });
+      if (mine.some(function (t) { return differ(p, t.p) < 0.05; })) return; // this very drawing is already known
+      hw.push({ l: lf.l, p: p }); count++;
+      if (mine.length >= KEEP) hw.splice(hw.indexOf(mine[0]), 1);
+    });
+    return count;
+  }
+
+  /* ---------- running the model ---------- */
+  var st = { loading: null, enc: null, dec: null, vocab: null, ok: null, cmd: null, slash: null };
+  // The model may only write what an answer can contain: these characters, and after a backslash these
+  // commands. Left free, it drifts into symbols like \tau or \binom on messy handwriting.
+  var CHARS = "0123456789.+-*/=()[]|{}^_,\\abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  // cdot: without it a written multiplication dot came out as \times, which toTyped() turns into the letter x
+  var WORDS = ["frac", "sqrt", "sin", "cos", "tan", "sec", "csc", "cot", "ln", "log", "exp", "arcsin", "arccos", "arctan", "pi", "left", "right", "times", "cdot", "int"];
+  var SPACE = /Ġ/g; // the tokenizer's mark for "a space comes before this"
+  function script(src) {
+    return new Promise(function (res, rej) { var s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = function () { rej(new Error("runtime")); }; document.head.appendChild(s); });
+  }
+  function hex(buf) { return Array.prototype.map.call(new Uint8Array(buf), function (b) { return (b < 16 ? "0" : "") + b.toString(16); }).join(""); }
+  function verify(f, buf) {
+    if (buf.byteLength !== f.size) return Promise.reject(new Error("download"));
+    if (!f.sha || !window.crypto || !crypto.subtle) return Promise.resolve(buf);
+    return crypto.subtle.digest("SHA-256", buf).then(function (h) { if (hex(h) !== f.sha) throw new Error("download"); return buf; });
+  }
+  function fetchFile(f, onBytes) {
+    var url = MODEL + f.name;
+    var store = window.caches ? caches.open(CACHE).catch(function () { return null; }) : Promise.resolve(null);
+    return store.then(function (c) {
+      return (c ? c.match(url) : Promise.resolve(null)).then(function (hit) {
+        if (hit) return hit.arrayBuffer().then(function (b) { return verify(f, b); }).then(function (b) { onBytes(f.size); return b; }, function () { return c.delete(url).then(function () { return download(); }); });
+        return download();
+        function download() {
+          return fetch(url).then(function (r) {
+            if (!r.ok) throw new Error("download");
+            if (!r.body || !r.body.getReader) return r.arrayBuffer().then(function (b) { onBytes(b.byteLength); return b; });
+            var rd = r.body.getReader(), chunks = [], got = 0;
+            function pump() { return rd.read().then(function (x) { if (x.done) return; chunks.push(x.value); got += x.value.length; onBytes(x.value.length); return pump(); }); }
+            return pump().then(function () { var all = new Uint8Array(got), o = 0; chunks.forEach(function (ch) { all.set(ch, o); o += ch.length; }); return all.buffer; });
+          }).then(function (b) { return verify(f, b); }).then(function (b) {
+            if (c) c.put(url, new Response(b.slice(0), { headers: { "Content-Type": "application/octet-stream" } })).catch(function () {});
+            return b;
+          });
+        }
+      });
+    });
+  }
+  // true once the model is in this browser, so the one-time download question can be skipped
+  function stored() {
+    if (st.enc) return Promise.resolve(true);
+    if (!window.caches) return Promise.resolve(false);
+    return caches.open(CACHE).then(function (c) { return Promise.all(FILES.map(function (f) { return c.match(MODEL + f.name); })); }).then(function (r) { return r.every(Boolean); }, function () { return false; });
+  }
+  // onProgress(fraction 0..1) is called while the model downloads
+  function load(onProgress) {
+    if (st.loading) return st.loading;
+    var got = 0;
+    function bytes(n) { got += n; if (onProgress) onProgress(Math.min(1, got / TOTAL)); }
+    st.loading = (window.ort ? Promise.resolve() : script(ORT_DIR + "ort.wasm.min.js")).then(function () {
+      ort.env.wasm.wasmPaths = new URL(ORT_DIR, document.baseURI).href; ort.env.wasm.numThreads = 1;
+      return Promise.all(FILES.map(function (f) { return fetchFile(f, bytes); }));
+    }).then(function (bufs) {
+      if (window.caches) OLD_CACHES.forEach(function (name) { caches.delete(name).catch(function () {}); });
+      var tok = JSON.parse(new TextDecoder().decode(bufs[0]));
+      st.vocab = []; st.ok = [EOS]; st.cmd = []; st.slash = {};
+      for (var k in tok.model.vocab) {
+        var id = tok.model.vocab[k], word = k.replace(SPACE, "");
+        st.vocab[id] = k;
+        if (word === "\\") st.slash[id] = true;
+        if (word.length === 1 && CHARS.indexOf(word) >= 0) st.ok.push(id); else if (WORDS.indexOf(word) >= 0) st.cmd.push(id);
+      }
+      return ort.InferenceSession.create(bufs[1], { executionProviders: ["wasm"] }).then(function (enc) {
+        return ort.InferenceSession.create(bufs[2], { executionProviders: ["wasm"] }).then(function (dec) { st.enc = enc; st.dec = dec; });
+      });
+    }).catch(function (e) { st.loading = null; throw e; });
+    return st.loading;
+  }
+  // the chosen strokes, drawn black on white and stretched to the square the model expects
+  function picture(strokes, line, opt) {
+    var pad = opt && opt.pad || PAD, k = 2, b = line.box, c = document.createElement("canvas");
+    c.width = Math.ceil((b[2] - b[0] + 2 * pad) * k); c.height = Math.ceil((b[3] - b[1] + 2 * pad) * k);
+    var shift = 0, wide = opt && opt.minAspect ? Math.ceil(c.height * opt.minAspect) : 0;
+    if (wide > c.width) { shift = opt.align === "left" ? 0 : (wide - c.width) / 2; c.width = wide; }
+    var g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+    g.translate(shift, 0);
+    g.strokeStyle = "#000"; g.lineWidth = (opt && opt.pen || line.pen || 3) * k; g.lineCap = "round"; g.lineJoin = "round";
+    line.idx.forEach(function (i) {
+      var pts = strokes[i].pts; g.beginPath();
+      pts.forEach(function (q, n) { var x = (q[0] - b[0] + pad) * k, y = (q[1] - b[1] + pad) * k; if (n) g.lineTo(x, y); else g.moveTo(x, y); });
+      if (pts.length === 1) g.lineTo((pts[0][0] - b[0] + pad) * k + 0.1, (pts[0][1] - b[1] + pad) * k);
+      g.stroke();
+    });
+    var o = document.createElement("canvas"); o.width = SIDE; o.height = SIDE;
+    var og = o.getContext("2d"); og.imageSmoothingEnabled = true; og.imageSmoothingQuality = "high";
+    og.fillStyle = "#fff"; og.fillRect(0, 0, SIDE, SIDE); og.drawImage(c, 0, 0, SIDE, SIDE);
+    var d = og.getImageData(0, 0, SIDE, SIDE).data, n = SIDE * SIDE, px = new Float32Array(3 * n);
+    for (var i = 0; i < n; i++) for (var ch = 0; ch < 3; ch++) px[ch * n + i] = d[i * 4 + ch] / 127.5 - 1;
+    return px;
+  }
+  // strokes: [{ pts: [[x, y, pressure], ...] }, ...] -> Promise of { text, latex, box, mode, sure }, or null when there is nothing to read
+  // opt.valid(text) tells whether the answer checker can parse a reading; opt.vars are the problem's variable
+  // letters. The result's `sure` is false when no reading passed every check. opt.modes (which also turns
+  // the personal reader off), opt.pen, opt.pad and opt.minAspect are for experiments.
+  function read(strokes, opt) {
+    strokes = strokes.filter(function (s) { return s.pts && s.pts.length; });
+    var line = lastLine(strokes, opt && opt.whole);
+    if (!line) return Promise.resolve(null);
+    function readPiece(piece) { // -> Promise of that piece's LaTeX
+      return st.enc.run({ pixel_values: new ort.Tensor("float32", picture(strokes, piece, opt), [1, 3, SIDE, SIDE]) }).then(function (eo) {
+        var hs = eo.last_hidden_state, ids = [START];
+        function step() {
+          if (ids.length > MAX_TOKENS) return ids;
+          return st.dec.run({ input_ids: new ort.Tensor("int64", BigInt64Array.from(ids.map(function (v) { return BigInt(v); })), [1, ids.length]), encoder_hidden_states: hs }).then(function (o) {
+            var lg = o.logits, off = (ids.length - 1) * lg.dims[2], pool = ids.length > 1 && st.slash[ids[ids.length - 1]] ? st.cmd : st.ok, best = pool[0];
+            for (var v = 1; v < pool.length; v++) if (lg.data[off + pool[v]] > lg.data[off + best]) best = pool[v];
+            if (best === EOS) return ids;
+            ids.push(best); return step();
+          });
+        }
+        return step();
+      }).then(function (ids) { return ids.slice(1).map(function (id) { return st.vocab[id] || ""; }).join("").replace(SPACE, " ").trim(); });
+    }
+    var ok = function (text) { return !!text && (!opt || !opt.valid || opt.valid(text)); };
+    // the personal reader first: it is instant, and when it knows every symbol the model isn't needed at all
+    var mine = opt && opt.modes ? null : quick(strokes, opt);
+    if (mine && mine.sure) return Promise.resolve(mine);
+    return load().then(function () {
+      var modes = opt && opt.modes || MODES, tried = {}, first = null, parsed = null;
+      // Go down the modes until a reading is valid math with as many symbols as the line has. Failing that,
+      // settle for valid math (the model's, else the personal reader's), else the first reading; sure stays false.
+      function attempt(m) {
+        if (m >= modes.length) return parsed || (mine && ok(mine.text) ? mine : first);
+        var parts = pieces(strokes, line, modes[m]), out = [];
+        var key = parts.map(function (p) { return p.idx.join(",") + "@" + p.pen.toFixed(1); }).join("|");
+        if (tried[key]) return attempt(m + 1);
+        tried[key] = true;
+        function next(i) { return i < parts.length ? readPiece(parts[i]).then(function (l) { out.push(l); return next(i + 1); }) : null; }
+        return new Promise(function (res) { setTimeout(res, m ? 30 : 0); }).then(function () { return next(0); }).then(function () {
+          var latex = out.join(" "), res = { text: toTyped(latex, opt && opt.vars), latex: latex, box: line.box, mode: modes[m], sure: false };
+          if (!first) first = res;
+          if (ok(res.text)) { if (fits(strokes, res.text, opt && opt.whole)) { res.sure = true; return res; } if (!parsed) parsed = res; }
+          return attempt(m + 1);
+        });
+      }
+      return attempt(0);
+    });
+  }
+
+  return { read: read, load: load, stored: stored, lastLine: lastLine, pieces: pieces, toTyped: toTyped,
+    quick: quick, learn: learn, sketch: sketch, differ: differ, glyph: glyph,
+    learned: function (list) { if (list) hw = list; return hw; }, megabytes: Math.round(TOTAL / 1e6) };
+})();
+
+/* ===== Scratch Pad (web build only, added Oct 17 at the user's request) =====
+   A free pad with the same tools as the problem pads (pen, eraser, select box, undo, clear, more room),
+   the handwriting reader, and the calculator. With no answer box here, "Read & copy" puts what it reads on
+   the clipboard. The pad, reader and calculator code is copied from ui.js and adapted, so the other apps
+   stay untouched. Pages sync through the same GitHub gist as the other apps (file scratch-pad.json),
+   using the token another app already saved on this device. */
+(function () {
+  "use strict";
+  var E = MathEngine, KEY = "scratch-pad-v1", HAS_READER = typeof Reader !== "undefined";
+  var COARSE = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+  function $(s, r) { return (r || document).querySelector(s); }
+  function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+  var toastT;
+  function toast(msg, ms) { var t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove("show"); }, ms || 3600); }
+  function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#000"; }
+  function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function fetchJSON(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
+
+  /* ---------- pages ---------- */
+  // D.pages[id] = { n: created (orders the tabs), h, strokes: ["x,y,p;..."], updated } or { n, deleted: true, updated }.
+  // Deleted pages stay as markers so a sync doesn't bring them back.
+  var D = fetchJSON(KEY), P = fetchJSON(KEY + ":prefs") || {}, SEL = {};
+  if (!D || D.v !== 1 || !D.pages) D = { v: 1, pages: {} };
+  function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function live() { return Object.keys(D.pages).filter(function (id) { return !D.pages[id].deleted; }).sort(function (a, b) { return D.pages[a].n - D.pages[b].n || (a < b ? -1 : 1); }); }
+  function addPage() { var id = newId(); D.pages[id] = { n: Date.now(), h: 1200, strokes: [], updated: Date.now() }; return id; }
+  // A new device starts with one empty page; it is dropped at the first sync if the pages from GitHub arrive
+  // before anything is written on it, so each device doesn't add an empty page to everyone's tabs.
+  var fresh = live().length ? null : addPage();
+  if (!P.cur || !D.pages[P.cur] || D.pages[P.cur].deleted) P.cur = live()[0];
+  var saveT = null;
+  function saveLocal() { clearTimeout(saveT); saveT = null; store(KEY, D); }
+  function changed(id) { if (id === fresh) fresh = null; D.pages[id].updated = Date.now(); clearTimeout(saveT); saveT = setTimeout(saveLocal, 400); queueSync(); }
+
+  function encode(strokes) { return strokes.map(function (s) { return s.pts.map(function (p) { return Math.round(p[0]) + "," + Math.round(p[1]) + "," + Math.round(p[2] * 9); }).join(";"); }); }
+  function decode(list) { return (list || []).map(function (str) { return { pts: String(str).split(";").filter(Boolean).map(function (t) { var a = t.split(","); return [+a[0], +a[1], (+a[2] || 5) / 9]; }) }; }); }
+
+  /* ---------- the pad (from mountScratches in ui.js) ---------- */
+  // src: { load() -> { h, strokes }, save(sc) }. dest: "clip" (Read & copy) or "calc" (the calculator's pad).
+  function padHTML(pid, dest) {
+    var reader = HAS_READER;
+    return '<div class="scratch" data-pid="' + pid + '"><div class="scr-tools">' +
+      '<div class="seg"><button class="on" data-act="scr-tool" data-tool="pen" aria-label="Pen">✎ Pen</button><button data-act="scr-tool" data-tool="erase" aria-label="Eraser">Eraser</button>' + (reader ? '<button data-act="scr-tool" data-tool="select" aria-label="Select what to read" title="Drag a box around what you want read">⬚ Select</button>' : "") + "</div>" +
+      '<button class="btn small ghost" data-act="scr-undo">Undo</button><button class="btn small ghost" data-act="scr-clear">Clear</button><button class="btn small ghost" data-act="scr-taller">More room</button>' +
+      (COARSE ? '<label class="row scr-finger" style="gap:6px;font-size:13px"><input type="checkbox" class="ck" data-act="scr-finger"> Finger draws</label>' : "") +
+      '<span class="spacer"></span>' +
+      (reader ? (dest === "calc" ? '<button class="btn small" data-act="scr-read" title="Reads what you boxed (or the last line you wrote) into the calculator">Read into calculator</button>'
+        : '<button class="btn small" data-act="scr-read" title="Reads what you boxed (or the last line you wrote) and copies it">Read &amp; copy</button><button class="btn small ghost" data-act="scr-calc" title="Reads what you boxed (or the last line) into the calculator">→ Calculator</button>') : "") +
+      '</div><div class="scr-canvas"><canvas></canvas></div></div>';
+  }
+  function inBox(strokes, b) { // strokes with most of their points inside the box
+    return strokes.filter(function (st) { var k = 0; st.pts.forEach(function (q) { if (q[0] >= b[0] && q[0] <= b[2] && q[1] >= b[1] && q[1] <= b[3]) k++; }); return k >= 0.6 * st.pts.length; });
+  }
+  function mountPad(el, src, grow) {
+    var pid = el.dataset.pid, cv = $("canvas", el), box = $(".scr-canvas", el), ctx = cv.getContext("2d");
+    var tool = "pen", finger = false, cur = null, undo = [], sc = src.load(), readBox = null, readT = null, sel = SEL[pid] || null, drag = null;
+    function scale() { return box.clientWidth / 1000; }
+    function size() {
+      var w = box.clientWidth, dpr = window.devicePixelRatio || 1, hpx = Math.round(sc.h * scale());
+      cv.style.width = w + "px"; cv.style.height = hpx + "px"; cv.width = Math.round(w * dpr); cv.height = Math.round(hpx * dpr);
+      ctx.setTransform(dpr * scale(), 0, 0, dpr * scale(), 0, 0); draw();
+    }
+    function drawStroke(c, s, color) {
+      var p = s.pts; if (!p.length) return;
+      c.strokeStyle = color; c.fillStyle = color; c.lineCap = "round"; c.lineJoin = "round";
+      if (p.length === 1) { c.beginPath(); c.arc(p[0][0], p[0][1], 1.6 + p[0][2] * 1.6, 0, Math.PI * 2); c.fill(); return; }
+      for (var i = 1; i < p.length; i++) {
+        var a = p[i - 1], b = p[i];
+        c.lineWidth = 1.4 + (a[2] + b[2]) * 1.6;
+        c.beginPath(); c.moveTo(a[0], a[1]);
+        if (i < p.length - 1) { var n = p[i + 1]; c.quadraticCurveTo(b[0], b[1], (b[0] + n[0]) / 2, (b[1] + n[1]) / 2); }
+        else c.lineTo(b[0], b[1]);
+        c.stroke();
+      }
+    }
+    function draw() {
+      ctx.clearRect(0, 0, 1000, sc.h);
+      ctx.strokeStyle = cssVar("--bg-grid"); ctx.lineWidth = 1;
+      for (var y = 40; y < sc.h; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1000, y); ctx.stroke(); }
+      var ink = cssVar("--ink");
+      sc.strokes.forEach(function (s) { drawStroke(ctx, s, ink); });
+      if (cur) drawStroke(ctx, cur, ink);
+      if (sel) { // the box the user dragged: only what's inside gets read
+        ctx.save(); ctx.fillStyle = cssVar("--accent"); ctx.globalAlpha = 0.07; ctx.fillRect(sel[0], sel[1], sel[2] - sel[0], sel[3] - sel[1]);
+        ctx.globalAlpha = 1; ctx.setLineDash([9, 6]); ctx.lineWidth = 2; ctx.strokeStyle = cssVar("--accent"); ctx.strokeRect(sel[0], sel[1], sel[2] - sel[0], sel[3] - sel[1]);
+        ctx.setLineDash([]); corners().forEach(function (c) { ctx.fillRect(c[0] - 7, c[1] - 7, 14, 14); }); ctx.restore();
+      }
+      if (readBox) { // what the reader just read
+        ctx.save(); ctx.setLineDash([7, 5]); ctx.lineWidth = 1.5; ctx.strokeStyle = cssVar("--accent");
+        ctx.strokeRect(readBox[0] - 10, readBox[1] - 10, readBox[2] - readBox[0] + 20, readBox[3] - readBox[1] + 20); ctx.restore();
+      }
+    }
+    function pt(e) { var r = cv.getBoundingClientRect(), k = 1000 / r.width; return [(e.clientX - r.left) * k, (e.clientY - r.top) * k, e.pointerType === "pen" ? (e.pressure || 0.5) : 0.5]; }
+    function corners() { return [[sel[0], sel[1]], [sel[2], sel[1]], [sel[2], sel[3]], [sel[0], sel[3]]]; }
+    function setSel(b) { sel = b; if (b) SEL[pid] = b; else delete SEL[pid]; }
+    function selStart(q) {
+      var hit = -1, near = COARSE ? 34 : 22;
+      if (sel) corners().forEach(function (c, i) { if (Math.abs(c[0] - q[0]) < near && Math.abs(c[1] - q[1]) < near) hit = i; });
+      if (hit >= 0) drag = { m: "corner", i: hit };
+      else if (sel && q[0] > sel[0] && q[0] < sel[2] && q[1] > sel[1] && q[1] < sel[3]) drag = { m: "move", q: q, o: sel.slice() };
+      else { drag = { m: "new", q: q }; setSel([q[0], q[1], q[0], q[1]]); }
+    }
+    function selMove(q) {
+      if (!drag) return;
+      var x = Math.max(0, Math.min(1000, q[0])), y = Math.max(0, Math.min(sc.h, q[1]));
+      if (drag.m === "new") setSel([Math.min(drag.q[0], x), Math.min(drag.q[1], y), Math.max(drag.q[0], x), Math.max(drag.q[1], y)]);
+      else if (drag.m === "move") { var dx = x - drag.q[0], dy = y - drag.q[1]; setSel([drag.o[0] + dx, drag.o[1] + dy, drag.o[2] + dx, drag.o[3] + dy]); }
+      else { var c = corners(); c[drag.i] = [x, y]; var o = c[(drag.i + 2) % 4]; setSel([Math.min(o[0], x), Math.min(o[1], y), Math.max(o[0], x), Math.max(o[1], y)]); }
+    }
+    function selEnd() { if (drag && sel && (sel[2] - sel[0] < 16 || sel[3] - sel[1] < 16)) setSel(null); drag = null; } // a tap clears the box
+    function eraseAt(q) { var hit = false; sc.strokes = sc.strokes.filter(function (s) { var near = s.pts.some(function (p) { return Math.abs(p[0] - q[0]) < 14 && Math.abs(p[1] - q[1]) < 14; }); if (near) hit = true; return !near; }); return hit; }
+    cv.addEventListener("pointerdown", function (e) {
+      if (e.pointerType === "touch" && !finger && tool !== "select") return; // palm rests and scrolling fingers don't draw
+      e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (err) {} el.classList.add("drawing");
+      if (tool === "select") { selStart(pt(e)); draw(); return; }
+      undo.push(JSON.stringify(sc.strokes)); if (undo.length > 40) undo.shift();
+      if (tool === "pen") cur = { pts: [pt(e)] }; else if (eraseAt(pt(e))) draw();
+    });
+    cv.addEventListener("pointermove", function (e) {
+      if (!el.classList.contains("drawing")) return;
+      if (tool === "select") { selMove(pt(e)); draw(); return; }
+      var evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e]; if (!evs.length) evs = [e];
+      evs.forEach(function (ev) {
+        var q = pt(ev);
+        if (tool === "pen" && cur) { var l = cur.pts[cur.pts.length - 1]; if (Math.abs(l[0] - q[0]) + Math.abs(l[1] - q[1]) > 1.5) cur.pts.push(q); }
+        else if (tool === "erase") eraseAt(q);
+      });
+      draw();
+    });
+    function end() {
+      if (!el.classList.contains("drawing")) return;
+      el.classList.remove("drawing");
+      if (tool === "select") { selEnd(); draw(); return; }
+      if (cur && cur.pts.length) sc.strokes.push(cur);
+      cur = null; draw(); src.save(sc);
+    }
+    cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end); cv.addEventListener("lostpointercapture", end);
+    el.__api = {
+      tool: function (t) {
+        tool = t; $$('[data-act="scr-tool"]', el).forEach(function (b) { b.classList.toggle("on", b.dataset.tool === t); });
+        cv.style.touchAction = t === "select" ? "none" : "";
+        if (t !== "select" && sel) { setSel(null); draw(); } // picking Pen or Eraser drops the box
+        if (t === "select" && !sel) toast("Drag a box around what you want read. Drag its corners to resize it. Tap outside it to clear it.", 6000);
+      },
+      undo: function () { if (undo.length) { sc.strokes = JSON.parse(undo.pop()); draw(); src.save(sc); } },
+      clear: function () { if (!sc.strokes.length) return; undo.push(JSON.stringify(sc.strokes)); sc.strokes = []; draw(); src.save(sc); toast("Cleared. Undo brings it back."); },
+      taller: function () { sc.h = Math.min(sc.h + grow, 6000); size(); src.save(sc); },
+      finger: function (on) { finger = on; },
+      isEmpty: function () { return !sc.strokes.length; },
+      busy: function () { return el.classList.contains("drawing"); },
+      strokes: function () { return sc.strokes; },
+      selected: function () { return sel ? inBox(sc.strokes, sel) : null; }, // strokes inside the box, or null when there's no box
+      flash: function (b) { readBox = b; draw(); clearTimeout(readT); readT = setTimeout(function () { readBox = null; draw(); }, 3500); },
+      reload: function () { sc = src.load(); undo = []; size(); },
+      redraw: draw
+    };
+    if (window.ResizeObserver) new ResizeObserver(function () { size(); }).observe(box); else window.addEventListener("resize", size);
+    size();
+  }
+
+  /* ---------- page tabs and the main pad ---------- */
+  var delArm = false;
+  function renderPages() {
+    var ids = live();
+    $("#pages").innerHTML = '<div class="seg">' + ids.map(function (id, i) {
+      return '<button role="tab" data-page="' + id + '"' + (id === P.cur ? ' class="on" aria-selected="true"' : ' aria-selected="false"') + ">Page " + (i + 1) + "</button>";
+    }).join("") + '</div><button class="btn small ghost" data-act="page-new">+ New page</button><span class="spacer"></span>' +
+      '<button class="btn small ghost" data-act="page-del">' + (delArm ? "Click again to delete this page" : "Delete page") + "</button>";
+  }
+  function mainSrc(id) {
+    return {
+      load: function () { var p = D.pages[id]; return { h: p.h || 1200, strokes: decode(p.strokes) }; },
+      save: function (sc) { var p = D.pages[id]; if (!p || p.deleted) return; p.h = Math.round(sc.h); p.strokes = encode(sc.strokes); changed(id); }
+    };
+  }
+  function mainPad() { return $("#padHost .scratch"); }
+  function showPage(id) {
+    P.cur = id; store(KEY + ":prefs", P); delArm = false;
+    $("#padHost").innerHTML = padHTML(id, "clip");
+    mountPad(mainPad(), mainSrc(id), 400);
+    $("#padOut").hidden = true;
+    renderPages();
+  }
+
+  /* ---------- clipboard ---------- */
+  function legacyCopy(t) {
+    var ta = document.createElement("textarea"); ta.value = t; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select(); var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) {}
+    ta.remove(); return ok;
+  }
+  function copyText(t) {
+    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t).then(function () { return true; }, function () { return legacyCopy(t); });
+    return Promise.resolve(legacyCopy(t));
+  }
+  // Reading can take a few seconds, and Safari only lets a page copy right after a click. So the copy starts
+  // at the click with text that arrives later (a ClipboardItem holding a promise); if the browser won't do
+  // that, a plain copy is tried when the text is ready, and failing that the Copy button does it.
+  function clipStart() {
+    var give, drop, p = new Promise(function (a, b) { give = a; drop = b; }), wrote = null;
+    p.catch(function () {});
+    if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+      var blob = p.then(function (t) { return new Blob([t], { type: "text/plain" }); });
+      blob.catch(function () {});
+      try { wrote = navigator.clipboard.write([new ClipboardItem({ "text/plain": blob })]); }
+      catch (e) { wrote = null; }
+      if (wrote) wrote.catch(function () {});
+    }
+    return {
+      give: function (t) { give(t); return wrote ? wrote.then(function () { return true; }, function () { return copyText(t); }) : copyText(t); },
+      drop: function () { drop(new Error("cancelled")); }
+    };
+  }
+  function showOut(text, copied, sure) {
+    $("#padOut").hidden = false; $("#padOutText").value = text;
+    $("#padOutMsg").textContent = (copied ? "Copied to the clipboard." : "Press Copy to copy it.") + (sure ? "" : " I’m not sure I read it right: fix it here, then press Copy.");
+  }
+
+  /* ---------- the reader (from readAnswer in ui.js) ---------- */
+  function readOpts() { return { vars: "x", valid: function (text) { try { E.parse(text); return true; } catch (e) { return false; } } }; }
+  function readPad(el, btn, dest) {
+    var inp = dest === "calc" ? CALC && CALC.target() : null;
+    if (!HAS_READER || !el || !el.__api || btn.disabled || (dest === "calc" && !inp)) return;
+    if (el.__api.isEmpty()) { toast("Write on the pad first."); return; }
+    var picked = el.__api.selected(), strokes = picked || el.__api.strokes(), opts = readOpts(), label = btn.dataset.label || (btn.dataset.label = btn.textContent);
+    if (picked && !picked.length) { toast("Nothing is inside the box. Drag it over what you want read."); return; }
+    if (picked) opts.whole = true;
+    var clip = dest === "clip" ? clipStart() : null;
+    function reset() { btn.disabled = false; btn.textContent = label; }
+    function done(r) {
+      el.__api.flash(r.box);
+      if (dest === "calc") {
+        inp.value = r.text; inp.dispatchEvent(new Event("input", { bubbles: true }));
+        toast((r.sure ? "Put “" : "Not sure I read that right: “") + r.text + "” in the calculator." + (r.sure ? "" : " Fix it there if needed."), 6000);
+        return;
+      }
+      clip.give(r.text).then(function (ok) {
+        showOut(r.text, ok, r.sure);
+        toast(ok ? (r.sure ? "Copied “" : "Copied, but I’m not sure I read it right: “") + r.text + "”" : "Read “" + r.text + "”. Press Copy to copy it.", 6000);
+      });
+    }
+    // when every symbol is one the reader has learned from this user, the answer is instant and needs no download
+    var fast = null;
+    try { fast = Reader.quick(strokes, opts); } catch (e) {}
+    if (fast && fast.sure) { done(fast); return; }
+    Reader.stored().then(function (have) {
+      if (!have && !btn.dataset.confirm) { // first time on this device: ask before the big download
+        if (clip) clip.drop();
+        btn.dataset.confirm = "1"; btn.textContent = "Download the reader (" + Reader.megabytes + " MB)";
+        toast("Reading handwriting needs a one-time " + Reader.megabytes + " MB download on this device. Click the button again to start.", 9000);
+        setTimeout(function () { if (btn.isConnected && btn.dataset.confirm && !btn.disabled) { btn.dataset.confirm = ""; reset(); } }, 9000);
+        return;
+      }
+      btn.dataset.confirm = "";
+      btn.disabled = true; btn.textContent = have ? "Reading…" : "Downloading… 0%";
+      return Reader.load(function (f) { btn.textContent = have || f >= 1 ? "Reading…" : "Downloading… " + Math.round(f * 100) + "%"; }).then(function () {
+        btn.textContent = "Reading…";
+        return new Promise(function (res) { setTimeout(res, 60); }); // let "Reading…" show: the reader holds the page for a second or two
+      }).then(function () {
+        return Reader.read(strokes, opts);
+      }).then(function (r) {
+        reset();
+        if (!r || !r.text) { if (clip) clip.drop(); toast("I couldn’t read that. Try writing it again, a little larger."); return; }
+        done(r);
+      });
+    }).catch(function (e) {
+      reset(); if (clip) clip.drop();
+      toast(e && e.message === "download" ? "Couldn’t download the handwriting reader. Check your internet connection and try again." : "The handwriting reader couldn’t start in this browser.", 8000);
+    });
+  }
+  // Symbols the Calc app has learned from this user's handwriting (same site, so same storage). Read only:
+  // learning needs a checked answer, and this app has none.
+  if (HAS_READER) {
+    var learned = fetchJSON("calc-catchup-local-v1:hw") || fetchJSON("precalc-2412-v2:hw");
+    if (learned && learned.v === 1 && learned.t) Reader.learned(learned.t);
+  }
+
+  /* ---------- clicks ---------- */
+  document.addEventListener("click", function (e) {
+    var t = e.target.closest("button"); if (!t) return;
+    var a = t.dataset.act, pad = t.closest(".scratch");
+    if (t.dataset.page) { if (t.dataset.page !== P.cur) showPage(t.dataset.page); return; }
+    switch (a) {
+      case "scr-tool": pad.__api.tool(t.dataset.tool); break;
+      case "scr-undo": pad.__api.undo(); break;
+      case "scr-clear": pad.__api.clear(); break;
+      case "scr-taller": pad.__api.taller(); break;
+      case "scr-read": readPad(pad, t, pad.dataset.pid === "_calc" ? "calc" : "clip"); break;
+      case "scr-calc": if (CALC) { CALC.open(); readPad(pad, t, "calc"); } break;
+      case "page-new": var id = addPage(); saveLocal(); queueSync(); showPage(id); toast("New page. Your other pages are in the tabs above."); break;
+      case "page-del":
+        if (!delArm) { delArm = true; renderPages(); setTimeout(function () { if (delArm) { delArm = false; renderPages(); } }, 4000); break; }
+        var gone = P.cur, ids = live(), at = ids.indexOf(gone);
+        D.pages[gone] = { n: D.pages[gone].n, deleted: true, updated: Date.now() };
+        if (ids.length === 1) addPage();
+        saveLocal(); queueSync(); showPage(live()[Math.max(0, at - 1)]); toast("Page deleted.");
+        break;
+    }
+    if (t.id === "padCopy") copyText($("#padOutText").value).then(function (ok) { $("#padOutMsg").textContent = ok ? "Copied to the clipboard." : "Your browser blocked copying. Select the text and copy it yourself."; toast(ok ? "Copied." : "Couldn’t copy."); });
+    if (t.id === "themeBtn") {
+      P.theme = { system: "light", light: "dark", dark: "system" }[P.theme || "system"] || "system"; store(KEY + ":prefs", P); applyTheme();
+      toast("Theme: " + (P.theme === "system" ? "match your computer" : P.theme));
+    }
+    if (t.id === "syncChip") toast(GH.err || (GH.gist ? "Your pages sync through GitHub, like the other apps." : "Sync is off on this device. Turn it on in the Calc app (Sync section on its home page). This pad uses the same token."), 7000);
+  });
+  document.addEventListener("change", function (e) {
+    var t = e.target;
+    if (t.dataset && t.dataset.act === "scr-finger") { var sc = t.closest(".scratch"); if (sc && sc.__api) sc.__api.finger(t.checked); }
+  });
+  document.addEventListener("keydown", function (e) {
+    var typing = /INPUT|TEXTAREA|SELECT/.test(e.target.tagName);
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key || "").toLowerCase() === "z" && !typing) { var m = mainPad(); if (m && m.__api) { e.preventDefault(); m.__api.undo(); } }
+  });
+  function applyTheme() {
+    var t = P.theme || "system";
+    if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); else document.documentElement.removeAttribute("data-theme");
+    $("#themeBtn").title = "Theme: " + t;
+    $$(".scratch").forEach(function (el) { if (el.__api) el.__api.redraw(); });
+  }
+  if (window.matchMedia) { var mq = window.matchMedia("(prefers-color-scheme: dark)"); if (mq.addEventListener) mq.addEventListener("change", applyTheme); }
+
+  /* ---------- sync through the other apps' GitHub gist (see ghSync in ui.js) ---------- */
+  var GFILE = "scratch-pad.json", GH = { token: "", gist: "", state: "off", err: "", busy: false, again: false, timer: null };
+  function chip() {
+    var c = $("#syncChip"); c.hidden = false; c.className = "chip" + (GH.state === "saved" ? " ok" : GH.state === "error" || GH.state === "offline" ? " warn" : "");
+    c.textContent = { off: "Sync off", saving: "Syncing…", saved: "Synced", error: "Not syncing", offline: "Offline" }[GH.state] || "Sync off";
+  }
+  function ghFetch(path, opt) {
+    opt = opt || {};
+    var h = { "Accept": "application/vnd.github+json", "Authorization": "Bearer " + GH.token };
+    if (opt.body) h["Content-Type"] = "application/json";
+    return fetch("https://api.github.com" + path, { method: opt.method || "GET", cache: "no-store", headers: h, body: opt.body ? JSON.stringify(opt.body) : undefined, keepalive: !!opt.keepalive })
+      .then(function (r) {
+        if (r.status === 401) throw { code: "auth" };
+        if (r.status === 404) throw { code: "notfound" };
+        if (r.status === 403 || r.status === 429) throw { code: "limit" };
+        if (!r.ok) throw { code: "http" };
+        return r.status === 204 ? null : r.json();
+      }, function () { throw { code: "network" }; });
+  }
+  function canon(o) {
+    if (Array.isArray(o)) return "[" + o.map(canon).join(",") + "]";
+    if (o && typeof o === "object") return "{" + Object.keys(o).sort().filter(function (k) { return o[k] !== undefined; }).map(function (k) { return JSON.stringify(k) + ":" + canon(o[k]); }).join(",") + "}";
+    return JSON.stringify(o);
+  }
+  // Each page: the newer copy wins (ties go to the one that sorts first, so both devices agree).
+  function merge(a, b) {
+    var out = { v: 1, pages: {} }, ap = a.pages || {}, bp = b.pages || {};
+    Object.keys(ap).concat(Object.keys(bp)).forEach(function (id) {
+      var x = ap[id], y = bp[id];
+      out.pages[id] = !x ? y : !y ? x : (x.updated || 0) !== (y.updated || 0) ? ((x.updated || 0) > (y.updated || 0) ? x : y) : (canon(x) <= canon(y) ? x : y);
+    });
+    return out;
+  }
+  function queueSync() { if (!GH.gist) return; clearTimeout(GH.timer); GH.timer = setTimeout(sync, 2500); }
+  function sync() {
+    if (!GH.gist) return Promise.resolve();
+    if (GH.busy) { GH.again = true; return Promise.resolve(); }
+    GH.busy = true; clearTimeout(GH.timer); GH.timer = null;
+    if (saveT) saveLocal();
+    return ghFetch("/gists/" + GH.gist).then(function (g) {
+      var f = g && g.files && g.files[GFILE];
+      if (!f) return null;
+      return (f.truncated ? fetch(f.raw_url, { cache: "no-store" }).then(function (r) { return r.text(); }) : Promise.resolve(f.content)).then(function (t) { try { return JSON.parse(t); } catch (e) { return null; } });
+    }).then(function (rem) {
+      rem = rem && rem.v === 1 && rem.pages ? rem : null;
+      var mp = mainPad();
+      if (rem && fresh && !(mp && mp.__api && mp.__api.busy()) && Object.keys(rem.pages).some(function (id) { return !rem.pages[id].deleted; })) { delete D.pages[fresh]; fresh = null; }
+      fresh = null;
+      if (rem) {
+        var m = merge(D, rem);
+        if (canon(m) !== canon(D)) {
+          var pad = mainPad();
+          if (pad && pad.__api && pad.__api.busy()) { GH.again = true; return; } // mid-stroke: try again after
+          var before = D.pages[P.cur]; D = m; saveLocal();
+          if (!D.pages[P.cur] || D.pages[P.cur].deleted) showPage(live()[0] || addPage());
+          else { if (D.pages[P.cur] !== before && pad && pad.__api) pad.__api.reload(); renderPages(); }
+        }
+      }
+      if (rem && canon(rem) === canon(D)) return;
+      GH.state = "saving"; chip();
+      var files = {}; files[GFILE] = { content: JSON.stringify(D) };
+      return ghFetch("/gists/" + GH.gist, { method: "PATCH", body: { files: files } });
+    }).then(function () { GH.state = "saved"; GH.err = ""; })
+      .catch(function (e) {
+        var c = e && e.code;
+        GH.state = c === "network" ? "offline" : "error";
+        GH.err = c === "auth" ? "GitHub stopped accepting your token. Make a new one in the Calc app’s Sync section." : c === "notfound" ? "Your sync file on GitHub is gone. Reconnect in the Calc app’s Sync section." : c === "limit" ? "GitHub asked us to slow down. Your pages are safe here; sync tries again in a few minutes." : "No connection right now. Your pages are safe on this device.";
+        if (c === "limit") setTimeout(queueSync, 180000); else if (c === "network") setTimeout(queueSync, 20000);
+      }).then(function () { GH.busy = false; chip(); if (GH.again) { GH.again = false; queueSync(); } });
+  }
+  function initSync() {
+    var c = fetchJSON("study-apps-github") || {};
+    GH.token = c.token || ""; GH.gist = c.gist || "";
+    if (!GH.token || !GH.gist) { GH.state = "off"; chip(); return; }
+    GH.state = "saving"; chip(); sync();
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible") sync();
+      else if (GH.timer) { // leaving the page: push straight away
+        clearTimeout(GH.timer); GH.timer = null; if (saveT) saveLocal();
+        var files = {}; files[GFILE] = { content: JSON.stringify(D) };
+        if (JSON.stringify(files).length < 60000) ghFetch("/gists/" + GH.gist, { method: "PATCH", body: { files: files }, keepalive: true }).catch(function () {});
+        else sync();
+      }
+    });
+  }
+  window.addEventListener("pagehide", function () { if (saveT) saveLocal(); });
+
+  /* ---------- calculator (from ui.js: values, definite integrals, graphs and crossing points) ---------- */
+  var CALC = null;
+  (function () {
+    var btn = document.getElementById("calcBtn");
+    var box = document.createElement("div"); box.className = "calc"; box.hidden = true; box.setAttribute("role", "dialog"); box.setAttribute("aria-label", "Calculator");
+    box.innerHTML = '<div class="calc-h"><div class="seg"><button class="on" data-m="val">Calculate</button><button data-m="int">Integral</button><button data-m="gr">Graph</button></div><button class="icon-btn" data-x aria-label="Close calculator">×</button></div>' +
+      '<div data-p="val"><input class="calc-in" data-f="e" placeholder="e.g. ln(865)/9 or sin(2)" aria-label="Expression" autocomplete="off" autocapitalize="off" spellcheck="false"></div>' +
+      '<div data-p="int" hidden><input class="calc-in" data-f="f" placeholder="f(x), e.g. sqrt(1 + 4x^2)" aria-label="Function to integrate" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="row calc-lims"><input class="calc-in" data-f="a" placeholder="from" aria-label="Lower limit"><input class="calc-in" data-f="b" placeholder="to" aria-label="Upper limit"></div></div>' +
+      '<div data-p="gr" hidden><input class="calc-in" data-f="g1" placeholder="y = …, e.g. x^3/10 + 1" aria-label="First curve" autocomplete="off" autocapitalize="off" spellcheck="false"><input class="calc-in" data-f="g2" placeholder="second curve (optional)" aria-label="Second curve" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="row calc-lims"><input class="calc-in" data-f="ga" value="-5" aria-label="x from"><input class="calc-in" data-f="gb" value="5" aria-label="x to"></div><div class="calc-plot"></div></div>' +
+      (HAS_READER ? '<div class="row calc-from"><button class="btn small" data-from-pad title="Reads what you boxed on the scratch pad (or its last line) into the box above">Read from the scratch pad</button></div>' : "") +
+      '<div class="calc-pad"></div>' +
+      '<p class="muted calc-note">Radians. Type pi for π and e for Euler’s number.</p><div class="calc-out" aria-live="polite"></div>';
+    document.body.appendChild(box);
+    var mode = "val", out = box.querySelector(".calc-out"), plot = box.querySelector(".calc-plot"), lastIn = null, answer = "", mounted = false;
+    if (HAS_READER) box.querySelector(".calc-pad").innerHTML = padHTML("_calc", "calc"); // the calculator's own pad, on this device only
+    function mountCalcPad() {
+      if (mounted || !HAS_READER) return; mounted = true;
+      mountPad(box.querySelector(".scratch"), {
+        load: function () { var d = fetchJSON(KEY + ":calc"); return { h: d && d.h || 420, strokes: decode(d && d.strokes) }; },
+        save: function (sc) { store(KEY + ":calc", { h: Math.round(sc.h), strokes: encode(sc.strokes) }); }
+      }, 260);
+    }
+    box.addEventListener("focusin", function (ev) { if (ev.target.classList.contains("calc-in")) lastIn = ev.target; });
+    function v(n) { return box.querySelector('[data-f="' + n + '"]').value.trim(); }
+    function num(s) { return E.ev(E.parse(s), 0, 0); }
+    function fn(s) { var a = E.parse(s); return function (x) { return E.ev(a, x, 0); }; }
+    function r(x) { return isFinite(x) ? String(+x.toPrecision(10)) : "undefined"; }
+    function f4(x) { return (Math.abs(x) < 5e-5 ? 0 : x).toFixed(4); }
+    function simpson(f, a, b, n) { var h = (b - a) / n, s = f(a) + f(b); for (var i = 1; i < n; i++) s += f(a + i * h) * (i % 2 ? 4 : 2); return s * h / 3; }
+    function copyBtn(val) { answer = val; return ' <button class="btn small ghost calc-copy" data-copy title="Copy this number">Copy</button>'; }
+    function draw(fs, A, B, roots) {
+      var n = 300, ys = [], pts = fs.map(function (f) { var a = []; for (var i = 0; i <= n; i++) { var x = A + (B - A) * i / n, y = f(x); a.push([x, y]); if (isFinite(y)) ys.push(y); } return a; });
+      if (!ys.length) { plot.innerHTML = ""; return; }
+      ys.sort(function (p, q) { return p - q; });
+      var lo = Math.min(ys[Math.floor(ys.length * 0.03)], 0), hi = Math.max(ys[Math.ceil(ys.length * 0.97) - 1], 0), pad = (hi - lo) * 0.08 || 1; lo -= pad; hi += pad;
+      var W = 340, H = 220, X = function (x) { return (x - A) / (B - A) * W; }, Y = function (y) { return H - (y - lo) / (hi - lo) * H; };
+      var s = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Graph of the curves">';
+      if (lo < 0 && hi > 0) s += '<line x1="0" x2="' + W + '" y1="' + Y(0) + '" y2="' + Y(0) + '" style="stroke:var(--ink-faint)"/>';
+      if (A < 0 && B > 0) s += '<line y1="0" y2="' + H + '" x1="' + X(0) + '" x2="' + X(0) + '" style="stroke:var(--ink-faint)"/>';
+      pts.forEach(function (a, k) {
+        var d = "", pen = false;
+        a.forEach(function (p) { if (!isFinite(p[1]) || p[1] < lo - (hi - lo) || p[1] > hi + (hi - lo)) { pen = false; return; } d += (pen ? "L" : "M") + X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1); pen = true; });
+        s += '<path d="' + d + '" style="fill:none;stroke-width:2;stroke:var(--' + (k ? "break" : "ink") + ')"/>';
+      });
+      roots.forEach(function (x) { s += '<circle cx="' + X(x).toFixed(1) + '" cy="' + Y(fs[0](x)).toFixed(1) + '" r="4" style="fill:var(--accent)"/>'; });
+      plot.innerHTML = s + '<text x="4" y="12" style="font-size:11px;fill:var(--ink-faint)">y from ' + r(+lo.toPrecision(3)) + " to " + r(+hi.toPrecision(3)) + "</text></svg>";
+    }
+    function run() {
+      answer = "";
+      try {
+        if (mode === "val") {
+          if (!v("e")) { out.textContent = ""; return; }
+          var ast = E.parse(v("e")), pv = '<span class="m">' + E.pretty(ast) + "</span>", g1 = E.ev(ast, 0.3, 0.37), g2 = E.ev(ast, 0.7, 0.91);
+          if (g1 !== g2 && !(isNaN(g1) && isNaN(g2))) { out.innerHTML = pv + '<br><span class="muted">This has x (or C) in it, so it isn’t a single number. Put a number in place of x, or use the Integral or Graph tab.</span>'; return; }
+          out.innerHTML = pv + " = <b>" + r(g1) + "</b>" + (isFinite(g1) ? copyBtn(r(g1)) : ""); return;
+        }
+        if (mode === "int") {
+          if (!v("f") || !v("a") || !v("b")) { out.textContent = "Enter the function and both limits."; return; }
+          var f = fn(v("f")), a = num(v("a")), b = num(v("b")), s1 = simpson(f, a, b, 2000), s2 = simpson(f, a, b, 4000);
+          out.innerHTML = "≈ <b>" + r(s2) + "</b>" + (isFinite(s2) ? copyBtn(r(s2)) : "") + (!isFinite(s2) || Math.abs(s1 - s2) > 1e-6 * Math.max(1, Math.abs(s2)) ? ' <span class="muted">The function blows up or jumps somewhere in there, so don’t trust this one.</span>' : "");
+          return;
+        }
+        if (!v("g1")) { out.textContent = ""; plot.innerHTML = ""; return; }
+        var f1 = fn(v("g1")), two = !!v("g2"), f2 = two ? fn(v("g2")) : function () { return 0; }, A = num(v("ga")), B = num(v("gb")), n = 2000, roots = [];
+        if (!(B > A)) { out.textContent = "The second x-value must be bigger than the first."; return; }
+        var d = function (x) { return f1(x) - f2(x); };
+        for (var i = 0; i < n; i++) {
+          var p = A + (B - A) * i / n, q = A + (B - A) * (i + 1) / n, dp = d(p), dq = d(q);
+          if (!isFinite(dp) || !isFinite(dq)) continue;
+          if (dp === 0) { roots.push(p); continue; }
+          if (dp * dq < 0) { for (var k = 0; k < 60; k++) { var m = (p + q) / 2, dm = d(m); if (dp * dm <= 0) q = m; else { p = m; dp = dm; } } var x = (p + q) / 2; if (Math.abs(d(x)) < 1e-6 * (1 + Math.abs(f1(x)))) roots.push(x); }
+        }
+        draw(two ? [f1, f2] : [f1], A, B, roots);
+        out.innerHTML = roots.length ? (two ? "They cross at " : "Zeros at ") + roots.map(function (x) { return "x ≈ <b>" + f4(x) + "</b> (y ≈ " + f4(f1(x)) + ")"; }).join(", ") + (roots.length === 1 ? copyBtn(f4(roots[0])) : "") : (two ? "They don’t cross" : "No zeros") + " between " + A + " and " + B + ". Try a wider range.";
+      } catch (e) { out.textContent = e.message; if (mode === "gr") plot.innerHTML = ""; }
+    }
+    var tmr = null;
+    box.addEventListener("keydown", function (ev) { if (ev.key === "Escape") { box.hidden = true; btn.focus(); } });
+    box.addEventListener("input", function (ev) { if (!ev.target.classList.contains("calc-in")) return; clearTimeout(tmr); tmr = setTimeout(run, 250); });
+    box.addEventListener("click", function (ev) {
+      var t = ev.target.closest("button"); if (!t) return;
+      if (t.hasAttribute("data-x")) { box.hidden = true; return; }
+      if (t.hasAttribute("data-copy")) { var val = answer; copyText(val).then(function (ok) { toast(ok ? "Copied " + val + "." : "Couldn’t copy. Select the number and copy it yourself."); }); return; }
+      if (t.hasAttribute("data-from-pad")) {
+        var pad = mainPad();
+        if (!pad || !pad.__api || pad.__api.isEmpty()) { toast("Write on the scratch pad first."); return; }
+        readPad(pad, t, "calc"); return;
+      }
+      if (t.dataset.m) {
+        mode = t.dataset.m;
+        box.querySelectorAll("[data-m]").forEach(function (b) { b.classList.toggle("on", b === t); });
+        box.querySelectorAll("[data-p]").forEach(function (p) { p.hidden = p.dataset.p !== mode; });
+        run();
+      }
+    });
+    function open() { box.hidden = false; mountCalcPad(); }
+    btn.addEventListener("click", function () { box.hidden = !box.hidden; if (!box.hidden) { mountCalcPad(); var i = box.querySelector('[data-p="' + mode + '"] input'); if (i) i.focus(); } });
+    CALC = {
+      open: open,
+      target: function () { // the box last typed in, if it's on the tab showing; else the first box of that tab
+        var pane = box.querySelector('[data-p="' + mode + '"]');
+        if (lastIn && pane.contains(lastIn)) return lastIn;
+        return pane.querySelector("input");
+      }
+    };
+  })();
+
+  applyTheme();
+  showPage(P.cur);
+  initSync();
+})();
+
+</script>
+<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});</script>
+</body>
+</html>
