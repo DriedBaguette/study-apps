@@ -1842,7 +1842,8 @@ var Reader = (function () {
   }
   // A letter that isn't part of a function name and isn't a variable can't be in an answer: it is the
   // digit or sign it resembles (a plain downstroke gets read as l or I, a 5 as s, a plus as t).
-  var UNLIKE = { l: "1", I: "1", s: "5", S: "5", o: "0", O: "0", z: "2", Z: "2", t: "+" };
+  // y: the user writes 4 with an open top, which the model reads as y (Oct 16). Never applied when y is the variable.
+  var UNLIKE = { l: "1", I: "1", s: "5", S: "5", o: "0", O: "0", z: "2", Z: "2", t: "+", y: "4" };
   function lex(s, vars) {
     var raw = s.match(/\\[a-zA-Z]+|\\.|\S/g) || [], out = [], i = 0;
     // an absolute-value bar without a partner can only be a 1 too
@@ -2108,6 +2109,17 @@ var Reader = (function () {
       else it.forced = byShape(idx.map(function (i) { return strokes[i]; })) || undefined;
       items.push(it);
     });
+    // a lone dot: at mid-height it's a multiplication dot, on the baseline a decimal point
+    var dotMax = Math.max(8, 0.22 * sh.H), full = items.filter(function (it) { return Math.max(it.box.w, it.box.h) > dotMax; });
+    if (full.length) {
+      var med = function (a) { a = a.slice().sort(function (p, q) { return p - q; }); return a[Math.floor(a.length / 2)]; };
+      var top = med(full.map(function (it) { return it.box.y0; })), foot = med(full.map(function (it) { return it.box.y1; }));
+      items.forEach(function (it) {
+        if (it.forced || it.idx.length !== 1 || Math.max(it.box.w, it.box.h) > dotMax || foot - top < 4) return;
+        var f = (it.box.cy - top) / (foot - top);
+        if (f > 0.78) it.forced = "."; else if (f >= 0.2) it.forced = "\\cdot";
+      });
+    }
     Object.keys(isBar).forEach(function (i) { items.push({ bar: +i, box: bs[i], sup: [] }); });
 
     function row(list) { // a horizontal run: fold fractions (widest bar first), then hang exponents on their bases
@@ -2133,7 +2145,7 @@ var Reader = (function () {
           if (raised) { base.sup.push(it); return; }
         }
         out.push(it);
-        base = it.forced && "-=+".indexOf(it.forced) >= 0 || (it.idx && it.box.h < 0.35 * it.box.w) ? null : it; // nothing is raised to a sign
+        base = it.forced && ["-", "=", "+", "\\cdot", "."].indexOf(it.forced) >= 0 || (it.idx && it.box.h < 0.35 * it.box.w) ? null : it; // nothing is raised to a sign
       });
       out.forEach(function (it) { if (it.sup.length > 1) it.sup = row(it.sup); });
       return out;
@@ -2175,10 +2187,11 @@ var Reader = (function () {
   // yet. A stacked fraction has no slash and needs no parentheses, so both are optional.
   function spell(typed, parens, slash) {
     var s = String(typed).replace(/\s+/g, ""), out = [];
-    if (/sqrt|cbrt|abs|pi|exp|[=*_,<>]/i.test(s)) return null;
+    if (/sqrt|cbrt|abs|pi|exp|[=_,<>]/i.test(s)) return null;
     for (var i = 0; i < s.length; i++) {
       var c = s[i];
-      if (/[0-9.+\-|]/.test(c)) out.push(c); else if (/[a-zA-Z]/.test(c)) out.push(c.toLowerCase());
+      if (c === "*") out.push("\\cdot"); // a typed * is a written multiplication dot
+      else if (/[0-9.+\-|]/.test(c)) out.push(c); else if (/[a-zA-Z]/.test(c)) out.push(c.toLowerCase());
       else if (c === "(" || c === ")") { if (parens) out.push(c); }
       else if (c === "/") { if (slash) out.push(c); }
       else if (c !== "^") return null;
@@ -2223,7 +2236,8 @@ var Reader = (function () {
   // The model may only write what an answer can contain: these characters, and after a backslash these
   // commands. Left free, it drifts into symbols like \tau or \binom on messy handwriting.
   var CHARS = "0123456789.+-*/=()[]|{}^_,\\abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  var WORDS = ["frac", "sqrt", "sin", "cos", "tan", "sec", "csc", "cot", "ln", "log", "exp", "arcsin", "arccos", "arctan", "pi", "left", "right", "times", "int"];
+  // cdot: without it a written multiplication dot came out as \times, which toTyped() turns into the letter x
+  var WORDS = ["frac", "sqrt", "sin", "cos", "tan", "sec", "csc", "cot", "ln", "log", "exp", "arcsin", "arccos", "arctan", "pi", "left", "right", "times", "cdot", "int"];
   var SPACE = /Ġ/g; // the tokenizer's mark for "a space comes before this"
   function script(src) {
     return new Promise(function (res, rej) { var s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = function () { rej(new Error("runtime")); }; document.head.appendChild(s); });
