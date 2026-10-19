@@ -411,6 +411,10 @@ button.chip { font: inherit; font-size: 13px; cursor: pointer; }
 ul.wamap { margin: 0 0 10px; padding-left: 20px; line-height: 1.7; }
 @media (max-width: 700px) { .hw-list .hw-links a[title="Open on Canvas"] { display: none; } }
 
+/* a problem's pad as the Scratch Pad app in a frame (web build) */
+.scratch.scratch-embed { border: 0; background: none; overflow: visible; border-radius: 0; }
+.scr-frame { display: block; width: 100%; height: 560px; border: 0; background: transparent; color-scheme: normal; }
+
 </style>
 </head>
 <body>
@@ -2649,7 +2653,7 @@ CONFIG.web = true;
   }
   function decodeScratch(d) {
     if (!d || !d.strokes) return null;
-    return { h: d.h || 420, strokes: d.strokes.map(function (str) { return { pts: String(str).split(";").filter(Boolean).map(function (t) { var a = t.split(","); return [+a[0], +a[1], (+a[2] || 5) / 9]; }) }; }) };
+    return { h: d.h || 420, strokes: d.strokes.filter(function (str) { return !/^~[^~]*,h~/.test(str); }).map(function (str) { return { pts: String(str).replace(/^~[^~]*~/, "").split(";").filter(Boolean).map(function (t) { var a = t.split(","); return [+a[0], +a[1], (+a[2] || 5) / 9]; }) }; }) };
   }
   var scrTimers = {};
   function saveScratch(pid) {
@@ -2667,6 +2671,9 @@ CONFIG.web = true;
   function scratchHTML(p) {
     if (CONFIG.noPad) return ""; // history app: no math to work out by hand
     var open = SCR_OPEN[p.pid] !== undefined ? SCR_OPEN[p.pid] : COARSE;
+    if (CONFIG.web && !p.calc) // the Scratch Pad app (scratch.html) inside the problem, with all its tools; see padHost
+      return '<div class="scratch-wrap" data-pid="' + p.pid + '"><button class="link-btn scratch-toggle" data-act="scratch-toggle" data-pid="' + p.pid + '">' + (open ? "Hide scratch pad" : "✎ Work it out by hand") + "</button>" +
+        (open ? '<div class="scratch scratch-embed" data-pid="' + p.pid + '"><iframe class="scr-frame" src="scratch.html?embed=' + encodeURIComponent(p.pid) + '" title="Scratch pad" loading="lazy"></iframe></div>' : "") + "</div>";
     return '<div class="scratch-wrap" data-pid="' + p.pid + '"><button class="link-btn scratch-toggle" data-act="scratch-toggle" data-pid="' + p.pid + '">' + (open ? "Hide scratch pad" : "✎ Work it out by hand") + "</button>" +
       (open ? '<div class="scratch" data-pid="' + p.pid + '"><div class="scr-tools">' +
         '<div class="seg"><button class="on" data-act="scr-tool" data-tool="pen" aria-label="Pen">✎ Pen</button><button data-act="scr-tool" data-tool="erase" aria-label="Eraser">Eraser</button>' + (CONFIG.web && typeof Reader !== "undefined" && p.type !== "choice" ? '<button data-act="scr-tool" data-tool="select" aria-label="Select what to read" title="Drag a box around what you want read">⬚ Select</button>' : "") + "</div>" +
@@ -2683,7 +2690,7 @@ CONFIG.web = true;
   function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#000"; }
   function mountScratches() {
     $$(".scratch").forEach(function (el) {
-      if (el.__mounted) return; el.__mounted = true;
+      if (el.__mounted || el.classList.contains("scratch-embed")) return; el.__mounted = true;
       var pid = el.dataset.pid, cv = $("canvas", el), box = $(".scr-canvas", el), ctx = cv.getContext("2d");
       var tool = "pen", finger = false, cur = null, undo = [], sc = { h: 420, strokes: [] }, readBox = null, readT = null, sel = SEL[pid] || null, drag = null;
       function scale() { return box.clientWidth / 1000; }
@@ -2855,6 +2862,27 @@ CONFIG.web = true;
       })
       .then(function () { delete askCtl[pid]; btn.textContent = "Check my work"; });
   }
+
+  // What a problem's Scratch Pad frame (padapp.js, embed mode) calls. The frame saves the pad under scratchKey(pid)
+  // itself, in the same format plus extra fields, and its pad api (strokes, selected, flash, dataURL, reload...)
+  // is put on the frame's wrapper, so the reading, Ask Claude and sync code here works unchanged.
+  function padWrap(pid) { return document.querySelector('.scratch-embed[data-pid="' + pid + '"]'); }
+  window.__padHost = {
+    key: KEY,
+    info: function (pid) { var pp = PROB[pid] || {}; return { quiz: !!pp.quiz, choice: pp.type === "choice", read: CONFIG.web && typeof Reader !== "undefined" && pp.type !== "choice" }; },
+    ready: function (pid, api) { var w = padWrap(pid); if (w) w.__api = api; },
+    saved: function (pid) { delete SCR[pid]; if (CONFIG.web) { GH.scrDirty[pid] = 1; queueGH(); } mark(); },
+    drawing: function (pid, on) {
+      var w = padWrap(pid); if (!w) return;
+      w.classList.toggle("drawing", on); if (on) LAST_PAD = w;
+      if (!on && CLOUD.pendingRender) { CLOUD.pendingRender = false; setTimeout(render, 30); }
+    },
+    height: function (pid, h) { var w = padWrap(pid), f = w && $("iframe", w); if (f) f.style.height = Math.ceil(h) + "px"; },
+    read: function (pid, btn, toCalc) { var w = padWrap(pid); if (!w) return; if (toCalc) { if (!CALC) return; CALC.open(); } readAnswer(pid, btn, toCalc, w); },
+    ask: function (pid, btn) { var w = padWrap(pid); if (w) handoff(pid, btn, w); },
+    toast: function (m, ms) { toast(m, ms); },
+    theme: function () { return document.documentElement.getAttribute("data-theme") || ""; }
+  };
 
   /* ---------- GitHub sync (standalone web app version) ---------- */
   var GH = { token: "", gist: "", login: "", state: CONFIG.web ? "setup" : "off", err: "", timer: null, busy: false, again: false, last: 0, scrDirty: {}, scrKnown: null, remoteProg: null };
@@ -3097,7 +3125,7 @@ CONFIG.web = true;
   // the calculator's own pad). If the user dragged a box, only what's inside it is read.
   function readAnswer(pid, btn, toCalc, padEl) {
     toCalc = toCalc || pid === "__calc";
-    var el = padEl || btn.closest(".scratch"), inp = toCalc ? CALC && CALC.target() : $(".ans", btn.closest(".prob"));
+    var el = padEl || btn.closest(".scratch"), inp = toCalc ? CALC && CALC.target() : $(".ans", (padEl || btn).closest(".prob")); // padEl: a Scratch Pad frame's wrapper (the button is inside the frame)
     if (!el || !el.__api || !inp || btn.disabled) return;
     if (el.__api.isEmpty()) { toast("Write on the pad first."); return; }
     var picked = el.__api.selected(), strokes = picked || el.__api.strokes(), opts = readOpts(pid), label = btn.textContent;
@@ -3159,8 +3187,8 @@ CONFIG.web = true;
       "2. Otherwise point to the FIRST step that went wrong, say what the mistake is, and give one hint for fixing it. Don't give the final answer.\n" +
       "3. If you can't read part of my handwriting, say which part.";
   }
-  function handoff(pid, btn) {
-    var el = btn.closest(".scratch");
+  function handoff(pid, btn, padEl) {
+    var el = padEl || btn.closest(".scratch");
     if (!el || !el.__api) return;
     if (el.__api.isEmpty()) { toast("Write your steps on the scratch pad first."); return; }
     var blob = dataURLBlob(el.__api.dataURL()), msg = tutorPrompt(pid, true);
@@ -3757,7 +3785,7 @@ CONFIG.web = true;
     items.forEach(function (p) { // a new attempt starts with clean pads; old work could give the answer away
       var old = SCR[p.pid] || decodeScratch(scratchLocal(p.pid));
       SCR[p.pid] = { h: 420, strokes: [] };
-      if (old && old.strokes.length) saveScratch(p.pid);
+      if (old && old.strokes.length) { try { localStorage.setItem(scratchKey(p.pid), JSON.stringify(encodeScratch(SCR[p.pid]))); } catch (e) {} saveScratch(p.pid); }
     });
     QZ[sid] = { items: items, end: Date.now() + s.quiz.minutes * 60000, done: false, vals: [] };
     rerenderTab();

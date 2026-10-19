@@ -411,6 +411,10 @@ button.chip { font: inherit; font-size: 13px; cursor: pointer; }
 ul.wamap { margin: 0 0 10px; padding-left: 20px; line-height: 1.7; }
 @media (max-width: 700px) { .hw-list .hw-links a[title="Open on Canvas"] { display: none; } }
 
+/* a problem's pad as the Scratch Pad app in a frame (web build) */
+.scratch.scratch-embed { border: 0; background: none; overflow: visible; border-radius: 0; }
+.scr-frame { display: block; width: 100%; height: 560px; border: 0; background: transparent; color-scheme: normal; }
+
 /* ---------- Scratch Pad app (added Oct 17): only what style.css doesn't already cover ---------- */
 :root { --solve: #B7791F;
   --pen-blue: #2563EB; --pen-red: #DC2626; --pen-green: #15803D; --pen-orange: #D97706; --pen-purple: #7C3AED;
@@ -457,6 +461,13 @@ ul.wamap { margin: 0 0 10px; padding-left: 20px; line-height: 1.7; }
   .top { padding: 10px 16px; }
   .page.pad-page { padding: 16px 16px 100px; }
 }
+.hover-dot { position: absolute; left: 0; top: 0; border-radius: 50%; pointer-events: none; opacity: .55; box-shadow: 0 0 0 1px var(--surface); z-index: 4; }
+.hover-dot.ring { opacity: .8; border: 1.5px solid var(--ink-soft); }
+.hover-dot[hidden] { display: none; }
+/* embed mode: just the pad, inside a problem in another study app */
+html.embed, html.embed body { background: transparent; }
+.embed .top, .embed #pages, .embed #syncPanel, .embed #padOut, .embed #toast { display: none; }
+html.embed .page.pad-page { padding: 0; max-width: none; margin: 0; gap: 0; }
 
 </style>
 </head>
@@ -1552,7 +1563,10 @@ var Reader = (function () {
    and the answer appears after it in handwriting-style ink, updating when the line changes. Readings are cached
    per line in the page (p.solved), so other devices show the answers without reading again.
    Sync can be turned on here too: an app added to the iPad Home Screen has its own storage, apart from Safari,
-   so it doesn't see the token the other apps saved there. */
+   so it doesn't see the token the other apps saved there.
+   Embed mode (Oct 18): the Calc and Precalc web apps show this page in a frame as each problem's pad
+   (scratch.html?embed=<problem id>). Then the pad is that problem's, saved under the app's own scratch key in
+   the format it already syncs, and the app does the reading, Ask Claude and syncing through window.__padHost. */
 (function () {
   "use strict";
   var E = MathEngine, KEY = "scratch-pad-v1", HAS_READER = typeof Reader !== "undefined";
@@ -1560,7 +1574,7 @@ var Reader = (function () {
   function $(s, r) { return (r || document).querySelector(s); }
   function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
   var toastT;
-  function toast(msg, ms) { var t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove("show"); }, ms || 3600); }
+  function toast(msg, ms) { if (EMB) { EMB.host.toast(msg, ms); return; } var t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove("show"); }, ms || 3600); }
   function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#000"; }
   function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   function fetchJSON(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
@@ -1575,24 +1589,37 @@ var Reader = (function () {
   function addPage() { var id = newId(); D.pages[id] = { n: Date.now(), h: 1200, strokes: [], updated: Date.now() }; return id; }
   // A new device starts with one empty page; it is dropped at the first sync if the pages from GitHub arrive
   // before anything is written on it, so each device doesn't add an empty page to everyone's tabs.
+  var EMB = null; // set when this page is a problem's pad inside another study app
+  try { var em = /[?&]embed=([^&]+)/.exec(location.search); if (em && window.parent !== window && window.parent.__padHost) EMB = { pid: decodeURIComponent(em[1]), host: window.parent.__padHost }; } catch (e) {}
+  function embedLoad() { var r = fetchJSON(EMB.key) || {}; D.pages[EMB.pid] = { n: 0, h: r.h || 420, strokes: r.strokes || [], texts: r.texts, solved: r.solved, updated: r.updated || 0 }; }
+  if (EMB) {
+    EMB.key = EMB.host.key + ":scratch:" + EMB.pid;
+    D = { v: 1, pages: {} }; P = JSON.parse(JSON.stringify(P)); P.cur = EMB.pid; embedLoad();
+    document.documentElement.classList.add("embed");
+    try { if (window.parent.Reader) Reader = window.parent.Reader; } catch (e) {} // one handwriting model in memory: the app's
+  }
   var fresh = live().length ? null : addPage();
   if (!P.cur || !D.pages[P.cur] || D.pages[P.cur].deleted) P.cur = live()[0];
   var saveT = null;
-  function saveLocal() { clearTimeout(saveT); saveT = null; store(KEY, D); }
+  function saveLocal() {
+    clearTimeout(saveT); saveT = null;
+    if (EMB) { var r = D.pages[EMB.pid]; store(EMB.key, { v: 1, h: r.h, updated: r.updated, strokes: r.strokes, texts: r.texts, solved: r.solved }); EMB.host.saved(EMB.pid); return; }
+    store(KEY, D);
+  }
   function changed(id) { if (id === fresh) fresh = null; D.pages[id].updated = Date.now(); clearTimeout(saveT); saveT = setTimeout(saveLocal, 400); queueSync(); }
 
   // A stroke is "x,y,p;x,y,p;..." (pressure p out of 9), with "~colour,width,kind~" in front when it isn't plain ink
   function encode(strokes) {
     return strokes.map(function (s) {
       var head = s.c || (s.w && s.w !== 1) || s.k ? "~" + (s.c || "") + "," + (s.w && s.w !== 1 ? Math.round(s.w * 100) / 100 : "") + "," + (s.k || "") + "~" : "";
-      return head + s.pts.map(function (p) { return Math.round(p[0]) + "," + Math.round(p[1]) + "," + Math.round(p[2] * 9); }).join(";");
+      return head + s.pts.map(function (p) { return Math.round(p[0]) + "," + Math.round(p[1]) + "," + Math.round(p[2] * 9) + (p.length > 3 ? "," + Math.round(p[3] * 9) : ""); }).join(";");
     });
   }
   function decode(list) {
     return (list || []).map(function (str) {
       str = String(str); var o = {};
       if (str.charAt(0) === "~") { var e = str.indexOf("~", 1), h = str.slice(1, e).split(","); str = str.slice(e + 1); if (h[0]) o.c = h[0]; if (h[1]) o.w = +h[1]; if (h[2]) o.k = h[2]; }
-      o.pts = str.split(";").filter(Boolean).map(function (t) { var a = t.split(","); return [+a[0], +a[1], (+a[2] || 5) / 9]; });
+      o.pts = str.split(";").filter(Boolean).map(function (t) { var a = t.split(","), q = [+a[0], +a[1], (+a[2] || 5) / 9]; if (a.length > 3) q.push((+a[3] || 0) / 9); return q; });
       return o;
     });
   }
@@ -1760,25 +1787,28 @@ var Reader = (function () {
   // src: { load() -> { h, strokes, imgs?, texts? }, save(sc), answers?(strokes) }. dest: "clip" (the page) or "calc" (the calculator's pad).
   // A stroke is { pts: [[x, y, pressure]], c: colour name (none = ink), w: width factor (none = 1), k: "h" for highlighter }.
   var PEN_COLORS = ["ink", "blue", "red", "green", "orange", "purple"], HL_COLORS = ["yellow", "green", "pink", "blue", "orange"];
-  var PENS = P.pens || { pen: { c: "ink", s: 1 }, marker: { c: "blue", s: 1 }, hl: { c: "yellow", s: 1 } };
+  var PENS = P.pens || {}; // per tool: colour and size
+  [["pen", "ink"], ["pencil", "ink"], ["marker", "blue"], ["hl", "yellow"]].forEach(function (d) { if (!PENS[d[0]]) PENS[d[0]] = { c: d[1], s: 1 }; });
   var INK = null; // what Copy on a selection put aside, for Paste (this visit)
   function padHTML(pid, dest) {
-    var full = dest === "clip", reader = HAS_READER;
+    var full = dest !== "calc", reader = HAS_READER, inf = dest === "embed" && EMB ? EMB.host.info(pid) : null;
     function tb(t, label, title) { return '<button data-act="scr-tool" data-tool="' + t + '"' + (t === "pen" ? ' class="on"' : "") + ' title="' + title + '">' + label + "</button>"; }
     return '<div class="scratch" data-pid="' + pid + '"><div class="scr-tools">' +
-      '<div class="seg">' + tb("pen", "✎ Pen", "Pen") + (full ? tb("marker", "Marker", "Marker") + tb("hl", "Highlighter", "Highlighter (the reader skips it)") : "") +
+      '<div class="seg">' + tb("pen", "✎ Pen", "Pen") + (full ? tb("pencil", "Pencil", "Pencil: lean Apple Pencil over to shade, like a real pencil") + tb("marker", "Marker", "Marker") + tb("hl", "Highlighter", "Highlighter (the reader skips it)") : "") +
         tb("erase", "Eraser", "Eraser. Tap it again to switch between erasing whole strokes and erasing part of a stroke") +
         tb("lasso", "◌ Select", "Circle writing, pictures or text to move, resize, copy or read it") + (full ? tb("text", "T Text", "Tap the page to add a text box. Write in it with Apple Pencil and iPad turns it into text") : "") + "</div>" +
       (full ? '<span class="pens" data-r="pens"></span>' : "") +
       '<button class="btn small ghost" data-act="scr-undo">Undo</button><button class="btn small ghost" data-act="scr-redo">Redo</button>' +
       '<button class="btn small ghost" data-act="scr-clear">Clear</button><button class="btn small ghost" data-act="scr-taller">More room</button>' +
-      (full ? '<button class="btn small ghost" data-act="img-paste" title="Paste a screenshot you copied (Ctrl+V or ⌘V works too)">Paste picture</button><button class="btn small ghost" data-act="img-upload" title="Add a picture from this device">Upload picture</button>' +
+      (dest === "clip" ? '<button class="btn small ghost" data-act="img-paste" title="Paste a screenshot you copied (Ctrl+V or ⌘V works too)">Paste picture</button><button class="btn small ghost" data-act="img-upload" title="Add a picture from this device">Upload picture</button>' +
         '<input type="file" accept="image/*" data-act="img-file" hidden><button class="btn small" data-act="ink-paste" hidden title="Paste what you copied">Paste</button>' : "") +
       (COARSE ? '<label class="row scr-finger" style="gap:6px;font-size:13px"><input type="checkbox" class="ck" data-act="scr-finger"> Finger draws</label>' : "") +
       '<span class="spacer"></span>' +
-      (reader ? (dest === "calc" ? '<button class="btn small" data-act="scr-read" title="Reads what you selected (or the last line you wrote) into the calculator">Read into calculator</button>'
+      (inf ? (inf.read ? '<button class="btn small" data-act="scr-read" title="Types what you selected (or the last line you wrote) into the answer box">Read my answer</button><button class="btn small ghost" data-act="scr-calc" title="Reads what you selected (or the last line) into the calculator">→ Calculator</button>' : "") +
+        (inf.quiz ? "" : '<button class="btn small" data-act="scr-ask">Ask Claude to check</button>') :
+      reader ? (dest === "calc" ? '<button class="btn small" data-act="scr-read" title="Reads what you selected (or the last line you wrote) into the calculator">Read into calculator</button>'
         : '<button class="btn small" data-act="scr-read" title="Reads what you selected (or the last line you wrote) and copies it">Read &amp; copy</button><button class="btn small ghost" data-act="scr-calc" title="Reads what you selected (or the last line) into the calculator">→ Calculator</button>') : "") +
-      '</div><div class="scr-canvas"><canvas></canvas><div class="scr-texts"></div><div class="sel-menu" hidden></div></div></div>';
+      '</div><div class="scr-canvas"><canvas></canvas><div class="scr-texts"></div><div class="sel-menu" hidden></div><div class="hover-dot" hidden></div></div></div>';
   }
   function pip(poly, x, y) { // is the point inside the lasso?
     var inside = false;
@@ -1817,7 +1847,33 @@ var Reader = (function () {
   function mountPad(el, src, grow) {
     var pid = el.dataset.pid, full = !!src.answers, cv = $("canvas", el), box = $(".scr-canvas", el), ctx = cv.getContext("2d"), layer = $(".scr-texts", el), menu = $(".sel-menu", el);
     var tool = "pen", eraseMode = "stroke", finger = false, cur = null, undo = [], redo = [], sc = src.load(), readBox = null, readT = null, answers = null;
-    var lasso = null, sel = null, drag = null, holdT = null, scroll = null, penAt = 0, textSnap = null;
+    var lasso = null, sel = null, drag = null, holdT = null, scroll = null, penAt = 0, textSnap = null, dot = $(".hover-dot", el), taps = { ids: {}, n: 0, max: 0, t0: 0, late: false, moved: false };
+    function hover(e) { // Apple Pencil hovering just above the glass: show where it will draw, how big, in what colour
+      if (e.pointerType !== "pen" || e.buttons || drawing()) { dot.hidden = true; return; }
+      var r = cv.getBoundingClientRect(), k = r.width / 1000, d, col = "", ring = false, pen = PENS[tool];
+      if (tool === "erase") { d = (eraseMode === "part" ? 22 : 24) * k; ring = true; }
+      else if (pen) { var f = (tool === "marker" ? 2.4 : 1) * (pen.s || 1); d = (tool === "hl" ? 16 * (pen.s || 1) : 4.4 * f) * k; col = colorOf({ c: pen.c === "ink" ? "" : pen.c, k: tool === "hl" ? "h" : "" }); }
+      else { d = 8; ring = true; }
+      d = Math.max(d, 5);
+      dot.hidden = false; dot.classList.toggle("ring", ring);
+      dot.style.width = dot.style.height = d + "px"; dot.style.background = ring ? "transparent" : col;
+      dot.style.transform = "translate(" + (e.clientX - r.left - d / 2) + "px," + (e.clientY - r.top - d / 2) + "px)";
+    }
+    cv.addEventListener("pointerleave", function () { dot.hidden = true; });
+    function tapDown(e) { // fingers landing together for a quick tap: two undo, three redo (the Pencil's own double-tap never reaches a web page)
+      if (!taps.n) { taps.t0 = Date.now(); taps.max = 0; taps.moved = false; taps.late = false; }
+      else if (Date.now() - taps.t0 > 150) taps.late = true; // a palm, then a finger: not a gesture
+      taps.ids[e.pointerId] = [e.clientX, e.clientY]; taps.n++; taps.max = Math.max(taps.max, taps.n);
+    }
+    function tapMove(e) { var o = taps.ids[e.pointerId]; if (o && Math.abs(e.clientX - o[0]) + Math.abs(e.clientY - o[1]) > 14) taps.moved = true; }
+    function tapUp(e) {
+      if (!taps.ids[e.pointerId]) return;
+      delete taps.ids[e.pointerId]; taps.n--;
+      if (taps.n > 0) return;
+      if (!taps.moved && !taps.late && taps.max >= 2 && taps.max <= 3 && Date.now() - taps.t0 < 400) {
+        if (taps.max === 2) { el.__api.undo(); toast("Undo"); } else { el.__api.redo(); toast("Redo"); }
+      }
+    }
     sc.imgs = sc.imgs || []; sc.texts = sc.texts || [];
     function snap() { return JSON.stringify({ s: sc.strokes, i: sc.imgs, t: sc.texts }); }
     function keep(u) { undo.push(u); if (undo.length > 60) undo.shift(); redo = []; }
@@ -1829,11 +1885,26 @@ var Reader = (function () {
       cv.style.width = w + "px"; cv.style.height = hpx + "px"; cv.width = Math.round(w * dpr); cv.height = Math.round(hpx * dpr);
       ctx.setTransform(dpr * scale(), 0, 0, dpr * scale(), 0, 0); layoutTexts(); draw();
     }
-    var colors = {};
+    var colors = {}, paperRGB = null;
+    function rgb(hex) { var m = /^#([0-9a-f]{6})$/i.exec(String(hex).trim()); return m ? [0, 2, 4].map(function (i) { return parseInt(m[1].substr(i, 2), 16); }) : null; }
     function colorOf(s) { var n = s.c ? "--pen-" + (s.k === "h" ? "hl-" : "") + s.c : "--ink"; return colors[n] || (colors[n] = cssVar(n)); }
     function drawStroke(c, s, color, extra) { // extra: added width, for the outline drawn under the ink
       var p = s.pts, f = s.w || 1; extra = extra || 0; if (!p.length) return;
       c.strokeStyle = color; c.fillStyle = color; c.lineCap = "round"; c.lineJoin = "round";
+      if (s.k === "p") { // pencil: leaning it over makes a wider, lighter line (tilt), pressing harder a darker one
+        // Each piece is solid, its shade mixed with the paper colour, so overlapping pieces don't build up into beads.
+        c.save(); c.lineCap = "round"; c.lineJoin = "round";
+        var paper = paperRGB || (paperRGB = rgb(cssVar("--surface-2"))), inkc = rgb(color);
+        function shade(a) { return !inkc || !paper || extra ? color : "rgb(" + [0, 1, 2].map(function (i) { return Math.round(inkc[i] * a + paper[i] * (1 - a)); }).join(",") + ")"; }
+        if (p.length === 1) { c.fillStyle = shade(0.7); c.beginPath(); c.arc(p[0][0], p[0][1], 1.6 * f + extra / 2, 0, Math.PI * 2); c.fill(); c.restore(); return; }
+        for (var j = 1; j < p.length; j++) {
+          var u = p[j - 1], v = p[j], lean = ((u[3] || 0) + (v[3] || 0)) / 2, pr = (u[2] + v[2]) / 2;
+          c.strokeStyle = shade(Math.max(0.22, Math.min(0.95, 0.3 + pr * 0.7 - lean * 0.4)));
+          c.lineWidth = (1.1 + pr * 1.3 + lean * lean * 14) * f + extra;
+          c.beginPath(); c.moveTo(u[0], u[1]); c.lineTo(v[0], v[1]); c.stroke();
+        }
+        c.restore(); return;
+      }
       if (s.k === "h") { c.save(); c.globalAlpha = 0.38; c.lineWidth = 16 * f; c.lineCap = "butt"; c.beginPath(); c.moveTo(p[0][0], p[0][1]); p.forEach(function (q) { c.lineTo(q[0], q[1]); }); if (p.length === 1) c.lineTo(p[0][0] + 1, p[0][1]); c.stroke(); c.restore(); return; }
       if (p.length === 1) { c.beginPath(); c.arc(p[0][0], p[0][1], (1.6 + p[0][2] * 1.6) * f + extra / 2, 0, Math.PI * 2); c.fill(); return; }
       for (var i = 1; i < p.length; i++) {
@@ -1846,7 +1917,7 @@ var Reader = (function () {
       }
     }
     function draw() {
-      colors = {};
+      colors = {}; paperRGB = null;
       ctx.clearRect(0, 0, 1000, sc.h);
       ctx.strokeStyle = cssVar("--bg-grid"); ctx.lineWidth = 1;
       for (var y = 40; y < sc.h; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1000, y); ctx.stroke(); }
@@ -1891,6 +1962,11 @@ var Reader = (function () {
       }
     }
     function pt(e) { var r = cv.getBoundingClientRect(), k = 1000 / r.width; return [(e.clientX - r.left) * k, (e.clientY - r.top) * k, e.pointerType === "pen" ? (e.pressure || 0.5) : 0.5]; }
+    function lean(e) { // how far Apple Pencil leans over: 0 upright, 1 flat on the glass
+      if (e.pointerType !== "pen") return 0;
+      if (typeof e.altitudeAngle === "number" && e.altitudeAngle > 0) return Math.max(0, Math.min(1, 1 - e.altitudeAngle / (Math.PI / 2)));
+      var t = Math.max(Math.abs(e.tiltX || 0), Math.abs(e.tiltY || 0)); return Math.max(0, Math.min(1, t / 90));
+    }
     function corners(b) { return [[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]]]; }
     function fit() { // make the pad tall enough for everything on it
       var need = 0;
@@ -1978,7 +2054,7 @@ var Reader = (function () {
     function selected() { return { s: sel.s.map(function (i) { return sc.strokes[i]; }), i: sel.i.map(function (i) { return sc.imgs[i]; }), t: sel.t.map(function (i) { return sc.texts[i]; }) }; }
     function transform(orig, fx, fy, ax, ay, f) { // move by (fx, fy), or scale by f around (ax, ay)
       var X = f ? function (x) { return ax + (x - ax) * f; } : function (x) { return x + fx; }, Y = f ? function (y) { return ay + (y - ay) * f; } : function (y) { return y + fy; };
-      sel.s.forEach(function (i, n) { var o = orig.s[n], st = sc.strokes[i]; st.pts = o.pts.map(function (q) { return [X(q[0]), Y(q[1]), q[2]]; }); if (f) { var w = (o.w || 1) * f; if (Math.abs(w - 1) < 0.01) delete st.w; else st.w = Math.round(w * 100) / 100; } });
+      sel.s.forEach(function (i, n) { var o = orig.s[n], st = sc.strokes[i]; st.pts = o.pts.map(function (q) { var n = q.slice(); n[0] = X(q[0]); n[1] = Y(q[1]); return n; }); if (f) { var w = (o.w || 1) * f; if (Math.abs(w - 1) < 0.01) delete st.w; else st.w = Math.round(w * 100) / 100; } });
       sel.i.forEach(function (i, n) { var o = orig.i[n], m = sc.imgs[i]; m.x = X(o.x); m.y = Y(o.y); if (f) { m.w = o.w * f; m.h = o.h * f; } });
       sel.t.forEach(function (i, n) { var o = orig.t[n], t = sc.texts[i]; t.x = X(o.x); t.y = Y(o.y); if (f) t.size = Math.max(10, o.size * f); });
       sel.box = selBox(sel); answers = null; layoutTexts();
@@ -2001,7 +2077,7 @@ var Reader = (function () {
     }
     function pasteItems(items, dx, dy) { // adds copies and selects them
       var s = { s: [], i: [], t: [] }, c = JSON.parse(JSON.stringify(items));
-      c.s.forEach(function (st) { st.pts = st.pts.map(function (q) { return [q[0] + dx, q[1] + dy, q[2]]; }); s.s.push(sc.strokes.push(st) - 1); });
+      c.s.forEach(function (st) { st.pts = st.pts.map(function (q) { var n = q.slice(); n[0] += dx; n[1] += dy; return n; }); s.s.push(sc.strokes.push(st) - 1); });
       c.i.forEach(function (m) { m.x += dx; m.y += dy; s.i.push(sc.imgs.push(m) - 1); });
       c.t.forEach(function (t) { t.x += dx; t.y += dy; s.t.push(sc.texts.push(t) - 1); });
       renderTexts(); el.__api.tool("lasso", true); setSel(s); fit(); answers = null; draw(); src.save(sc);
@@ -2030,16 +2106,18 @@ var Reader = (function () {
     function drawing() { return el.classList.contains("drawing"); }
     cv.addEventListener("pointerdown", function (e) {
       var touch = e.pointerType === "touch";
-      if (e.pointerType === "pen") { penAt = Date.now(); if (scroll) scroll = null; }
-      if (touch && !finger && (tool === "pen" || tool === "marker" || tool === "hl" || tool === "erase")) {
+      if (e.pointerType === "pen") { penAt = Date.now(); if (scroll) scroll = null; dot.hidden = true; }
+      if (touch && !finger && (tool === "pen" || tool === "pencil" || tool === "marker" || tool === "hl" || tool === "erase")) {
         // a finger scrolls the page (the canvas blocks the browser's own scrolling); not right after the pencil, so a resting palm doesn't
-        if (Date.now() - penAt > 1500 && !(e.width > 40)) scroll = { id: e.pointerId, y: e.clientY, moved: false };
+        tapDown(e);
+        if (!scroll && Date.now() - penAt > 1500 && !(e.width > 40)) scroll = { id: e.pointerId, y: e.clientY, moved: false };
         return;
       }
       if (drawing()) return; // a second finger or the palm while drawing
       e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (err) {} el.classList.add("drawing");
       var q = pt(e);
       if (tool === "text") { el.classList.remove("drawing"); addText(q); return; }
+      if (src.drawing) src.drawing(true);
       if (tool === "lasso") {
         if (sel) {
           var near = COARSE ? 36 : 22, b = sel.box, hit = -1;
@@ -2057,12 +2135,15 @@ var Reader = (function () {
       if (pen.c && pen.c !== "ink") cur.c = pen.c;
       var w = (tool === "marker" ? 2.4 : 1) * (pen.s || 1); if (Math.abs(w - 1) > 0.01) cur.w = w;
       if (tool === "hl") { cur.k = "h"; if (!cur.c) cur.c = "yellow"; cur.w = pen.s || 1; }
+      if (tool === "pencil") { cur.k = "p"; q.push(lean(e)); }
       if (tool === "marker" || tool === "hl") q[2] = 0.5; // even width
     });
     cv.addEventListener("pointermove", function (e) {
+      if (e.pointerType === "touch") tapMove(e);
+      if (!drawing()) hover(e);
       if (scroll && e.pointerId === scroll.id) {
         var dy = e.clientY - scroll.y;
-        if (scroll.moved || Math.abs(dy) > 10) { scroll.moved = true; window.scrollBy(0, -dy); scroll.y = e.clientY; }
+        if (scroll.moved || Math.abs(dy) > 10) { scroll.moved = true; (EMB ? window.parent : window).scrollBy(0, -dy); scroll.y = e.clientY; }
         return;
       }
       if (!drawing()) return;
@@ -2079,6 +2160,7 @@ var Reader = (function () {
       var evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e]; if (!evs.length) evs = [e];
       evs.forEach(function (ev) {
         var p = pt(ev);
+        if (cur && cur.k === "p") p.push(lean(ev));
         if (cur && !cur.shape) { if (cur.k === "h" || cur.w > 2) p[2] = 0.5; var l = cur.pts[cur.pts.length - 1]; if (Math.abs(l[0] - p[0]) + Math.abs(l[1] - p[1]) > 1.5) cur.pts.push(p); }
         else if (tool === "erase") eraseAt(p);
       });
@@ -2089,9 +2171,10 @@ var Reader = (function () {
       draw();
     });
     function end(e) {
+      if (e && e.pointerType === "touch") tapUp(e);
       if (scroll && (!e || e.pointerId === scroll.id)) { scroll = null; return; }
       if (!drawing()) return;
-      el.classList.remove("drawing"); clearTimeout(holdT);
+      el.classList.remove("drawing"); clearTimeout(holdT); if (src.drawing) src.drawing(false);
       if (tool === "lasso") {
         if (drag) { var changed = snap() !== drag.u; if (changed) keep(drag.u); drag = null; setSel(sel); fit(); draw(); if (changed) src.save(sc); return; }
         if (lasso) { var s = selectLasso(lasso); lasso = null; setSel(s); draw(); }
@@ -2108,6 +2191,16 @@ var Reader = (function () {
       var list = tool === "hl" ? HL_COLORS : PEN_COLORS;
       r.innerHTML = list.map(function (c) { return '<button class="dot-btn' + (pen.c === c ? " on" : "") + '" data-act="pen-color" data-c="' + c + '" style="--dot:var(--pen-' + (tool === "hl" ? "hl-" : "") + c + ', var(--ink))" aria-label="' + c + '" title="' + c + '"></button>'; }).join("") +
         '<span class="seg sizes">' + [[0.6, "S"], [1, "M"], [1.7, "L"]].map(function (z) { return '<button data-act="pen-size" data-s="' + z[0] + '"' + ((pen.s || 1) === z[0] ? ' class="on"' : "") + ' aria-label="Size ' + z[1] + '">' + z[1] + "</button>"; }).join("") + "</span>";
+    }
+    function workImage() { // the work in dark ink on white, for Ask Claude to check
+      var bottom = 0;
+      sc.strokes.forEach(function (s) { s.pts.forEach(function (q) { if (q[1] > bottom) bottom = q[1]; }); });
+      sc.texts.forEach(function (t) { bottom = Math.max(bottom, t.y + t.size * 1.4); });
+      var off = document.createElement("canvas"), H = Math.max(200, Math.min(sc.h, Math.ceil(bottom + 40))); off.width = 1000; off.height = H;
+      var c = off.getContext("2d"); c.fillStyle = "#fff"; c.fillRect(0, 0, 1000, H);
+      sc.strokes.forEach(function (s) { if (ink(s)) drawStroke(c, s, "#111"); });
+      c.fillStyle = "#111"; sc.texts.forEach(function (t) { c.font = t.size + 'px "IBM Plex Sans", sans-serif'; c.fillText(t.t || "", t.x + 4, t.y + t.size); });
+      return off;
     }
     function inkBtn() { var b = $('[data-act="ink-paste"]', el); if (b) b.hidden = !INK; }
     el.__api = {
@@ -2151,7 +2244,11 @@ var Reader = (function () {
         var y = r.width > 0 ? Math.max(20, Math.max(0, -r.top + 90) * 1000 / r.width) : 40; // near the top of what's on screen
         keep(snap()); pasteItems(INK, 60 - b[0], y - b[1]);
       },
-      pen: function (what, v) { var p = PENS[tool]; if (!p) return; if (what === "c") p.c = v; else p.s = +v; P.pens = PENS; store(KEY + ":prefs", P); showPens(); },
+      pen: function (what, v) {
+        var p = PENS[tool]; if (!p) return; if (what === "c") p.c = v; else p.s = +v; P.pens = PENS;
+        if (EMB) { var pr = fetchJSON(KEY + ":prefs") || {}; pr.pens = PENS; store(KEY + ":prefs", pr); } else store(KEY + ":prefs", P); // a problem's pad mustn't change the app's current page
+        showPens();
+      },
       hasSel: function () { return !!sel; },
       taller: function () { sc.h = Math.min(sc.h + grow, 6000); size(); src.save(sc); },
       finger: function (on) { finger = on; },
@@ -2161,7 +2258,9 @@ var Reader = (function () {
       selected: function () { return sel ? sel.s.map(function (i) { return sc.strokes[i]; }).filter(ink) : null; }, // selected writing, or null when nothing is selected
       flash: function (b) { readBox = b; draw(); clearTimeout(readT); readT = setTimeout(function () { readBox = null; draw(); }, 3500); },
       reload: function () { sc = src.load(); sc.imgs = sc.imgs || []; sc.texts = sc.texts || []; undo = []; redo = []; answers = null; setSel(null); renderTexts(); size(); },
-      redraw: function () { answers = null; draw(); }
+      redraw: function () { answers = null; draw(); },
+      dataURL: function () { return workImage().toDataURL("image/png"); },
+      image: function () { var c = workImage(); return new Promise(function (res) { c.toBlob(res, "image/png"); }); }
     };
     if (window.ResizeObserver) new ResizeObserver(function () { size(); showMenu(); }).observe(box); else window.addEventListener("resize", size);
     renderTexts(); showPens(); inkBtn(); size();
@@ -2324,8 +2423,9 @@ var Reader = (function () {
       case "ink-paste": pad.__api.pasteInk(); break;
       case "scr-clear": pad.__api.clear(); break;
       case "scr-taller": pad.__api.taller(); break;
-      case "scr-read": readPad(pad, t, pad.dataset.pid === "_calc" ? "calc" : "clip"); break;
-      case "scr-calc": if (CALC) { CALC.open(); readPad(pad, t, "calc"); } break;
+      case "scr-read": if (EMB) EMB.host.read(EMB.pid, t, false); else readPad(pad, t, pad.dataset.pid === "_calc" ? "calc" : "clip"); break;
+      case "scr-calc": if (EMB) EMB.host.read(EMB.pid, t, true); else if (CALC) { CALC.open(); readPad(pad, t, "calc"); } break;
+      case "scr-ask": if (EMB) EMB.host.ask(EMB.pid, t); break;
       case "img-paste": pasteButton(); break;
       case "img-upload": $('[data-act="img-file"]', pad).click(); break;
       case "page-new": var id = addPage(); saveLocal(); queueSync(); showPage(id); toast("New page. Your other pages are in the tabs above."); break;
@@ -2356,13 +2456,14 @@ var Reader = (function () {
   });
   document.addEventListener("paste", function (e) { // a copied screenshot pasted anywhere on the page (not into a text box)
     if (/INPUT|TEXTAREA/.test(e.target.tagName) || !e.clipboardData) return;
+    if (EMB) { if (INK) { var me = mainPad(); if (me && me.__api) { e.preventDefault(); me.__api.pasteInk(); } } return; }
     var items = Array.prototype.slice.call(e.clipboardData.items || []), f = items.filter(function (it) { return it.kind === "file" && /^image\//.test(it.type); })[0];
     if (f) { e.preventDefault(); importImage(f.getAsFile()); }
     else if (INK) { var m = mainPad(); if (m && m.__api) { e.preventDefault(); m.__api.pasteInk(); } }
   });
   document.addEventListener("dragover", function (e) { if (e.target.closest && e.target.closest("#padHost")) e.preventDefault(); });
   document.addEventListener("drop", function (e) { // a picture dragged onto the pad
-    if (!e.target.closest || !e.target.closest("#padHost")) return;
+    if (EMB || !e.target.closest || !e.target.closest("#padHost")) return;
     var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
     if (f) { e.preventDefault(); importImage(f); }
   });
@@ -2575,6 +2676,7 @@ var Reader = (function () {
   var CALC = null;
   (function () {
     var btn = document.getElementById("calcBtn");
+    if (EMB) { btn.hidden = true; return; } // a problem's pad uses the app's calculator
     var box = document.createElement("div"); box.className = "calc"; box.hidden = true; box.setAttribute("role", "dialog"); box.setAttribute("aria-label", "Calculator");
     box.innerHTML = '<div class="calc-h"><div class="seg"><button class="on" data-m="val">Calculate</button><button data-m="int">Integral</button><button data-m="gr">Graph</button></div><button class="icon-btn" data-x aria-label="Close calculator">×</button></div>' +
       '<div data-p="val"><input class="calc-in" data-f="e" placeholder="e.g. ln(865)/9 or sin(2)" aria-label="Expression" autocomplete="off" autocapitalize="off" spellcheck="false"></div>' +
@@ -2678,12 +2780,31 @@ var Reader = (function () {
     };
   })();
 
-  applyTheme();
-  showPage(P.cur);
-  imgKeys().then(function (keys) {
-    var R = refs();
-    (keys || []).forEach(function (k) { if (R[k]) HAVE[k] = 1; else imgDel(k); }); // undo can't reach a picture from an earlier visit
-  }).then(initSync, initSync);
+  function embedTheme() { var t = EMB.host.theme(); if (t) document.documentElement.setAttribute("data-theme", t); else document.documentElement.removeAttribute("data-theme"); redrawAll(); }
+  function showEmbed() {
+    var pid = EMB.pid, src = mainSrc(pid);
+    src.drawing = function (on) { EMB.host.drawing(pid, on); };
+    $("#padHost").innerHTML = padHTML(pid, "embed");
+    var el = mainPad(); mountPad(el, src, 260);
+    var api = el.__api, reload = api.reload;
+    api.reload = function () { embedLoad(); reload(); }; // the app synced newer work in from another device
+    EMB.host.ready(pid, api);
+    function tell() { var h = $("#padHost"); EMB.host.height(pid, h.getBoundingClientRect().bottom + window.scrollY + 2); } // the frame's own height can't tell it to shrink
+    if (window.ResizeObserver) new ResizeObserver(tell).observe($("#padHost"));
+    tell(); scheduleSolve(300);
+  }
+  if (EMB) {
+    embedTheme();
+    try { new MutationObserver(embedTheme).observe(window.parent.document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); } catch (e) { setInterval(embedTheme, 3000); }
+    showEmbed();
+  } else {
+    applyTheme();
+    showPage(P.cur);
+    imgKeys().then(function (keys) { // (never in embed mode: it would forget the Scratch Pad's own pictures)
+      var R = refs();
+      (keys || []).forEach(function (k) { if (R[k]) HAVE[k] = 1; else imgDel(k); }); // undo can't reach a picture from an earlier visit
+    }).then(initSync, initSync);
+  }
 })();
 
 </script>
