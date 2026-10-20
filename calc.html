@@ -931,7 +931,7 @@ var WAMAP = {
 
 var CANVAS = "https://canvas.uw.edu/courses/1931711/assignments/";
 var EXAMS = [
-  { id: "X1", title: "Exam 1", covers: "4.9–5.5", date: "2026-10-20", time: "3:15 PM", pts: 60, phase: 1, prep: "B8", canvas: "11483545" },
+  { id: "X1", title: "Exam 1", covers: "4.9–5.5", date: "2026-10-20", time: "2:05 PM", pts: 60, phase: 1, prep: "B8", canvas: "11483545" },
   { id: "X2", title: "Exam 2", covers: "6.1–6.7", date: "2026-11-10", time: "3:30 PM", pts: 60, phase: 2, prep: "C8", canvas: "11483546" },
   { id: "X3", title: "Exam 3", covers: "8.1–8.6, 8.9", date: "2026-12-08", time: "3:30 PM", pts: 60, phase: 3, prep: "E4", canvas: "11483547" },
   { id: "XF", title: "Final exam", covers: "everything", date: "2026-12-17", time: "5:30 PM", pts: 100, phase: 4, prep: "F3", canvas: "11483548" }
@@ -1329,7 +1329,7 @@ var SESSIONS = [
   topics: ["Everything on Exam 1: 4.9 and 5.1–5.5", "A 50-minute practice test under exam conditions", "A plan for Monday and exam day"],
   links: [["Paul: Calculus I practice problems (Integrals chapter)", "https://tutorial.math.lamar.edu/Problems/CalcI/IntegralsIntro.aspx"], ["Khan: Integration unit test", KA + "cs1-integration-and-accumulation-of-change"]],
   parts: [
-    { t: "What’s on Exam 1", h: "<p>Exam 1 is <b>Tue Oct 20 at 3:15 PM</b> and covers 4.9 and 5.1–5.5. Here’s every skill on it and where you learned it. If a row makes you nervous, reread that session first.</p>" +
+    { t: "What’s on Exam 1", h: "<p>Exam 1 is <b>Tue Oct 20, starting around 2:05 PM</b> (six 10-point questions, 70 minutes, calculator and one 4×6 note card allowed; see <a href=\"#/s/B9\">B9</a>) and covers 4.9 and 5.1–5.5. Here’s every skill on it and where you learned it. If a row makes you nervous, reread that session first.</p>" +
       tbl(["Section", "Skill", "Review"], [
         ["4.9", "Antiderivatives, +C, rewriting roots and fractions as powers", '<a href="#/s/A3">A3</a>, <a href="#/s/A4">A4</a>'],
         ["4.9", "Initial value problems (use the point to find C)", '<a href="#/s/A5">A5</a>'],
@@ -1392,6 +1392,140 @@ var SESSIONS = [
     { k: "txt", text: "Suppose 2 ≤ " + GX + " ≤ 6 for every x in [0, 3]. What is the largest possible value of " + DIH("0", "3", GX) + "?", type: "number", ans: "18", sol: ["The largest g can be is 6 the whole way.", "6 × (3 − 0) = 18"] },
     { k: "i", q: "x^3/(x^4 + 1)", type: "antideriv", ans: "(1/4)ln(x^4 + 1) + C", sol: ["u = x⁴ + 1, du = 4x³ dx, so x³ dx = du/4", "(1/4)∫ du/u = (1/4) ln|u|", M("(1/4)ln(x^4 + 1) + C")] }
   ] }
+},
+/* ================= B9 ================= */
+// The instructor's Exam 1 review guide (STMATH 125, uploaded by the user Oct 20, exam day), problem by problem.
+// Numbered like the guide so the user can match them to the PDF. Exam 1 covers 4.9–6.1, so 6.1 (motion) is here too.
+{ id: "B9", block: "B", date: "2026-10-20", title: "Exam 1 review guide", test: "Problem set", star: true,
+  topics: ["Your instructor’s review guide, worked problem by problem", "What to put on your 4×6 note card", "Every answer checked, with full steps behind “Show solution”"],
+  links: [["Paul: Calculus I practice problems (Integrals chapter)", "https://tutorial.math.lamar.edu/Problems/CalcI/IntegralsIntro.aspx"], ["Khan: Applications of integrals (6.1)", KA + "cs1-applications-of-integrals"]],
+  parts: [
+    { t: "The exam", h: "<p>Exam 1 <b>starts around 2:05 PM</b> today (class time is 3:15, but the exam begins early, after a short review). 70 minutes, <b>six questions, 10 points each</b>. You may use an approved calculator and <b>one 4×6 note card</b>, both sides, anything on it. <b>Correct answers with no work get at most half credit</b>, so write every step.</p>" +
+      "<p>Canvas says the exam covers 4.9–5.5; the review guide says 4.9–6.1. Put 4.9–5.5 first. Problems 25–30 below are 6.1 (motion, taught in <a href=\"#/s/C1\">C1</a>): do them if you have time.</p>" +
+      tbl(["Guide problems", "Skill", "Review"], [
+        ["1–5", "Antiderivatives, +C, initial value problems", '<a href="#/s/A3">A3</a>, <a href="#/s/A4">A4</a>, <a href="#/s/A5">A5</a>'],
+        ["6–11", "Riemann sums (left, right, midpoint, from a table) and sigma notation", '<a href="#/s/B1">B1</a>'],
+        ["12–16", "Definite integrals by geometry, properties, area functions", '<a href="#/s/B2">B2</a>'],
+        ["17–20", "Fundamental Theorem, net area vs. area", '<a href="#/s/B4">B4</a>'],
+        ["21–23", "Symmetry, average value", '<a href="#/s/B5">B5</a>'],
+        ["24", "u-substitution, indefinite and definite", '<a href="#/s/B6">B6</a>, <a href="#/s/B7">B7</a>'],
+        ["25–30", "Displacement, distance, position from velocity, net change (6.1)", '<a href="#/s/C1">C1</a>']
+      ]) },
+    { t: "How to use this today", h: steps([
+        "Do the problems in the Practice tab in order, on the scratch pad, without looking at the solution first. Your instructor says the same thing: reading a solution feels like knowing it, but it isn’t.",
+        "Show every step, even where the problem doesn’t ask for it. The exam gives points for the work.",
+        "Problems with a sketch (7, 8, 12–14, 16, 18, 22, 25, 26): the app checks the numbers, but practise the sketch on paper too.",
+        "Missed ones go to your mistake log. Redo those once, then stop at least an hour before the exam."
+      ]) + rule("Short on time? Do 3, 7b, 15, 16, 17, 20 and 24. Together they touch every section on Canvas’s list.") },
+    { t: "Your 4×6 note card", h: "<p>Anything goes, both sides. Write it yourself: making the card is studying. What earns its space:</p>" + steps([
+        "<b>Antiderivative table:</b> xⁿ → xⁿ⁺¹/(n + 1) (n ≠ −1), 1/x → ln|x|, eˣ → eˣ, sin → −cos, cos → sin, sec² → tan, sec tan → sec, 1/(1 + x²) → arctan. And “+C!”",
+        "<b>Riemann sums:</b> Δx = (b − a)/n, xᵢ = a + iΔx. Left uses x₀…xₙ₋₁, right x₁…xₙ, midpoint the middles. Rising graph: left under, right over (falling: the reverse).",
+        "<b>Sums:</b> Σk = n(n + 1)/2, Σk² = n(n + 1)(2n + 1)/6, Σc = cn.",
+        "<b>Integral rules:</b> flip limits → change sign; split at any c; ∫ₐᵃ = 0; odd on [−a, a] → 0; even → 2∫₀ᵃ. Area = add sizes; net area = signs count.",
+        "<b>FTC:</b> ∫ₐᵇ f = F(b) − F(a). d/dx ∫ₐ^g(x) f(t) dt = f(g(x))·g′(x); a variable on the bottom → flip and add a minus; both → split at 0.",
+        "<b>Average value:</b> (1/(b − a))∫ₐᵇ f.",
+        "<b>u-sub:</b> pick u (the inside), du = u′ dx, solve for dx; definite → change the limits too (or switch back).",
+        "<b>Geometry:</b> semicircle √(r² − x²): πr²/2 (quarter: πr²/4); triangle bh/2.",
+        "<b>6.1:</b> displacement = ∫v; distance = ∫|v| (split where v = 0); s(b) = s(a) + ∫v."
+      ]) }
+  ],
+  probs: [
+    // 1–2 antiderivatives
+    { k: "i", q: "3sec(x)^2", type: "antideriv", ans: "3tan(x) + C", hint: "Which function has derivative sec² x? Type tan x as tan(x).", sol: ["The derivative of tan x is sec² x.", M("3tan(x) + C"), "Check: d/dx(3 tan x) = 3 sec² x ✓"] },
+    { k: "txt", text: "1b. Find all antiderivatives of " + mx("<i>f</i>(<i>y</i>) = " + MI("-2/x^3", "y")) + ".", type: "antideriv", v: "y", ans: "1/x^2 + C", hint: "Rewrite as −2y⁻³ first, then use the power rule.", sol: [M("-2x^(-3)", "y"), "Power rule: " + M("-2x^(-2)/(-2)", "y") + " = " + M("x^(-2)", "y"), M("1/x^2 + C", "y")] },
+    { k: "i", q: "3/x^4 + 2 - 3/x^2", type: "antideriv", ans: "-1/x^3 + 2x + 3/x + C", hint: "Rewrite as 3x⁻⁴ + 2 − 3x⁻² and integrate each term.", sol: [M("3x^(-4) + 2 - 3x^(-2)"), M("3x^(-3)/(-3)") + " + 2x − " + M("3x^(-1)/(-1)"), M("-1/x^3 + 2x + 3/x + C")] },
+    { k: "i", q: "(x^2 - 36)/(x - 6)", type: "antideriv", ans: "x^2/2 + 6x + C", hint: "Factor the top: x² − 36 = (x − 6)(x + 6).", sol: ["(x − 6)(x + 6)/(x − 6) = x + 6", II("x + 6") + " = " + M("x^2/2 + 6x + C")] },
+    { k: "txt", text: "2c. Find " + '<span class="m"><span class="is">∫</span>' + MI("1/(2x)", "y") + "&thinsp;<i>dy</i></span>.", type: "antideriv", v: "y", ans: "ln|x|/2 + C", hint: "Pull out the 1/2: it’s (1/2)∫(1/y) dy.", sol: ["(1/2)∫(1/y) dy", "∫(1/y) dy = ln|y|", M("ln|x|/2 + C", "y")] },
+    // 3–5 initial value problems
+    { k: "ivp", q: "8x^3 + sin(x)", at: "0", val: "2", type: "expr", ivp: true, ans: "2x^4 - cos(x) + 3", hint: "The antiderivative of sin x is −cos x, and cos 0 = 1.", sol: [M("2x^4 - cos(x) + C"), "F(0) = 0 − 1 + C = 2, so C = 3", M("2x^4 - cos(x) + 3")] },
+    { k: "txt", text: "4. " + mx("<i>f</i>′(<i>u</i>) = " + MI("4(cos(x) - sin(x))", "u")) + " and " + mx("<i>f</i>(π/2) = 0") + ". Find " + mx("<i>f</i>(<i>u</i>)") + ".", type: "expr", ivp: true, v: "u", ans: "4sin(x) + 4cos(x) - 4", hint: "∫cos u = sin u and ∫(−sin u) = cos u. Then sin(π/2) = 1, cos(π/2) = 0.", sol: [M("4sin(x) + 4cos(x) + C", "u"), "f(π/2) = 4(1) + 4(0) + C = 0, so C = −4", M("4sin(x) + 4cos(x) - 4", "u")] },
+    { k: "txt", text: "5. An object has velocity " + tq(VT, "2sqrt(x)") + " and " + mx("<i>s</i>(0) = 1") + ". Find its position " + mx(ST) + ".", type: "expr", ivp: true, v: "t", ans: "(4/3)x^(3/2) + 1", hint: "Write 2√t as 2t^(1/2), then the power rule.", sol: [M("2x^(1/2)", "t") + " → " + M("2x^(3/2)/(3/2)", "t") + " = " + M("(4/3)x^(3/2)", "t"), "s(0) = 0 + C = 1", M("(4/3)x^(3/2) + 1", "t")] },
+    // 6–9 Riemann sums
+    { k: "txt", text: "6. Velocity " + tq(VT, "1/(2x + 1)") + ". Approximate the displacement on 0 ≤ t ≤ 8 with n = 4 subintervals and left endpoints.", type: "number", ans: "2(1 + 1/5 + 1/9 + 1/13)", hint: "Δt = 8/4 = 2. Left endpoints: 0, 2, 4, 6.", sol: ["Δt = (8 − 0)/4 = 2", "Heights v(0), v(2), v(4), v(6) = 1, 1/5, 1/9, 1/13", "2(1 + 1/5 + 1/9 + 1/13) = 1624/585 ≈ 2.776"] },
+    { k: "txt", text: "7a. Left Riemann sum for " + M("cos(x)") + " on [0, π/2] with n = 4.", type: "number", ans: "pi/8*(1 + cos(pi/8) + cos(pi/4) + cos(3pi/8))", hint: "Δx = π/8. Left endpoints: 0, π/8, π/4, 3π/8.", sol: ["Δx = (π/2)/4 = π/8. Grid: 0, π/8, π/4, 3π/8, π/2.", "Left: (π/8)(cos 0 + cos π/8 + cos π/4 + cos 3π/8)", "= (π/8)(1 + 0.924 + 0.707 + 0.383) ≈ 1.183", "cos x falls on this interval, so the left sum overestimates."] },
+    { k: "txt", text: "7a. Right Riemann sum for " + M("cos(x)") + " on [0, π/2] with n = 4.", type: "number", ans: "pi/8*(cos(pi/8) + cos(pi/4) + cos(3pi/8) + 0)", hint: "Right endpoints: π/8, π/4, 3π/8, π/2 (and cos π/2 = 0).", sol: ["Right: (π/8)(cos π/8 + cos π/4 + cos 3π/8 + cos π/2)", "= (π/8)(0.924 + 0.707 + 0.383 + 0) ≈ 0.791", "cos x falls, so the right sum underestimates. (The true area is 1.)"] },
+    { k: "txt", text: "7b. Left Riemann sum for " + M("x^2 - 1") + " on [2, 4] with n = 4.", type: "number", ans: "13.75", hint: "Δx = 0.5. Left endpoints: 2, 2.5, 3, 3.5.", sol: ["Δx = 0.5. Grid: 2, 2.5, 3, 3.5, 4.", "Heights: 3, 5.25, 8, 11.25", "0.5 × 27.5 = 13.75", "x² − 1 rises here, so the left sum underestimates."] },
+    { k: "txt", text: "7b. Right Riemann sum for " + M("x^2 - 1") + " on [2, 4] with n = 4.", type: "number", ans: "19.75", hint: "Right endpoints: 2.5, 3, 3.5, 4.", sol: ["Heights: 5.25, 8, 11.25, 15", "0.5 × 39.5 = 19.75", "The function rises, so the right sum overestimates."] },
+    { k: "txt", text: "8a. Midpoint Riemann sum for " + M("2x + 1") + " on [0, 4] with n = 4.", type: "number", ans: "20", hint: "Δx = 1. Midpoints: 0.5, 1.5, 2.5, 3.5.", sol: ["Δx = 1. Grid: 0, 1, 2, 3, 4.", "Heights at the midpoints: 2, 4, 6, 8", "1 × 20 = 20 (exact here, because the graph is a straight line)"] },
+    { k: "txt", text: "8b. Midpoint Riemann sum for " + M("sqrt(x)") + " on [1, 3] with n = 4.", type: "number", ans: "0.5*(sqrt(1.25) + sqrt(1.75) + sqrt(2.25) + sqrt(2.75))", hint: "Δx = 0.5. Midpoints: 1.25, 1.75, 2.25, 2.75.", sol: ["Δx = 0.5. Grid: 1, 1.5, 2, 2.5, 3.", "Heights: √1.25, √1.75, √2.25, √2.75 ≈ 1.118, 1.323, 1.5, 1.658", "0.5 × 5.599 ≈ 2.800"] },
+    { k: "txt", text: "9. f(x) at x = 0, 0.5, 1, 1.5, 2 is 5, 3, 2, 1, 1. Find the <b>left</b> Riemann sum on [0, 2] with n = 4.", type: "number", ans: "5.5", hint: "Δx = 0.5. Left uses the first four values.", sol: ["0.5 × (5 + 3 + 2 + 1) = 0.5 × 11 = 5.5"] },
+    { k: "txt", text: "9. Same table (5, 3, 2, 1, 1). Find the <b>right</b> Riemann sum on [0, 2] with n = 4.", type: "number", ans: "3.5", hint: "Right uses the last four values.", sol: ["0.5 × (3 + 2 + 1 + 1) = 0.5 × 7 = 3.5"] },
+    // 10–11 sigma notation
+    { k: "txt", text: "10a. Which is 1 + 2 + 3 + 4 + 5?", type: "choice", opts: [SIG("1", "5", "x"), SIG("0", "5", "x + 1"), SIG("1", "5", "x + 1")], ans: 0, sol: ["k runs 1 to 5, and each term is k."] },
+    { k: "txt", text: "10b. Which is 4 + 5 + 6 + 7 + 8 + 9?", type: "choice", opts: [SIG("1", "6", "x"), SIG("4", "9", "x"), SIG("1", "9", "x")], ans: 1, sol: ["Start k at 4 and stop at 9. (Σ from k = 1 to 6 of (k + 3) also works.)"] },
+    { k: "txt", text: "10c. Which is 1² + 2² + 3² + 4²?", type: "choice", opts: [SIG("1", "4", "2x"), SIG("1", "16", "x"), SIG("1", "4", "x^2")], ans: 2, sol: ["Each term is k², for k = 1 to 4."] },
+    { k: "txt", text: "10d. Which is 1 + 1/2 + 1/3 + 1/4?", type: "choice", opts: [SIG("1", "4", "1/x"), SIG("1", "4", "x/2"), SIG("1", "4", "1/(2x)")], ans: 0, sol: ["Each term is 1/k, for k = 1 to 4."] },
+    { k: "sum", from: "1", to: "10", q: "x", type: "number", ans: "55", hint: "1 + 2 + … + n = n(n + 1)/2.", sol: ["10·11/2 = 55"] },
+    { k: "sum", from: "1", to: "6", q: "2x + 1", type: "number", ans: "48", hint: "Split: 2Σk + Σ1.", sol: ["2(6·7/2) + 6 = 42 + 6 = 48"] },
+    { k: "sum", from: "1", to: "4", q: "x^2", type: "number", ans: "30", hint: "Just add them: 1 + 4 + 9 + 16.", sol: ["1 + 4 + 9 + 16 = 30"] },
+    { k: "sum", from: "1", to: "5", q: "1 + x^2", type: "number", ans: "60", hint: "Σ1 = 5, and Σk² = n(n + 1)(2n + 1)/6.", sol: ["Σ1 = 5", "Σk² = 5·6·11/6 = 55", "5 + 55 = 60"] },
+    { k: "sum", from: "1", to: "3", q: "(2x + 2)/3", type: "number", ans: "6", hint: "Only three terms: m = 1, 2, 3.", sol: ["(4 + 6 + 8)/3 = 18/3 = 6"] },
+    { k: "sum", from: "1", to: "3", q: "3x - 4", type: "number", ans: "6", hint: "Three terms.", sol: ["(−1) + 2 + 5 = 6"] },
+    { k: "sum", from: "1", to: "5", q: "2x + x^2", type: "number", ans: "85", hint: "2Σp + Σp².", sol: ["2(15) + 55 = 85"] },
+    { k: "sum", from: "0", to: "4", q: "sin(pi x/2)", type: "number", ans: "0", hint: "sin 0, sin(π/2), sin π, sin(3π/2), sin 2π.", sol: ["0 + 1 + 0 + (−1) + 0 = 0"] },
+    // 12–16 geometry, properties, area functions
+    { k: "di", a: "-1", b: "4", q: "2", type: "number", ans: "10", hint: "y = 2 is a flat line: the region is a rectangle.", sol: ["Rectangle: width 4 − (−1) = 5, height 2", "5 × 2 = 10"] },
+    { k: "txt", text: "13. " + mx("<i>f</i>(<i>x</i>) = 1 − |<i>x</i>|") + " on −2 ≤ x ≤ 2. Find the <b>area</b> between the graph and the x-axis.", type: "number", ans: "2", hint: "It’s a tent: above the axis on [−1, 1], below it on [−2, −1] and [1, 2].", sol: ["Above: triangle from −1 to 1, height 1: area 1", "Below: two triangles, base 1, height 1: 1/2 each, 1 together", "Area counts everything as positive: 1 + 1 = 2"] },
+    { k: "txt", text: "13. Same " + mx("<i>f</i>(<i>x</i>) = 1 − |<i>x</i>|") + " on −2 ≤ x ≤ 2. Find the <b>net area</b>.", type: "number", ans: "0", hint: "Net area: above counts +, below counts −.", sol: ["Above: +1. Below: −1.", "Net: 1 − 1 = 0"] },
+    { k: "di", a: "0", b: "4", q: "sqrt(16 - x^2)", type: "number", ans: "4pi", hint: "y = √(16 − x²) is the top half of a circle of radius 4.", sol: ["From 0 to 4 is a quarter of a circle of radius 4.", "(1/4)π(4²) = 4π"] },
+    { k: "txt", text: "15. On [1, 6]: " + DIH("1", "6", FX) + " = 10, " + DIH("1", "6", GX) + " = 5, " + DIH("4", "6", FX) + " = 5, " + DIH("1", "4", GX) + " = 2. Find " + DIH("1", "4", "3" + FX) + ".", type: "number", ans: "15", hint: "First find ∫ from 1 to 4 of f: (1 to 6) − (4 to 6).", sol: [DIH("1", "4", FX) + " = 10 − 5 = 5", "3 × 5 = 15"] },
+    { k: "txt", text: "15b. Same facts. Find " + DIH("1", "6", "(" + FX + " − " + GX + ")") + ".", type: "number", ans: "5", hint: "Split it into two integrals.", sol: ["10 − 5 = 5"] },
+    { k: "txt", text: "15c. Same facts. Find " + DIH("1", "4", "(" + FX + " − " + GX + ")") + ".", type: "number", ans: "3", hint: "∫ from 1 to 4 of f is 5 (from 15a).", sol: ["5 − 2 = 3"] },
+    { k: "txt", text: "15d. Same facts. Find " + DIH("4", "6", "(" + GX + " − " + FX + ")") + ".", type: "number", ans: "-2", hint: "∫ from 4 to 6 of g = (1 to 6) − (1 to 4).", sol: [DIH("4", "6", GX) + " = 5 − 2 = 3", "3 − 5 = −2"] },
+    { k: "txt", text: "15e. Same facts. Find " + DIH("4", "6", "8" + GX) + ".", type: "number", ans: "24", hint: "∫ from 4 to 6 of g is 3.", sol: ["8 × 3 = 24"] },
+    { k: "txt", text: "15f. Same facts. Find " + DIH("4", "1", "2" + FX) + ".", type: "number", ans: "-10", hint: "The limits are backwards: flip them and change the sign.", sol: [DIH("4", "1", FX) + " = −" + DIH("1", "4", FX) + " = −5", "2 × (−5) = −10"] },
+    { k: "txt", text: "16. In the graph, the shaded areas are 8 (from −2 to 0), 17 (from 0 to 4) and 9 (from 4 to 8, below the axis). " + mx("<i>A</i>(<i>x</i>) = ∫<sub>−2</sub><sup><i>x</i></sup> <i>f</i>(<i>t</i>) <i>dt</i>") + " and " + mx("<i>F</i>(<i>x</i>) = ∫<sub>4</sub><sup><i>x</i></sup> <i>f</i>(<i>t</i>) <i>dt</i>") + ". Find " + mx("<i>A</i>(4)") + "." +
+      fig({ x: [-3.2, 9.6], y: [-3.6, 6.4], curves: [{ f: "(x + 2)(x - 4)(x - 8)/12", from: -2.6, to: 9.2 }], fill: [{ top: "(x + 2)(x - 4)(x - 8)/12", bot: "0", from: -2, to: 4 }, { top: "0", bot: "(x + 2)(x - 4)(x - 8)/12", from: 4, to: 8 }], xt: [-2, 4, 8], lab: [[-1.2, 1.2, "8", "middle"], [2, 1.8, "17", "middle"], [6, -1, "9", "middle"]], alt: "The graph of f: above the axis from −2 to 4, below it from 4 to 8, above it again after 8." }),
+      type: "number", ans: "25", hint: "A starts adding area at −2.", sol: ["From −2 to 4: 8 + 17 = 25"] },
+    { k: "txt", text: "16. Same graph. Find " + mx("<i>A</i>(−2)") + ".", type: "number", ans: "0", hint: "Both limits are −2.", sol: ["An integral from −2 to −2 covers no width: 0."] },
+    { k: "txt", text: "16. Same graph. Find " + mx("<i>A</i>(8)") + ".", type: "number", ans: "16", hint: "Area below the axis counts negative.", sol: ["8 + 17 − 9 = 16"] },
+    { k: "txt", text: "16. Same graph. Find " + mx("<i>F</i>(8)") + ".", type: "number", ans: "-9", hint: "F starts at 4.", sol: ["From 4 to 8 the area is below the axis: −9"] },
+    { k: "txt", text: "16. Same graph. Find " + mx("<i>F</i>(4)") + ".", type: "number", ans: "0", hint: "Same limit top and bottom.", sol: ["From 4 to 4: 0"] },
+    // 17–20 Fundamental Theorem
+    { k: "di", a: "-2", b: "3", q: "x^2 - x - 6", type: "number", ans: "-125/6", hint: "Antiderivative: x³/3 − x²/2 − 6x. Be careful with the negatives at −2.", sol: [M("x^3/3 - x^2/2 - 6x") + " from −2 to 3", "At 3: 9 − 4.5 − 18 = −13.5", "At −2: −8/3 − 2 + 12 = 22/3", "−13.5 − 22/3 = −125/6 ≈ −20.83"] },
+    { k: "di", a: "1", b: "9", q: "2/sqrt(x)", type: "number", ans: "8", hint: "2x^(−1/2) integrates to 4x^(1/2).", sol: [M("4sqrt(x)") + " from 1 to 9", "4(3) − 4(1) = 8"] },
+    { k: "txt", text: "17c. Evaluate " + DI("1/2", "1", "x^(-3) - 8", "t") + ".", type: "number", ans: "-5/2", hint: "t⁻³ integrates to t⁻²/(−2) = −1/(2t²).", sol: [M("-1/(2x^2) - 8x", "t") + " from 1/2 to 1", "At 1: −1/2 − 8 = −8.5", "At 1/2: −2 − 4 = −6", "−8.5 − (−6) = −2.5"] },
+    { k: "txt", text: "18. Find the area between " + yq("x^(1/2)") + " and the x-axis from x = 1 to x = 4. (Here the net area is the same, because the graph stays above the axis.)", type: "number", ans: "14/3", hint: "x^(1/2) integrates to (2/3)x^(3/2).", sol: [M("(2/3)x^(3/2)") + " from 1 to 4", "(2/3)(8) − (2/3)(1) = 14/3", "√x ≥ 0 on [1, 4], so area = net area = 14/3"] },
+    { k: "txt", text: "19. Find the <b>area</b> between " + yq("1/x") + " and the x-axis on [−2, −1].", type: "number", ans: "ln(2)", hint: "The integral comes out negative (the graph is below the axis). Area is its size.", sol: [DI("-2", "-1", "1/x") + " = ln|x| from −2 to −1 = ln 1 − ln 2 = −ln 2", "Below the axis, so the area is ln 2 ≈ 0.693"] },
+    { k: "txt", text: "20. Simplify " + mx("<i>d</i>/<i>dx</i>") + " " + DIH("-x", "x", "√(1 + <i>t</i>²)", "t") + ".", type: "expr", ans: "2sqrt(1 + x^2)", hint: "Split at 0 as the hint says. The piece from −x to 0 is minus the piece from 0 to −x.", sol: ["d/dx of " + DIH("0", "x", "√(1 + <i>t</i>²)", "t") + " = √(1 + x²)", "d/dx of " + DIH("-x", "0", "√(1 + <i>t</i>²)", "t") + " = −√(1 + x²) · (−1) = √(1 + x²)", "Total: " + M("2sqrt(1 + x^2)")] },
+    // 21–23 symmetry, average value
+    { k: "di", a: "-2", b: "2", q: "x^2 + x^3", type: "number", ans: "16/3", hint: "x³ is odd (cancels to 0); x² is even (double the half).", sol: [DI("-2", "2", "x^3") + " = 0", DI("-2", "2", "x^2") + " = 2" + DI("0", "2", "x^2") + " = 2(8/3) = 16/3"] },
+    { k: "di", a: "-2", b: "2", q: "(x^3 - 4x)/(x^2 + 1)", type: "number", ans: "0", hint: "Put −x in: the top changes sign, the bottom doesn’t.", sol: ["Odd top over even bottom is odd.", "Over [−2, 2] an odd function’s integral is 0."] },
+    { k: "txt", text: "22. Average value of " + M("cos(x)") + " on [−π/2, π/2].", type: "number", ans: "2/pi", hint: "Average = (1/(b − a)) × the integral.", sol: [DI("-pi/2", "pi/2", "cos(x)") + " = sin(π/2) − sin(−π/2) = 2", "Average: 2/π ≈ 0.637"] },
+    { k: "txt", text: "23. Velocity " + tq(VT, "x^2 + 3x") + " m/s on [0, 6]. Find the average velocity.", type: "number", ans: "21", hint: "Average velocity = displacement ÷ time.", sol: [DI("0", "6", "x^2 + 3x", "t") + " = 72 + 54 = 126", "126 ÷ 6 = 21 m/s"] },
+    // 24 u-substitution
+    { k: "i", q: "x^3(x^4 + 16)^6", type: "antideriv", ans: "(x^4 + 16)^7/28 + C", hint: "u = x⁴ + 16.", sol: ["u = x⁴ + 16, du = 4x³ dx, so x³ dx = du/4", "(1/4)∫u⁶ du = u⁷/28", M("(x^4 + 16)^7/28 + C")] },
+    { k: "i", q: "(x^6 - 3x^2)^4(x^5 - x)", type: "antideriv", ans: "(x^6 - 3x^2)^5/30 + C", hint: "u = x⁶ − 3x². du = (6x⁵ − 6x) dx = 6(x⁵ − x) dx.", sol: ["u = x⁶ − 3x², du = 6(x⁵ − x) dx", "(1/6)∫u⁴ du = u⁵/30", M("(x^6 - 3x^2)^5/30 + C")] },
+    { k: "i", q: "sec(10x + 7)^2", type: "antideriv", ans: "tan(10x + 7)/10 + C", hint: "u = 10x + 7, so dx = du/10.", sol: ["u = 10x + 7, du = 10 dx", "(1/10)∫sec² u du = tan(u)/10", M("tan(10x + 7)/10 + C")] },
+    { k: "i", q: "sin(x)sec(x)^8", type: "antideriv", ans: "sec(x)^7/7 + C", hint: "sec x = 1/cos x, so this is sin x / cos⁸ x. Let u = cos x.", sol: ["sin x/cos⁸ x. u = cos x, du = −sin x dx", "−∫u⁻⁸ du = u⁻⁷/7", "= 1/(7cos⁷ x) = " + M("sec(x)^7/7 + C")] },
+    { k: "di", a: "1", b: "3", q: "2^x/(2^x + 4)", type: "number", ans: "1", hint: "u = 2ˣ + 4, du = (ln 2)2ˣ dx. New limits 6 to 12.", sol: ["u = 2ˣ + 4, du = (ln 2)·2ˣ dx. x = 1 → u = 6, x = 3 → u = 12", "(1/ln 2)∫ from 6 to 12 of du/u = (1/ln 2)(ln 12 − ln 6)", "= ln 2 / ln 2 = 1"] },
+    { k: "di", a: "0", b: "4", q: "x/(x^2 + 1)", type: "number", ans: "ln(17)/2", hint: "u = x² + 1, new limits 1 to 17.", sol: ["u = x² + 1, x dx = du/2", "(1/2)(ln 17 − ln 1) = (ln 17)/2 ≈ 1.417"] },
+    { k: "di", a: "2", b: "3", q: "x/(x^2 - 1)^(1/3)", type: "number", ans: "(3/4)(4 - 3^(2/3))", hint: "u = x² − 1, new limits 3 to 8. ∛ means the 1/3 power.", sol: ["u = x² − 1, x dx = du/2, limits 3 to 8", "(1/2)∫u^(−1/3) du = (1/2)(3/2)u^(2/3) = (3/4)u^(2/3)", "(3/4)(8^(2/3) − 3^(2/3)) = (3/4)(4 − 3^(2/3)) ≈ 1.440"] },
+    // 25–30 motion and net change (6.1)
+    { k: "txt", text: "25. The graph is an object’s velocity (mi/hr, t in hours). The areas are 12 on [0, 1] (above), 16 on [1, 3] (below) and 10 on [3, 5] (above). When is it moving in the positive direction?" +
+      fig({ x: [-0.4, 5.7], y: [-2.4, 8], curves: [{ f: "-(x - 1)(x - 3)(x - 5)/2", from: 0, to: 5.3 }], fill: [{ top: "-(x - 1)(x - 3)(x - 5)/2", bot: "0", from: 0, to: 1 }, { top: "0", bot: "-(x - 1)(x - 3)(x - 5)/2", from: 1, to: 3 }, { top: "-(x - 1)(x - 3)(x - 5)/2", bot: "0", from: 3, to: 5 }], xt: [1, 2, 3, 4, 5], lab: [[0.35, 1.6, "12", "middle"], [2, -0.8, "16", "middle"], [4, 0.45, "10", "middle"]], alt: "Velocity above the axis from 0 to 1, below from 1 to 3, above from 3 to 5." }),
+      type: "choice", opts: ["(0, 1) and (3, 5)", "(1, 3)", "(0, 3)", "the whole time, (0, 5)"], ans: 0, sol: ["Positive direction = velocity above the axis: (0, 1) and (3, 5)."] },
+    { k: "txt", text: "25b. Same graph. Displacement over [0, 3]?", type: "number", ans: "-4", hint: "Displacement: above counts +, below counts −.", sol: ["12 − 16 = −4 miles"] },
+    { k: "txt", text: "25c. Same graph. Total distance traveled over [1, 5]?", type: "number", ans: "26", hint: "Distance counts every area as positive.", sol: ["16 + 10 = 26 miles"] },
+    { k: "txt", text: "25d. Same graph. Displacement over [0, 5]?", type: "number", ans: "6", sol: ["12 − 16 + 10 = 6 miles"] },
+    { k: "txt", text: "25e. Same graph. Where is the object after 5 hours, compared with where it started?", type: "choice", opts: ["6 miles behind where it started", "6 miles ahead, in the positive direction", "back where it started", "38 miles ahead"], ans: 1, sol: ["Displacement over [0, 5] is +6, so it ends 6 miles from the start in the positive direction (even though it traveled 38 miles)."] },
+    { k: "txt", text: "26. The graph is a velocity v(t), made of straight pieces through (0, 2), (3, −1), (4, 2) and (5, 0), with s(0) = 0. Find the displacement from t = 0 to t = 5. (Read the points off your own copy of the figure to be sure.)" +
+      fig({ x: [-0.5, 5.7], y: [-1.6, 3.3], poly: [[[0, 2], [3, -1], [4, 2], [5, 0]]], dots: [[0, 2], [3, -1], [4, 2], [5, 0]], xt: [1, 2, 3, 4, 5], yt: [-1, 1, 2], grid: true, alt: "Velocity falls in a straight line from 2 at t = 0 to −1 at t = 3, rises to 2 at t = 4, then falls to 0 at t = 5." }),
+      type: "number", ans: "3", hint: "Find where v crosses 0 (t = 2 and t = 10/3), then add the triangles, with the ones below the axis negative.", sol: ["Crossings: t = 2 (slope −1 from 2) and t = 10/3 (slope 3 from −1)", "Triangles: +2 on [0, 2], −1/2 on [2, 3], −1/6 on [3, 10/3], +2/3 on [10/3, 4], +1 on [4, 5]", "2 − 1/2 − 1/6 + 2/3 + 1 = 3"] },
+    { k: "txt", text: "26b. Same graph. Distance traveled from t = 0 to t = 5?", type: "number", ans: "13/3", hint: "Same triangles, all counted positive.", sol: ["2 + 1/2 + 1/6 + 2/3 + 1 = 13/3 ≈ 4.33"] },
+    { k: "txt", text: "26c. Same graph, s(0) = 0. Position at t = 5?", type: "number", ans: "3", hint: "Position = starting position + displacement.", sol: ["s(5) = 0 + 3 = 3"] },
+    { k: "txt", text: "26d. Same graph. Find s(t) on 0 ≤ t ≤ 3 (the first piece of the piecewise function).", type: "expr", v: "t", ans: "2x - x^2/2", hint: "On [0, 3], v(t) = 2 − t. Integrate and use s(0) = 0.", sol: ["v(t) = 2 − t on [0, 3]", "s(t) = 2t − t²/2 + C, s(0) = 0 so C = 0", "The other pieces: s(t) = 1.5t² − 10t + 18 on [3, 4] and s(t) = −t² + 10t − 22 on [4, 5] (each one starts where the last ended: s(3) = 1.5, s(4) = 2)"] },
+    { k: "txt", text: "27. " + tq(VT, "3x^2 - 6x") + " m/s on [0, 3]. When does it move in the negative direction?", type: "choice", opts: ["(0, 2)", "(2, 3)", "(0, 3)", "never"], ans: 0, sol: ["v = 3t(t − 2): negative between 0 and 2, positive on (2, 3)."] },
+    { k: "txt", text: "27b. Same " + tq(VT, "3x^2 - 6x") + ". Displacement over [0, 3]?", type: "number", ans: "0", sol: [DI("0", "3", "3x^2 - 6x", "t") + " = " + M("x^3 - 3x^2", "t") + " from 0 to 3 = 0"] },
+    { k: "txt", text: "27c. Same " + tq(VT, "3x^2 - 6x") + ". Distance traveled over [0, 3]?", type: "number", ans: "8", hint: "Split at t = 2, where v changes sign.", sol: [DI("0", "2", "3x^2 - 6x", "t") + " = −4", DI("2", "3", "3x^2 - 6x", "t") + " = 4", "4 + 4 = 8 m"] },
+    { k: "txt", text: "28. Flying into a headwind: " + tq(VT, "30(16 - x^2)") + " mi/hr for 0 ≤ t ≤ 3, s(0) = 0. Find the position function " + mx(ST) + ".", type: "expr", ivp: true, v: "t", ans: "480x - 10x^3", hint: "Expand: 480 − 30t².", sol: ["v = 480 − 30t²", "s = 480t − 10t³ + C, s(0) = 0 so C = 0", M("480x - 10x^3", "t")] },
+    { k: "txt", text: "28b. Same plane. How far does it travel in the first 2 hours?", type: "number", ans: "880", hint: "v stays positive on [0, 2], so distance = s(2) − s(0).", sol: ["s(2) = 960 − 80 = 880 miles"] },
+    { k: "txt", text: "28c. Same plane. How far has it traveled when its velocity reaches 400 mi/hr?", type: "number", ans: "2720sqrt(6)/9", hint: "Solve 30(16 − t²) = 400 for t first.", sol: ["16 − t² = 40/3, so t² = 8/3, t = √(8/3) ≈ 1.633 hr", "s = 480t − 10t³ = t(480 − 10t²) = t(480 − 80/3)", "≈ 1.633 × 453.3 ≈ 740.3 miles"] },
+    { k: "txt", text: "29. " + tq(AT, "cos(2x)") + ", " + mx("<i>v</i>(0) = 5") + ". Find " + mx(VT) + ".", type: "expr", ivp: true, v: "t", ans: "sin(2x)/2 + 5", hint: "∫cos(2t) dt = sin(2t)/2.", sol: ["v = sin(2t)/2 + C, v(0) = 0 + C = 5", M("sin(2x)/2 + 5", "t")] },
+    { k: "txt", text: "29. Same object, " + mx("<i>s</i>(0) = 7") + ". Find " + mx(ST) + ".", type: "expr", ivp: true, v: "t", ans: "-cos(2x)/4 + 5x + 29/4", hint: "∫sin(2t)/2 dt = −cos(2t)/4. Careful: cos 0 = 1, so C isn’t just 7.", sol: ["s = −cos(2t)/4 + 5t + C", "s(0) = −1/4 + C = 7, so C = 29/4", M("-cos(2x)/4 + 5x + 29/4", "t")] },
+    { k: "txt", text: "30. A town had 250 people at t = 0 and grows at " + mx("<i>P</i>′(<i>t</i>) = " + MI("30(1 + sqrt(x))", "t")) + " people per year. Find " + mx("<i>P</i>(<i>t</i>)") + ".", type: "expr", ivp: true, v: "t", ans: "30x + 20x^(3/2) + 250", hint: "30√t = 30t^(1/2) → 20t^(3/2).", sol: ["P = 30t + 30·(2/3)t^(3/2) + C = 30t + 20t^(3/2) + C", "P(0) = 250, so C = 250", M("30x + 20x^(3/2) + 250", "t")] },
+    { k: "txt", text: "30b. Same town. What is the population after 20 years?", type: "number", ans: "850 + 20*20^(3/2)", hint: "Put t = 20 into P(t).", sol: ["P(20) = 600 + 20·20^(3/2) + 250", "20^(3/2) ≈ 89.44, so P(20) ≈ 850 + 1788.9 ≈ 2639 people"] }
+  ]
 },
 /* ================= Block C ================= */
 /* ================= C1 ================= */
@@ -5395,10 +5529,10 @@ CONFIG.web = true;
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps 13431286a820 for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps 4a7291571997 for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "13431286a820", shown = false, last = 0;
+  var V = "4a7291571997", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;
