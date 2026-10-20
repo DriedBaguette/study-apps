@@ -488,6 +488,30 @@ html.embed .scr-rail { position: relative; top: 0; }
 .scr-rail .pens:empty { display: none; }
 .scr-rail .pens .sizes { grid-column: 1 / -1; margin: 0; justify-self: center; flex-direction: row; }
 .scr-rail .pens .sizes button { padding: 4px 6px; }
+/* everything on the rail, and it can sit on either side (Oct 20) */
+.scratch.rail-right .scr-body { flex-direction: row-reverse; }
+.scratch.rail-right .scr-rail { border-right: 0; border-left: 1px solid var(--border); }
+.scr-rail { width: 96px; max-height: calc(100vh - var(--top-h, 0px) - 16px); overflow-y: auto; overscroll-behavior: contain; }
+html.embed .scr-rail { max-height: none; overflow: visible; }
+.scr-rail .acts { display: flex; flex-direction: column; gap: 5px; padding-top: 8px; border-top: 1px solid var(--border); }
+.scr-rail .acts .btn { width: 100%; justify-content: center; text-align: center; padding: 6px 4px; font-size: 12.5px; line-height: 1.2; white-space: normal; }
+.scr-rail .acts [hidden] { display: none; }
+.scr-rail .scr-finger { font-size: 12px !important; justify-content: center; }
+.scr-rail > * { flex-shrink: 0; } /* the rail scrolls when it is taller than the screen; nothing in it squeezes */
+/* stroke size: a slider with a dot showing the size (Oct 20) */
+.size-slider { display: flex; align-items: center; gap: 6px; }
+.size-slider input { flex: 1; min-width: 0; width: 100%; accent-color: var(--accent); touch-action: pan-x; }
+.size-slider i { flex: none; width: 22px; height: 22px; display: grid; place-items: center; }
+.size-slider i::after { content: ""; width: var(--sz); height: var(--sz); border-radius: 50%; background: var(--dot); }
+.pens .size-slider { margin-left: 4px; min-width: 110px; }
+.scr-rail .pens .size-slider { grid-column: 1 / -1; margin: 0; min-width: 0; width: 100%; }
+.scr-rail .size-slider { flex-direction: column; gap: 2px; }
+.scr-rail .size-slider input { width: 100%; }
+.scr-rail { scrollbar-width: none; }
+.scr-rail::-webkit-scrollbar { display: none; }
+.pens .dots { display: inline-flex; align-items: center; gap: 4px; }
+.scr-rail .pens { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.scr-rail .pens .dots { display: grid; grid-template-columns: repeat(2, 24px); justify-content: center; gap: 8px; }
 
 </style>
 </head>
@@ -1820,17 +1844,20 @@ var Reader = (function () {
       (side ? '<div class="ur"><button class="btn small ghost" data-act="scr-undo" title="Undo (two-finger tap)" aria-label="Undo">↶</button><button class="btn small ghost" data-act="scr-redo" title="Redo (three-finger tap)" aria-label="Redo">↷</button></div>'
         : '<button class="btn small ghost" data-act="scr-undo">Undo</button><button class="btn small ghost" data-act="scr-redo">Redo</button>') +
       (full ? '<span class="pens" data-r="pens"></span>' : "");
-    return '<div class="scratch' + (side ? " has-rail" : "") + '" data-pid="' + pid + '"><div class="scr-tools">' + (side ? "" : tools) +
-      '<button class="btn small ghost" data-act="scr-clear">Clear</button><button class="btn small ghost" data-act="scr-taller" title="The page also grows by itself as you write near the bottom">More room</button>' +
+    // everything else the pad does; on the rail too (Oct 20), so nothing is up at the top of a long page
+    var acts = '<button class="btn small ghost" data-act="scr-clear">Clear</button><button class="btn small ghost" data-act="scr-taller" title="The page also grows by itself as you write near the bottom">More room</button>' +
       (dest === "clip" ? '<button class="btn small ghost" data-act="img-paste" title="Paste a screenshot you copied (Ctrl+V or ⌘V works too)">Paste picture</button><button class="btn small ghost" data-act="img-upload" title="Add a picture from this device">Upload picture</button>' +
         '<input type="file" accept="image/*" data-act="img-file" hidden><button class="btn small" data-act="ink-paste" hidden title="Paste what you copied">Paste</button>' : "") +
       (COARSE ? '<label class="row scr-finger" style="gap:6px;font-size:13px"><input type="checkbox" class="ck" data-act="scr-finger"> Finger draws</label>' : "") +
-      '<span class="spacer"></span>' +
+      (side ? "" : '<span class="spacer"></span>') +
       (inf ? (inf.read ? '<button class="btn small" data-act="scr-read" title="Types what you selected (or the last line you wrote) into the answer box">Read my answer</button><button class="btn small ghost" data-act="scr-calc" title="Reads what you selected (or the last line) into the calculator">→ Calculator</button>' : "") +
         (inf.quiz ? "" : '<button class="btn small" data-act="scr-ask">Ask Claude to check</button>') :
       reader ? (dest === "calc" ? '<button class="btn small" data-act="scr-read" title="Reads what you selected (or the last line you wrote) into the calculator">Read into calculator</button>'
-        : '<button class="btn small" data-act="scr-read" title="Reads what you selected (or the last line you wrote) and copies it">Read &amp; copy</button><button class="btn small ghost" data-act="scr-calc" title="Reads what you selected (or the last line) into the calculator">→ Calculator</button>') : "") +
-      '</div><div class="scr-body">' + (side ? '<div class="scr-rail">' + tools + "</div>" : "") +
+        : '<button class="btn small" data-act="scr-read" title="Reads what you selected (or the last line you wrote) and copies it">Read &amp; copy</button><button class="btn small ghost" data-act="scr-calc" title="Reads what you selected (or the last line) into the calculator">→ Calculator</button>') : "");
+    if (!side) return '<div class="scratch" data-pid="' + pid + '"><div class="scr-tools">' + tools + acts + '</div><div class="scr-body">' +
+      '<div class="scr-canvas"><canvas></canvas><div class="scr-texts"></div><div class="sel-menu" hidden></div><div class="hover-dot" hidden></div></div></div></div>';
+    return '<div class="scratch has-rail' + (P.side === "right" ? " rail-right" : "") + '" data-pid="' + pid + '"><div class="scr-body"><div class="scr-rail">' + tools +
+      '<div class="acts">' + acts + '<button class="btn small ghost" data-act="scr-side" title="Put the tools on the other side (for left- or right-handed writing)">⇄ Other side</button></div></div>' +
       '<div class="scr-canvas"><canvas></canvas><div class="scr-texts"></div><div class="sel-menu" hidden></div><div class="hover-dot" hidden></div></div></div></div>';
   }
   function pip(poly, x, y) { // is the point inside the lasso?
@@ -2248,8 +2275,8 @@ var Reader = (function () {
       var pen = PENS[tool];
       if (!pen) { r.innerHTML = ""; return; }
       var list = tool === "hl" ? HL_COLORS : PEN_COLORS;
-      r.innerHTML = list.map(function (c) { return '<button class="dot-btn' + (pen.c === c ? " on" : "") + '" data-act="pen-color" data-c="' + c + '" style="--dot:var(--pen-' + (tool === "hl" ? "hl-" : "") + c + ', var(--ink))" aria-label="' + c + '" title="' + c + '"></button>'; }).join("") +
-        '<span class="seg sizes">' + [[0.6, "S"], [1, "M"], [1.7, "L"]].map(function (z) { return '<button data-act="pen-size" data-s="' + z[0] + '"' + ((pen.s || 1) === z[0] ? ' class="on"' : "") + ' aria-label="Size ' + z[1] + '">' + z[1] + "</button>"; }).join("") + "</span>";
+      r.innerHTML = '<span class="dots">' + list.map(function (c) { return '<button class="dot-btn' + (pen.c === c ? " on" : "") + '" data-act="pen-color" data-c="' + c + '" style="--dot:var(--pen-' + (tool === "hl" ? "hl-" : "") + c + ', var(--ink))" aria-label="' + c + '" title="' + c + '"></button>'; }).join("") + "</span>" +
+        '<label class="size-slider" title="Stroke size"><input type="range" min="0.4" max="3" step="0.1" value="' + (pen.s || 1) + '" data-act="pen-size-range" aria-label="Stroke size"><i style="--sz:' + Math.round(Math.max(3, Math.min(22, (tool === "hl" ? 10 : tool === "marker" ? 5 : 3) * (pen.s || 1)))) + 'px;--dot:' + colorOf({ c: pen.c === "ink" ? "" : pen.c, k: tool === "hl" ? "h" : "" }) + '"></i></label>';
     }
     function workImage() { // the work in dark ink on white, for Ask Claude to check
       var bottom = 0;
@@ -2303,8 +2330,9 @@ var Reader = (function () {
         var y = r.width > 0 ? Math.max(20, (viewport()[0] + 90) * 1000 / r.width) : 40; // near the top of what's on screen
         keep(snap()); pasteItems(INK, 60 - b[0], y - b[1]);
       },
-      pen: function (what, v) {
+      pen: function (what, v, live) {
         var p = PENS[tool]; if (!p) return; if (what === "c") p.c = v; else p.s = +v; P.pens = PENS;
+        if (live) { var dt = $(".size-slider i", el); if (dt) dt.style.setProperty("--sz", Math.round(Math.max(3, Math.min(22, (tool === "hl" ? 10 : tool === "marker" ? 5 : 3) * p.s))) + "px"); return; } // mid-drag: don't rebuild the slider
         if (EMB) { var pr = fetchJSON(KEY + ":prefs") || {}; pr.pens = PENS; store(KEY + ":prefs", pr); } else store(KEY + ":prefs", P); // a problem's pad mustn't change the app's current page
         showPens();
       },
@@ -2498,6 +2526,11 @@ var Reader = (function () {
       case "sel-done": pad.__api.selAction("done"); break;
       case "ink-paste": pad.__api.pasteInk(); break;
       case "scr-clear": pad.__api.clear(); break;
+      case "scr-side": // tools on the left or the right; remembered on this device
+        P.side = P.side === "right" ? "left" : "right";
+        if (EMB) { var pr = fetchJSON(KEY + ":prefs") || {}; pr.side = P.side; store(KEY + ":prefs", pr); } else store(KEY + ":prefs", P);
+        $$(".scratch.has-rail").forEach(function (x) { x.classList.toggle("rail-right", P.side === "right"); });
+        break;
       case "scr-taller": pad.__api.taller(); break;
       case "scr-read": if (EMB) EMB.host.read(EMB.pid, t, false); else readPad(pad, t, pad.dataset.pid === "_calc" ? "calc" : "clip"); break;
       case "scr-calc": if (EMB) EMB.host.read(EMB.pid, t, true); else if (CALC) { CALC.open(); readPad(pad, t, "calc"); } break;
@@ -2524,8 +2557,13 @@ var Reader = (function () {
     if (a === "sync-change") { panelForm = true; syncPanel(true); }
     if (a === "sync-close") syncPanel(false);
   });
+  document.addEventListener("input", function (e) { // the size slider, while it's dragged
+    var t = e.target; if (!t.dataset || t.dataset.act !== "pen-size-range") return;
+    var pad = t.closest(".scratch"); if (pad && pad.__api) pad.__api.pen("s", t.value, true);
+  });
   document.addEventListener("change", function (e) {
     var t = e.target;
+    if (t.dataset && t.dataset.act === "pen-size-range") { var sp = t.closest(".scratch"); if (sp && sp.__api) sp.__api.pen("s", t.value); }
     if (t.dataset && t.dataset.act === "scr-finger") { var sc = t.closest(".scratch"); if (sc && sc.__api) sc.__api.finger(t.checked); }
     if (t.dataset && t.dataset.act === "img-file") { if (t.files && t.files[0]) importImage(t.files[0]); t.value = ""; }
     if (t.dataset && t.dataset.act === "solve") { SOLVE.on = t.checked; P.solve = t.checked; store(KEY + ":prefs", P); redrawAll(); if (SOLVE.on) scheduleSolve(100); }
@@ -2888,10 +2926,10 @@ var Reader = (function () {
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps 4a7291571997 for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps ec7989ec23f5 for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "4a7291571997", shown = false, last = 0;
+  var V = "ec7989ec23f5", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;
