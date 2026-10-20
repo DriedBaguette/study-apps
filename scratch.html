@@ -125,7 +125,7 @@ sup sup { font-size: .85em; }
 .main { min-width: 0; display: flex; flex-direction: column; }
 .top {
   position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  padding: 10px 28px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px);
+  padding: 10px 28px; background: var(--bg); /* solid: the frosted see-through look made the page under it look blurry */
   border-bottom: 1px solid var(--border);
 }
 .icon-btn.menu-btn { display: none; }
@@ -492,7 +492,7 @@ html.embed .scr-rail { position: relative; top: 0; }
 .scratch.rail-right .scr-body { flex-direction: row-reverse; }
 .scratch.rail-right .scr-rail { border-right: 0; border-left: 1px solid var(--border); }
 .scr-rail { width: 96px; max-height: calc(100vh - var(--top-h, 0px) - 16px); overflow-y: auto; overscroll-behavior: contain; }
-html.embed .scr-rail { max-height: none; overflow: visible; }
+html.embed .scr-rail { overflow-y: auto; } /* max-height set by railAt() */
 .scr-rail .acts { display: flex; flex-direction: column; gap: 5px; padding-top: 8px; border-top: 1px solid var(--border); }
 .scr-rail .acts .btn { width: 100%; justify-content: center; text-align: center; padding: 6px 4px; font-size: 12.5px; line-height: 1.2; white-space: normal; }
 .scr-rail .acts [hidden] { display: none; }
@@ -501,7 +501,7 @@ html.embed .scr-rail { max-height: none; overflow: visible; }
 /* stroke size: a slider with a dot showing the size (Oct 20) */
 .size-slider { display: flex; align-items: center; gap: 6px; }
 .size-slider input { flex: 1; min-width: 0; width: 100%; accent-color: var(--accent); touch-action: pan-x; }
-.size-slider i { flex: none; width: 22px; height: 22px; display: grid; place-items: center; }
+.size-slider i { flex: none; width: 36px; height: 36px; display: grid; place-items: center; }
 .size-slider i::after { content: ""; width: var(--sz); height: var(--sz); border-radius: 50%; background: var(--dot); }
 .pens .size-slider { margin-left: 4px; min-width: 110px; }
 .scr-rail .pens .size-slider { grid-column: 1 / -1; margin: 0; min-width: 0; width: 100%; }
@@ -1833,6 +1833,9 @@ var Reader = (function () {
   var PEN_COLORS = ["ink", "blue", "red", "green", "orange", "purple"], HL_COLORS = ["yellow", "green", "pink", "blue", "orange"];
   var PENS = P.pens || {}; // per tool: colour and size
   [["pen", "ink"], ["pencil", "ink"], ["marker", "blue"], ["hl", "yellow"]].forEach(function (d) { if (!PENS[d[0]]) PENS[d[0]] = { c: d[1], s: 1 }; });
+  var SZ_MIN = 0.4, SZ_MAX = 8; // stroke size factor at the slider's two ends
+  function sizeAt(pos) { return Math.round(SZ_MIN * Math.pow(SZ_MAX / SZ_MIN, pos / 100) * 100) / 100; }
+  function sizePos(sz) { return Math.max(0, Math.min(100, 100 * Math.log(sz / SZ_MIN) / Math.log(SZ_MAX / SZ_MIN))); }
   var INK = null; // what Copy on a selection put aside, for Paste (this visit)
   function padHTML(pid, dest) {
     var full = dest !== "calc", reader = HAS_READER, inf = dest === "embed" && EMB ? EMB.host.info(pid) : null;
@@ -2270,13 +2273,17 @@ var Reader = (function () {
       src.save(sc);
     }
     cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end); cv.addEventListener("lostpointercapture", end);
+    function dotPx(t, sz) { // how wide the stroke really is on screen, for the dot by the slider
+      var u = (t === "hl" ? 16 : t === "marker" ? 7.2 : t === "pencil" ? 2.4 : 3) * sz;
+      return Math.max(1, Math.min(34, Math.round(u * (scale() || 1) * 10) / 10));
+    }
     function showPens() {
       var r = $('[data-r="pens"]', el); if (!r) return;
       var pen = PENS[tool];
       if (!pen) { r.innerHTML = ""; return; }
       var list = tool === "hl" ? HL_COLORS : PEN_COLORS;
       r.innerHTML = '<span class="dots">' + list.map(function (c) { return '<button class="dot-btn' + (pen.c === c ? " on" : "") + '" data-act="pen-color" data-c="' + c + '" style="--dot:var(--pen-' + (tool === "hl" ? "hl-" : "") + c + ', var(--ink))" aria-label="' + c + '" title="' + c + '"></button>'; }).join("") + "</span>" +
-        '<label class="size-slider" title="Stroke size"><input type="range" min="0.4" max="3" step="0.1" value="' + (pen.s || 1) + '" data-act="pen-size-range" aria-label="Stroke size"><i style="--sz:' + Math.round(Math.max(3, Math.min(22, (tool === "hl" ? 10 : tool === "marker" ? 5 : 3) * (pen.s || 1)))) + 'px;--dot:' + colorOf({ c: pen.c === "ink" ? "" : pen.c, k: tool === "hl" ? "h" : "" }) + '"></i></label>';
+        '<label class="size-slider" title="Stroke size"><input type="range" min="0" max="100" step="1" value="' + Math.round(sizePos(pen.s || 1)) + '" data-act="pen-size-range" aria-label="Stroke size"><i style="--sz:' + dotPx(tool, pen.s || 1) + 'px;--dot:' + colorOf({ c: pen.c === "ink" ? "" : pen.c, k: tool === "hl" ? "h" : "" }) + '"></i></label>';
     }
     function workImage() { // the work in dark ink on white, for Ask Claude to check
       var bottom = 0;
@@ -2332,7 +2339,7 @@ var Reader = (function () {
       },
       pen: function (what, v, live) {
         var p = PENS[tool]; if (!p) return; if (what === "c") p.c = v; else p.s = +v; P.pens = PENS;
-        if (live) { var dt = $(".size-slider i", el); if (dt) dt.style.setProperty("--sz", Math.round(Math.max(3, Math.min(22, (tool === "hl" ? 10 : tool === "marker" ? 5 : 3) * p.s))) + "px"); return; } // mid-drag: don't rebuild the slider
+        if (live) { var dt = $(".size-slider i", el); if (dt) dt.style.setProperty("--sz", dotPx(tool, p.s) + "px"); return; } // mid-drag: don't rebuild the slider
         if (EMB) { var pr = fetchJSON(KEY + ":prefs") || {}; pr.pens = PENS; store(KEY + ":prefs", pr); } else store(KEY + ":prefs", P); // a problem's pad mustn't change the app's current page
         showPens();
       },
@@ -2356,8 +2363,11 @@ var Reader = (function () {
       if (!EMB || !rail) return;
       try {
         var body = rail.parentNode, br = body.getBoundingClientRect(), top = window.frameElement.getBoundingClientRect().top + br.top;
-        var hd = window.parent.document.querySelector(".top"), hh = hd ? hd.getBoundingClientRect().bottom : 0;
-        rail.style.transform = "translateY(" + Math.max(0, Math.min(br.height - rail.offsetHeight, Math.max(0, hh) + 8 - top)) + "px)";
+        // stay below everything the app keeps stuck at the top: its header, the Learn/Practice tabs, a quiz's timer bar
+        var hh = 0, vh = window.parent.innerHeight;
+        window.parent.document.querySelectorAll(".top, .tabs, .qbar").forEach(function (n) { var r = n.getBoundingClientRect(); if (r.height && r.bottom > 0 && r.bottom < vh / 2) hh = Math.max(hh, r.bottom); });
+        rail.style.maxHeight = Math.max(240, vh - hh - 16) + "px"; // what fits under them; the rest of the rail scrolls
+        rail.style.transform = "translateY(" + Math.max(0, Math.min(br.height - rail.offsetHeight, hh + 8 - top)) + "px)";
       } catch (e) {}
     }
     function onScroll() {
@@ -2559,11 +2569,11 @@ var Reader = (function () {
   });
   document.addEventListener("input", function (e) { // the size slider, while it's dragged
     var t = e.target; if (!t.dataset || t.dataset.act !== "pen-size-range") return;
-    var pad = t.closest(".scratch"); if (pad && pad.__api) pad.__api.pen("s", t.value, true);
+    var pad = t.closest(".scratch"); if (pad && pad.__api) pad.__api.pen("s", sizeAt(+t.value), true);
   });
   document.addEventListener("change", function (e) {
     var t = e.target;
-    if (t.dataset && t.dataset.act === "pen-size-range") { var sp = t.closest(".scratch"); if (sp && sp.__api) sp.__api.pen("s", t.value); }
+    if (t.dataset && t.dataset.act === "pen-size-range") { var sp = t.closest(".scratch"); if (sp && sp.__api) sp.__api.pen("s", sizeAt(+t.value)); }
     if (t.dataset && t.dataset.act === "scr-finger") { var sc = t.closest(".scratch"); if (sc && sc.__api) sc.__api.finger(t.checked); }
     if (t.dataset && t.dataset.act === "img-file") { if (t.files && t.files[0]) importImage(t.files[0]); t.value = ""; }
     if (t.dataset && t.dataset.act === "solve") { SOLVE.on = t.checked; P.solve = t.checked; store(KEY + ":prefs", P); redrawAll(); if (SOLVE.on) scheduleSolve(100); }
@@ -2926,10 +2936,10 @@ var Reader = (function () {
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps ec7989ec23f5 for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps b24717692aba for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "ec7989ec23f5", shown = false, last = 0;
+  var V = "b24717692aba", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;

@@ -125,7 +125,7 @@ sup sup { font-size: .85em; }
 .main { min-width: 0; display: flex; flex-direction: column; }
 .top {
   position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  padding: 10px 28px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px);
+  padding: 10px 28px; background: var(--bg); /* solid: the frosted see-through look made the page under it look blurry */
   border-bottom: 1px solid var(--border);
 }
 .icon-btn.menu-btn { display: none; }
@@ -4122,10 +4122,10 @@ CONFIG.web = true;
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps ec7989ec23f5 for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps b24717692aba for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "ec7989ec23f5", shown = false, last = 0;
+  var V = "b24717692aba", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;
