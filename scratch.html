@@ -472,6 +472,22 @@ ul.wamap { margin: 0 0 10px; padding-left: 20px; line-height: 1.7; }
 html.embed, html.embed body { background: transparent; }
 .embed .top, .embed #pages, .embed #syncPanel, .embed #padOut, .embed #toast { display: none; }
 html.embed .page.pad-page { padding: 0; max-width: none; margin: 0; gap: 0; }
+/* the tools on a rail beside the page, on screen while you scroll (Oct 20) */
+.scratch.has-rail { overflow: visible; overflow: clip; } /* clip, not hidden: hidden would stop the rail sticking */
+.scr-body { display: flex; align-items: flex-start; }
+.scr-canvas { flex: 1; min-width: 0; position: relative; }
+.scr-canvas canvas { position: absolute; left: 0; top: 0; }
+.scr-rail { flex: none; width: 82px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; padding: 10px 7px; position: sticky; top: calc(var(--top-h, 0px) + 8px); z-index: 6; border-right: 1px solid var(--border); background: var(--surface); }
+html.embed .scr-rail { position: relative; top: 0; }
+.scr-rail .seg { flex-direction: column; }
+.scr-rail .seg button { padding: 9px 4px; font-size: 13px; text-align: center; }
+.scr-rail .seg button + button { border-top: 1px solid var(--border); }
+.scr-rail .ur { display: flex; gap: 4px; }
+.scr-rail .ur button { flex: 1; padding: 6px 0; font-size: 17px; line-height: 1; justify-content: center; }
+.scr-rail .pens { display: grid; grid-template-columns: repeat(2, 24px); justify-content: center; gap: 8px; }
+.scr-rail .pens:empty { display: none; }
+.scr-rail .pens .sizes { grid-column: 1 / -1; margin: 0; justify-self: center; flex-direction: row; }
+.scr-rail .pens .sizes button { padding: 4px 6px; }
 
 </style>
 </head>
@@ -1796,14 +1812,16 @@ var Reader = (function () {
   var INK = null; // what Copy on a selection put aside, for Paste (this visit)
   function padHTML(pid, dest) {
     var full = dest !== "calc", reader = HAS_READER, inf = dest === "embed" && EMB ? EMB.host.info(pid) : null;
+    var side = dest !== "calc"; // the calculator's small pad keeps its tools on top
     function tb(t, label, title) { return '<button data-act="scr-tool" data-tool="' + t + '"' + (t === "pen" ? ' class="on"' : "") + ' title="' + title + '">' + label + "</button>"; }
-    return '<div class="scratch" data-pid="' + pid + '"><div class="scr-tools">' +
-      '<div class="seg">' + tb("pen", "✎ Pen", "Pen") + (full ? tb("pencil", "Pencil", "Pencil: lean Apple Pencil over to shade, like a real pencil") + tb("marker", "Marker", "Marker") + tb("hl", "Highlighter", "Highlighter (the reader skips it)") : "") +
+    var tools = '<div class="seg">' + tb("pen", side ? "Pen" : "✎ Pen", "Pen") + (full ? tb("pencil", "Pencil", "Pencil: lean Apple Pencil over to shade, like a real pencil") + tb("marker", "Marker", "Marker") + tb("hl", "Highlight", "Highlighter (the reader skips it)") : "") +
         tb("erase", "Eraser", "Eraser. Tap it again to switch between erasing whole strokes and erasing part of a stroke") +
-        tb("lasso", "◌ Select", "Circle writing, pictures or text to move, resize, copy or read it") + (full ? tb("text", "T Text", "Tap the page to add a text box. Write in it with Apple Pencil and iPad turns it into text") : "") + "</div>" +
-      (full ? '<span class="pens" data-r="pens"></span>' : "") +
-      '<button class="btn small ghost" data-act="scr-undo">Undo</button><button class="btn small ghost" data-act="scr-redo">Redo</button>' +
-      '<button class="btn small ghost" data-act="scr-clear">Clear</button><button class="btn small ghost" data-act="scr-taller">More room</button>' +
+        tb("lasso", side ? "Select" : "◌ Select", "Circle writing, pictures or text to move, resize, copy or read it") + (full ? tb("text", "Text", "Tap the page to add a text box. Write in it with Apple Pencil and iPad turns it into text") : "") + "</div>" +
+      (side ? '<div class="ur"><button class="btn small ghost" data-act="scr-undo" title="Undo (two-finger tap)" aria-label="Undo">↶</button><button class="btn small ghost" data-act="scr-redo" title="Redo (three-finger tap)" aria-label="Redo">↷</button></div>'
+        : '<button class="btn small ghost" data-act="scr-undo">Undo</button><button class="btn small ghost" data-act="scr-redo">Redo</button>') +
+      (full ? '<span class="pens" data-r="pens"></span>' : "");
+    return '<div class="scratch' + (side ? " has-rail" : "") + '" data-pid="' + pid + '"><div class="scr-tools">' + (side ? "" : tools) +
+      '<button class="btn small ghost" data-act="scr-clear">Clear</button><button class="btn small ghost" data-act="scr-taller" title="The page also grows by itself as you write near the bottom">More room</button>' +
       (dest === "clip" ? '<button class="btn small ghost" data-act="img-paste" title="Paste a screenshot you copied (Ctrl+V or ⌘V works too)">Paste picture</button><button class="btn small ghost" data-act="img-upload" title="Add a picture from this device">Upload picture</button>' +
         '<input type="file" accept="image/*" data-act="img-file" hidden><button class="btn small" data-act="ink-paste" hidden title="Paste what you copied">Paste</button>' : "") +
       (COARSE ? '<label class="row scr-finger" style="gap:6px;font-size:13px"><input type="checkbox" class="ck" data-act="scr-finger"> Finger draws</label>' : "") +
@@ -1812,7 +1830,8 @@ var Reader = (function () {
         (inf.quiz ? "" : '<button class="btn small" data-act="scr-ask">Ask Claude to check</button>') :
       reader ? (dest === "calc" ? '<button class="btn small" data-act="scr-read" title="Reads what you selected (or the last line you wrote) into the calculator">Read into calculator</button>'
         : '<button class="btn small" data-act="scr-read" title="Reads what you selected (or the last line you wrote) and copies it">Read &amp; copy</button><button class="btn small ghost" data-act="scr-calc" title="Reads what you selected (or the last line) into the calculator">→ Calculator</button>') : "") +
-      '</div><div class="scr-canvas"><canvas></canvas><div class="scr-texts"></div><div class="sel-menu" hidden></div><div class="hover-dot" hidden></div></div></div>';
+      '</div><div class="scr-body">' + (side ? '<div class="scr-rail">' + tools + "</div>" : "") +
+      '<div class="scr-canvas"><canvas></canvas><div class="scr-texts"></div><div class="sel-menu" hidden></div><div class="hover-dot" hidden></div></div></div></div>';
   }
   function pip(poly, x, y) { // is the point inside the lasso?
     var inside = false;
@@ -1849,12 +1868,12 @@ var Reader = (function () {
     return null;
   }
   function mountPad(el, src, grow) {
-    var pid = el.dataset.pid, full = !!src.answers, cv = $("canvas", el), box = $(".scr-canvas", el), ctx = cv.getContext("2d"), layer = $(".scr-texts", el), menu = $(".sel-menu", el);
+    var pid = el.dataset.pid, full = !!src.answers, cv = $("canvas", el), box = $(".scr-canvas", el), vctx = cv.getContext("2d"), base = document.createElement("canvas"), ctx = base.getContext("2d"), layer = $(".scr-texts", el), menu = $(".sel-menu", el);
     var tool = "pen", eraseMode = "stroke", finger = false, cur = null, undo = [], redo = [], sc = src.load(), readBox = null, readT = null, answers = null;
     var lasso = null, sel = null, drag = null, holdT = null, scroll = null, penAt = 0, textSnap = null, dot = $(".hover-dot", el), taps = { ids: {}, n: 0, max: 0, t0: 0, late: false, moved: false };
     function hover(e) { // Apple Pencil hovering just above the glass: show where it will draw, how big, in what colour
       if (e.pointerType !== "pen" || e.buttons || drawing()) { dot.hidden = true; return; }
-      var r = cv.getBoundingClientRect(), k = r.width / 1000, d, col = "", ring = false, pen = PENS[tool];
+      var r = box.getBoundingClientRect(), k = r.width / 1000, d, col = "", ring = false, pen = PENS[tool];
       if (tool === "erase") { d = (eraseMode === "part" ? 22 : 24) * k; ring = true; }
       else if (pen) { var f = (tool === "marker" ? 2.4 : 1) * (pen.s || 1); d = (tool === "hl" ? 16 * (pen.s || 1) : 4.4 * f) * k; col = colorOf({ c: pen.c === "ink" ? "" : pen.c, k: tool === "hl" ? "h" : "" }); }
       else { d = 8; ring = true; }
@@ -1884,11 +1903,36 @@ var Reader = (function () {
     function restore(u) { var o = JSON.parse(u); sc.strokes = o.s; sc.imgs = o.i || []; sc.texts = o.t || []; setSel(null); answers = null; renderTexts(); fit(); draw(); src.save(sc); }
     function ink(s) { return s.k !== "h"; }
     function scale() { return box.clientWidth / 1000; }
+    var win = { y: 0, h: 0, w: 0 }, rail = $(".scr-rail", el), lastW = 0;
     function size() {
-      var w = box.clientWidth, dpr = window.devicePixelRatio || 1, hpx = Math.round(sc.h * scale());
-      cv.style.width = w + "px"; cv.style.height = hpx + "px"; cv.width = Math.round(w * dpr); cv.height = Math.round(hpx * dpr);
-      ctx.setTransform(dpr * scale(), 0, 0, dpr * scale(), 0, 0); layoutTexts(); draw();
+      var w = box.clientWidth; lastW = w;
+      if (rail && w && sc.h * scale() < rail.offsetHeight) sc.h = Math.ceil(rail.offsetHeight / scale()); // at least as tall as the tools beside it
+      box.style.height = Math.round(sc.h * scale()) + "px";
+      layoutTexts(); place(true);
     }
+    function viewport() { // the rows of the pad that are on screen, in CSS px from its top
+      var r = box.getBoundingClientRect(), top = r.top, vh = window.innerHeight;
+      if (EMB) { try { top += window.frameElement.getBoundingClientRect().top; vh = window.parent.innerHeight; } catch (e) {} }
+      return [Math.max(0, Math.min(r.height, -top)), Math.max(0, Math.min(r.height, vh - top)), vh];
+    }
+    function place(force) { // move the canvas over what's on screen; redraw only when it had to move
+      var H = box.clientHeight, w = box.clientWidth, v = viewport(), ch = Math.max(1, Math.min(H, Math.ceil(v[2] * 1.6)));
+      if (!force && ch === win.h && w === win.w && v[0] >= win.y && v[1] <= win.y + win.h) return;
+      var dpr = window.devicePixelRatio || 1, y = Math.max(0, Math.min(H - ch, Math.round((v[0] + v[1]) / 2 - ch / 2)));
+      if (ch !== win.h || w !== win.w) {
+        cv.style.width = w + "px"; cv.style.height = ch + "px";
+        cv.width = base.width = Math.max(1, Math.round(w * dpr)); cv.height = base.height = Math.round(ch * dpr);
+      }
+      win = { y: y, h: ch, w: w }; cv.style.top = y + "px";
+      draw();
+    }
+    var BB = typeof WeakMap === "function" ? new WeakMap() : null;
+    function rows(st) { // a stroke's top and bottom, remembered per point list
+      var b = BB && BB.get(st.pts); if (b) return b;
+      b = [1e9, -1e9]; st.pts.forEach(function (q) { if (q[1] < b[0]) b[0] = q[1]; if (q[1] > b[1]) b[1] = q[1]; });
+      if (BB) BB.set(st.pts, b); return b;
+    }
+    function view(c) { var dpr = window.devicePixelRatio || 1, k = scale(); c.setTransform(dpr * k, 0, 0, dpr * k, 0, -win.y * dpr); }
     var colors = {}, paperRGB = null;
     function rgb(hex) { var m = /^#([0-9a-f]{6})$/i.exec(String(hex).trim()); return m ? [0, 2, 4].map(function (i) { return parseInt(m[1].substr(i, 2), 16); }) : null; }
     function colorOf(s) { var n = s.c ? "--pen-" + (s.k === "h" ? "hl-" : "") + s.c : "--ink"; return colors[n] || (colors[n] = cssVar(n)); }
@@ -1922,10 +1966,13 @@ var Reader = (function () {
     }
     function draw() {
       colors = {}; paperRGB = null;
-      ctx.clearRect(0, 0, 1000, sc.h);
+      var k = scale() || 1, y0 = win.y / k - 60, y1 = (win.y + win.h) / k + 60;
+      function seen(st) { var b = rows(st), m = 20 * (st.w || 1) + 20; return b[1] + m >= y0 && b[0] - m <= y1; }
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, base.width, base.height); view(ctx);
       ctx.strokeStyle = cssVar("--bg-grid"); ctx.lineWidth = 1;
-      for (var y = 40; y < sc.h; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1000, y); ctx.stroke(); }
+      for (var y = Math.max(40, Math.floor(y0 / 40) * 40); y < Math.min(sc.h, y1); y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1000, y); ctx.stroke(); }
       sc.imgs.forEach(function (m) { // pictures sit under the writing
+        if (m.y > y1 || m.y + m.h < y0) return;
         var im = picture(m.id);
         if (im) ctx.drawImage(im, m.x, m.y, m.w, m.h);
         else {
@@ -1933,15 +1980,13 @@ var Reader = (function () {
           ctx.fillText(IMG[m.id] === "missing" ? "Picture still syncing from your other device…" : "Loading picture…", m.x + 14, m.y + 34); ctx.restore();
         }
       });
-      sc.strokes.forEach(function (s) { if (!ink(s)) drawStroke(ctx, s, colorOf(s)); }); // highlighter under the ink
-      if (cur && !ink(cur)) drawStroke(ctx, cur, colorOf(cur));
+      var shown = sc.strokes.filter(seen);
+      shown.forEach(function (s) { if (!ink(s)) drawStroke(ctx, s, colorOf(s)); }); // highlighter under the ink
       if (sc.imgs.length) { // an outline in the pad's colour keeps the ink readable on a picture (light ink on a white screenshot in dark mode)
         var halo = cssVar("--surface-2");
-        sc.strokes.forEach(function (s) { if (ink(s)) drawStroke(ctx, s, halo, 4); });
-        if (cur && ink(cur)) drawStroke(ctx, cur, halo, 4);
+        shown.forEach(function (s) { if (ink(s)) drawStroke(ctx, s, halo, 4); });
       }
-      sc.strokes.forEach(function (s) { if (ink(s)) drawStroke(ctx, s, colorOf(s)); });
-      if (cur && ink(cur)) drawStroke(ctx, cur, colorOf(cur));
+      shown.forEach(function (s) { if (ink(s)) drawStroke(ctx, s, colorOf(s)); });
       if (src.answers) { // answers after "=", in handwriting-style ink
         if (!answers) answers = src.answers(sc.strokes.filter(ink));
         answers.forEach(function (a) {
@@ -1949,6 +1994,13 @@ var Reader = (function () {
           ctx.fillStyle = cssVar(a.faint ? "--ink-faint" : "--solve"); ctx.fillText(a.text, a.x, a.y); ctx.restore();
         });
       }
+      compose();
+    }
+    function compose() { // the page as drawn, plus what's moving: the stroke under way, the lasso, the selection
+      var ctx = vctx;
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); if (base.width && base.height) ctx.drawImage(base, 0, 0);
+      view(ctx);
+      if (cur) { if (sc.imgs.length && ink(cur)) drawStroke(ctx, cur, cssVar("--surface-2"), 4); drawStroke(ctx, cur, colorOf(cur)); }
       var acc = cssVar("--accent");
       if (lasso && lasso.length > 1) {
         ctx.save(); ctx.setLineDash([8, 6]); ctx.lineWidth = 2; ctx.strokeStyle = acc; ctx.beginPath(); ctx.moveTo(lasso[0][0], lasso[0][1]);
@@ -1965,7 +2017,7 @@ var Reader = (function () {
         ctx.strokeRect(readBox[0] - 10, readBox[1] - 10, readBox[2] - readBox[0] + 20, readBox[3] - readBox[1] + 20); ctx.restore();
       }
     }
-    function pt(e) { var r = cv.getBoundingClientRect(), k = 1000 / r.width; return [(e.clientX - r.left) * k, (e.clientY - r.top) * k, e.pointerType === "pen" ? (e.pressure || 0.5) : 0.5]; }
+    function pt(e) { var r = box.getBoundingClientRect(), k = 1000 / r.width; return [(e.clientX - r.left) * k, (e.clientY - r.top) * k, e.pointerType === "pen" ? (e.pressure || 0.5) : 0.5]; }
     function lean(e) { // how far Apple Pencil leans over: 0 upright, 1 flat on the glass
       if (e.pointerType !== "pen") return 0;
       if (typeof e.altitudeAngle === "number" && e.altitudeAngle > 0) return Math.max(0, Math.min(1, 1 - e.altitudeAngle / (Math.PI / 2)));
@@ -1977,7 +2029,8 @@ var Reader = (function () {
       sc.imgs.forEach(function (m) { need = Math.max(need, m.y + m.h + 40); });
       sc.strokes.forEach(function (s) { s.pts.forEach(function (q) { if (q[1] + 40 > need) need = q[1] + 40; }); });
       sc.texts.forEach(function (t) { need = Math.max(need, t.y + t.size * 1.6 + 40); });
-      if (need > sc.h) { sc.h = Math.min(Math.ceil(need), 6000); size(); }
+      need += Math.max(0, grow - 40); // always room to keep writing below
+      if (need > sc.h) { sc.h = Math.ceil(need); size(); }
     }
 
     /* text boxes: real text fields over the canvas, so Apple Pencil's Scribble (Apple's own handwriting reader) works in them */
@@ -2130,7 +2183,7 @@ var Reader = (function () {
           if (q[0] > b[0] && q[0] < b[2] && q[1] > b[1] && q[1] < b[3]) { drag = { m: "move", q: q, b0: b.slice(), orig: JSON.parse(JSON.stringify(selected())), u: snap() }; showMenu(); return; }
           setSel(null);
         }
-        lasso = [q]; draw(); return;
+        lasso = [q]; compose(); return;
       }
       keep(snap());
       if (tool === "erase") { if (eraseAt(q)) draw(); return; }
@@ -2158,7 +2211,7 @@ var Reader = (function () {
         else if (drag) {
           var a = drag.a, c = drag.c, vx = c[0] - a[0], vy = c[1] - a[1], f = ((q[0] - a[0]) * vx + (q[1] - a[1]) * vy) / (vx * vx + vy * vy || 1);
           transform(drag.orig, 0, 0, a[0], a[1], Math.max(0.1, Math.min(8, f)));
-        } else if (lasso) lasso.push(q);
+        } else if (lasso) { lasso.push(q); compose(); return; }
         draw(); return;
       }
       var evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e]; if (!evs.length) evs = [e];
@@ -2170,9 +2223,9 @@ var Reader = (function () {
       });
       if (cur && !cur.shape) { // holding still turns a line, rectangle or ellipse into a clean one
         clearTimeout(holdT);
-        holdT = setTimeout(function () { if (!cur || cur.shape || !drawing()) return; var s = shapeOf(cur.pts); if (s) { cur.pts = s; cur.shape = true; draw(); } }, 550);
-      }
-      draw();
+        holdT = setTimeout(function () { if (!cur || cur.shape || !drawing()) return; var s = shapeOf(cur.pts); if (s) { cur.pts = s; cur.shape = true; compose(); } }, 550);
+        compose();
+      } else draw();
     });
     function end(e) {
       if (e && e.pointerType === "touch") tapUp(e);
@@ -2184,8 +2237,10 @@ var Reader = (function () {
         if (lasso) { var s = selectLasso(lasso); lasso = null; setSel(s); draw(); }
         return;
       }
-      if (cur && cur.pts.length) { delete cur.shape; sc.strokes.push(cur); }
-      cur = null; answers = null; draw(); src.save(sc);
+      var added = cur && cur.pts.length; if (added) { delete cur.shape; sc.strokes.push(cur); }
+      cur = null; answers = null;
+      if (added) { var hb = sc.h; fit(); if (sc.h === hb) draw(); } else draw();
+      src.save(sc);
     }
     cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end); cv.addEventListener("lostpointercapture", end);
     function showPens() {
@@ -2200,7 +2255,7 @@ var Reader = (function () {
       var bottom = 0;
       sc.strokes.forEach(function (s) { s.pts.forEach(function (q) { if (q[1] > bottom) bottom = q[1]; }); });
       sc.texts.forEach(function (t) { bottom = Math.max(bottom, t.y + t.size * 1.4); });
-      var off = document.createElement("canvas"), H = Math.max(200, Math.min(sc.h, Math.ceil(bottom + 40))); off.width = 1000; off.height = H;
+      var off = document.createElement("canvas"), H = Math.max(200, Math.min(sc.h, Math.ceil(bottom + 40), 12000)); off.width = 1000; off.height = H;
       var c = off.getContext("2d"); c.fillStyle = "#fff"; c.fillRect(0, 0, 1000, H);
       sc.strokes.forEach(function (s) { if (ink(s)) drawStroke(c, s, "#111"); });
       c.fillStyle = "#111"; sc.texts.forEach(function (t) { c.font = t.size + 'px "IBM Plex Sans", sans-serif'; c.fillText(t.t || "", t.x + 4, t.y + t.size); });
@@ -2211,7 +2266,7 @@ var Reader = (function () {
       tool: function (t, quiet) {
         if (t === "erase" && tool === "erase") { eraseMode = eraseMode === "stroke" ? "part" : "stroke"; toast(eraseMode === "part" ? "Eraser: erases only where you rub." : "Eraser: erases whole strokes."); }
         tool = t;
-        $$('[data-act="scr-tool"]', el).forEach(function (b) { b.classList.toggle("on", b.dataset.tool === t); if (b.dataset.tool === "erase") b.textContent = eraseMode === "part" ? "Eraser · part" : "Eraser"; });
+        $$('[data-act="scr-tool"]', el).forEach(function (b) { b.classList.toggle("on", b.dataset.tool === t); if (b.dataset.tool === "erase") b.textContent = eraseMode === "part" ? "Erase part" : "Eraser"; });
         el.classList.toggle("texting", t === "text");
         if (t !== "lasso" && sel) { setSel(null); draw(); }
         showPens(); inkBtn();
@@ -2223,8 +2278,8 @@ var Reader = (function () {
       redo: function () { if (redo.length) { undo.push(snap()); restore(redo.pop()); } },
       clear: function () { if (!sc.strokes.length && !sc.texts.length) return; keep(snap()); sc.strokes = []; sc.texts = []; setSel(null); renderTexts(); answers = null; draw(); src.save(sc); toast(sc.imgs.length ? "Cleared your writing (pictures stay). Undo brings it back." : "Cleared. Undo brings it back."); },
       addImage: function (id, nw, nh) { // place it at the top of what's on screen, no wider than the pad
-        var r = cv.getBoundingClientRect(), k = Math.min(1, 900 / nw, 800 / nh), w = nw * k, h = nh * k;
-        var y = r.width > 0 ? Math.max(20, Math.min(sc.h - 60, Math.max(0, -r.top + 70) * 1000 / r.width)) : 20;
+        var r = box.getBoundingClientRect(), k = Math.min(1, 900 / nw, 800 / nh), w = nw * k, h = nh * k;
+        var y = r.width > 0 ? Math.max(20, Math.min(sc.h - 60, (viewport()[0] + 70) * 1000 / r.width)) : 20;
         keep(snap()); sc.imgs.push({ id: id, x: Math.round((1000 - w) / 2), y: Math.round(y), w: Math.round(w), h: Math.round(h) });
         el.__api.tool("lasso", true); setSel({ s: [], i: [sc.imgs.length - 1], t: [] }); fit(); draw(); src.save(sc);
         toast("Picture added. Drag it to move it, drag a corner to resize it, then pick Pen to write on it.", 7000);
@@ -2241,11 +2296,11 @@ var Reader = (function () {
       },
       pasteInk: function () {
         if (!INK) return;
-        var r = cv.getBoundingClientRect(), b = [1e9, 1e9];
+        var r = box.getBoundingClientRect(), b = [1e9, 1e9];
         INK.s.forEach(function (st) { st.pts.forEach(function (q) { b[0] = Math.min(b[0], q[0]); b[1] = Math.min(b[1], q[1]); }); });
         INK.i.forEach(function (m) { b[0] = Math.min(b[0], m.x); b[1] = Math.min(b[1], m.y); });
         INK.t.forEach(function (t) { b[0] = Math.min(b[0], t.x); b[1] = Math.min(b[1], t.y); });
-        var y = r.width > 0 ? Math.max(20, Math.max(0, -r.top + 90) * 1000 / r.width) : 40; // near the top of what's on screen
+        var y = r.width > 0 ? Math.max(20, (viewport()[0] + 90) * 1000 / r.width) : 40; // near the top of what's on screen
         keep(snap()); pasteItems(INK, 60 - b[0], y - b[1]);
       },
       pen: function (what, v) {
@@ -2254,20 +2309,37 @@ var Reader = (function () {
         showPens();
       },
       hasSel: function () { return !!sel; },
-      taller: function () { sc.h = Math.min(sc.h + grow, 6000); size(); src.save(sc); },
+      taller: function () { sc.h += grow * 2; size(); src.save(sc); },
       finger: function (on) { finger = on; },
       isEmpty: function () { return !sc.strokes.filter(ink).length; },
       busy: function () { return drawing(); },
       strokes: function () { return sc.strokes.filter(ink); }, // the reader and the answers skip highlighter
       selected: function () { return sel ? sel.s.map(function (i) { return sc.strokes[i]; }).filter(ink) : null; }, // selected writing, or null when nothing is selected
-      flash: function (b) { readBox = b; draw(); clearTimeout(readT); readT = setTimeout(function () { readBox = null; draw(); }, 3500); },
+      flash: function (b) { readBox = b; compose(); clearTimeout(readT); readT = setTimeout(function () { readBox = null; compose(); }, 3500); },
       reload: function () { sc = src.load(); sc.imgs = sc.imgs || []; sc.texts = sc.texts || []; undo = []; redo = []; answers = null; setSel(null); renderTexts(); size(); },
       redraw: function () { answers = null; draw(); },
       dataURL: function () { return workImage().toDataURL("image/png"); },
       image: function () { var c = workImage(); return new Promise(function (res) { c.toBlob(res, "image/png"); }); }
     };
-    if (window.ResizeObserver) new ResizeObserver(function () { size(); showMenu(); }).observe(box); else window.addEventListener("resize", size);
-    renderTexts(); showPens(); inkBtn(); size();
+    if (window.ResizeObserver) new ResizeObserver(function () { if (box.clientWidth !== lastW) { size(); showMenu(); } }).observe(box); else window.addEventListener("resize", size);
+    var tick = 0, hosts = [window];
+    if (EMB) try { hosts.push(window.parent); } catch (e) {}
+    function railAt() {
+      if (!EMB || !rail) return;
+      try {
+        var body = rail.parentNode, br = body.getBoundingClientRect(), top = window.frameElement.getBoundingClientRect().top + br.top;
+        var hd = window.parent.document.querySelector(".top"), hh = hd ? hd.getBoundingClientRect().bottom : 0;
+        rail.style.transform = "translateY(" + Math.max(0, Math.min(br.height - rail.offsetHeight, Math.max(0, hh) + 8 - top)) + "px)";
+      } catch (e) {}
+    }
+    function onScroll() {
+      if (!el.isConnected) { hosts.forEach(function (w) { try { w.removeEventListener("scroll", onScroll, true); w.removeEventListener("resize", onScroll); } catch (e) {} }); return; }
+      if (tick) return; tick = 1;
+      var go = function () { if (!tick) return; tick = 0; place(false); railAt(); };
+      requestAnimationFrame(go); setTimeout(go, 60); // whichever comes first (no frames while the page is in the background)
+    }
+    hosts.forEach(function (w) { try { w.addEventListener("scroll", onScroll, true); w.addEventListener("resize", onScroll); } catch (e) {} });
+    renderTexts(); showPens(); inkBtn(); size(); railAt();
   }
 
   /* ---------- page tabs and the main pad ---------- */
@@ -2802,6 +2874,8 @@ var Reader = (function () {
     try { new MutationObserver(embedTheme).observe(window.parent.document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); } catch (e) { setInterval(embedTheme, 3000); }
     showEmbed();
   } else {
+    var topH = function () { var t = $(".top"); if (t) document.documentElement.style.setProperty("--top-h", t.offsetHeight + "px"); }; // the rail sticks just under the header
+    topH(); window.addEventListener("resize", topH);
     applyTheme();
     showPage(P.cur);
     imgKeys().then(function (keys) { // (never in embed mode: it would forget the Scratch Pad's own pictures)
@@ -2814,10 +2888,10 @@ var Reader = (function () {
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps 26f751fa4931 for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps 13431286a820 for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "26f751fa4931", shown = false, last = 0;
+  var V = "13431286a820", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;
