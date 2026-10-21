@@ -424,6 +424,18 @@ ul.wamap { margin: 0 0 10px; padding-left: 20px; line-height: 1.7; }
 .more-btn { align-self: flex-start; }
 .more-list { display: flex; flex-direction: column; gap: 14px; padding-left: 14px; border-left: 3px solid var(--accent-soft-border); }
 
+/* "Teach the reader" (ui.js, #/teach) */
+.teach-syms { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.teach-sym { min-width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); font: inherit; font-size: 17px; cursor: pointer; }
+.teach-sym.done { border-color: var(--good); color: var(--good); }
+.teach-sym.on { outline: 2px solid var(--accent); outline-offset: 1px; }
+.teach-now { font-size: 17px; margin-bottom: 10px; }
+.teach-big { font-size: 30px; margin: 0 4px; }
+.teach-boxes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.teach-box { width: 100%; height: 150px; border: 1.5px dashed var(--border-strong); border-radius: 10px; background: var(--surface); color: var(--ink); touch-action: none; cursor: crosshair; }
+.teach-box.bad { border-color: var(--bad); border-style: solid; }
+.teach-msg { min-height: 1.4em; margin: 8px 0; color: var(--bad); }
+
 /* ---------- Scratch Pad app (added Oct 17): only what style.css doesn't already cover ---------- */
 :root { --solve: #B7791F;
   --pen-blue: #2563EB; --pen-red: #DC2626; --pen-green: #15803D; --pen-orange: #D97706; --pen-purple: #7C3AED;
@@ -1449,10 +1461,24 @@ var Reader = (function () {
       var p = glyphs[k], mine = hw.filter(function (t) { return t.l === lf.l; });
       if (mine.some(function (t) { return differ(p, t.p) < 0.05; })) return; // this very drawing is already known
       hw.push({ l: lf.l, p: p }); count++;
-      if (mine.length >= KEEP) hw.splice(hw.indexOf(mine[0]), 1);
+      var old = mine.filter(function (t) { return !t.c; }); // calibration samples (c) are kept; the oldest learned one goes
+      if (mine.length >= KEEP && old.length) hw.splice(hw.indexOf(old[0]), 1);
     });
     return count;
   }
+
+  // Calibration: the user writes one symbol by itself (ui.js, #/teach). Returns "ok" (learned), "auto" (geometry
+  // already names it, like + or a straight 1, so there is nothing to learn) or "split" (it came out as more
+  // than one symbol). Calibration samples are marked c and never pushed out by learn().
+  function teach(strokes, label) {
+    var sk = sketch(strokes, true);
+    if (!sk || sk.leaves.length !== 1 || sk.items.length !== 1) return "split";
+    var lf = sk.leaves[0];
+    if (lf.forced) return "auto";
+    hw.push({ l: label, p: glyph(lf.strokes), c: 1 });
+    return "ok";
+  }
+  function forget(label) { hw = hw.filter(function (t) { return !(t.c && t.l === label); }); }
 
   /* ---------- running the model ---------- */
   var st = { loading: null, enc: null, dec: null, vocab: null, ok: null, cmd: null, slash: null };
@@ -1595,7 +1621,7 @@ var Reader = (function () {
   }
 
   return { read: read, load: load, stored: stored, lastLine: lastLine, pieces: pieces, toTyped: toTyped,
-    quick: quick, learn: learn, sketch: sketch, differ: differ, glyph: glyph,
+    quick: quick, learn: learn, teach: teach, forget: forget, sketch: sketch, differ: differ, glyph: glyph,
     learned: function (list) { if (list) hw = list; return hw; }, megabytes: Math.round(TOTAL / 1e6) };
 })();
 
@@ -1615,7 +1641,7 @@ var Reader = (function () {
    so it doesn't see the token the other apps saved there.
    Embed mode (Oct 18): the Calc and Precalc web apps show this page in a frame as each problem's pad
    (scratch.html?embed=<problem id>). Then the pad is that problem's, saved under the app's own scratch key in
-   the format it already syncs, and the app does the reading, Ask Claude and syncing through window.__padHost. */
+   the format it already syncs, and the app does the reading, Ask Gemini and syncing through window.__padHost. */
 (function () {
   "use strict";
   var E = MathEngine, KEY = "scratch-pad-v1", HAS_READER = typeof Reader !== "undefined";
@@ -1859,7 +1885,7 @@ var Reader = (function () {
       (COARSE ? '<label class="row scr-finger" style="gap:6px;font-size:13px"><input type="checkbox" class="ck" data-act="scr-finger"> Finger draws</label>' : "") +
       (side ? "" : '<span class="spacer"></span>') +
       (inf ? (inf.read ? '<button class="btn small" data-act="scr-read" title="Types what you selected (or the last line you wrote) into the answer box">Read my answer</button><button class="btn small ghost" data-act="scr-calc" title="Reads what you selected (or the last line) into the calculator">→ Calculator</button>' : "") +
-        (inf.quiz ? "" : '<button class="btn small" data-act="scr-ask">Ask Claude to check</button>') :
+        (inf.quiz ? "" : '<button class="btn small" data-act="scr-ask">Ask Gemini to check</button>') :
       reader ? (dest === "calc" ? '<button class="btn small" data-act="scr-read" title="Reads what you selected (or the last line you wrote) into the calculator">Read into calculator</button>'
         : '<button class="btn small" data-act="scr-read" title="Reads what you selected (or the last line you wrote) and copies it">Read &amp; copy</button><button class="btn small ghost" data-act="scr-calc" title="Reads what you selected (or the last line) into the calculator">→ Calculator</button>') : "");
     if (!side) return '<div class="scratch" data-pid="' + pid + '"><div class="scr-tools">' + tools + acts + '</div><div class="scr-body">' +
@@ -2190,6 +2216,35 @@ var Reader = (function () {
       sc.strokes = out; return hit;
     }
 
+    /* scribbling over writing erases it, like Scribble on the iPad: a tight back-and-forth stroke
+       (at least 5 passes, retracing its own area) deletes the strokes that sit mostly inside it.
+       Over empty space it stays as ink, so shading still works. */
+    function scratchOut(pts) {
+      if (pts.length < 12) return false;
+      var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, len = 0;
+      pts.forEach(function (p, i) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); if (i) len += Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]); });
+      var w = x1 - x0, h = y1 - y0;
+      if (w + h < 12 || len < 3 * (w + h)) return false;
+      function turns(k, span) { // direction changes along one axis, ignoring wobbles smaller than a quarter of the span
+        var n = 0, dir = 0, ext = pts[0][k], min = Math.max(4, span / 4);
+        pts.forEach(function (p) {
+          var v = p[k];
+          if (!dir) { if (Math.abs(v - ext) > min) { dir = v > ext ? 1 : -1; ext = v; } }
+          else if ((v - ext) * dir > 0) ext = v;
+          else if ((ext - v) * dir > min) { n++; dir = -dir; ext = v; }
+        });
+        return n;
+      }
+      if (Math.max(turns(0, w), turns(1, h)) < 4) return false;
+      var m = 4, hit = false;
+      sc.strokes = sc.strokes.filter(function (st) {
+        var inside = st.pts.filter(function (p) { return p[0] > x0 - m && p[0] < x1 + m && p[1] > y0 - m && p[1] < y1 + m; }).length;
+        if (inside >= st.pts.length / 2) { hit = true; return false; }
+        return true;
+      });
+      return hit;
+    }
+
     /* input */
     // Safari treats a quick lift and touch of the pencil as a double tap and selects text or zooms. Cancelling the
     // touch on the canvas stops that; the pointer events below still arrive.
@@ -2272,6 +2327,7 @@ var Reader = (function () {
         if (lasso) { var s = selectLasso(lasso); lasso = null; setSel(s); draw(); }
         return;
       }
+      if (cur && !cur.shape && cur.k !== "h" && scratchOut(cur.pts)) { cur = null; answers = null; draw(); src.save(sc); return; }
       var added = cur && cur.pts.length; if (added) { delete cur.shape; sc.strokes.push(cur); }
       cur = null; answers = null;
       if (added) { var hb = sc.h; fit(); if (sc.h === hb) draw(); } else draw();
@@ -2290,7 +2346,7 @@ var Reader = (function () {
       r.innerHTML = '<span class="dots">' + list.map(function (c) { return '<button class="dot-btn' + (pen.c === c ? " on" : "") + '" data-act="pen-color" data-c="' + c + '" style="--dot:var(--pen-' + (tool === "hl" ? "hl-" : "") + c + ', var(--ink))" aria-label="' + c + '" title="' + c + '"></button>'; }).join("") + "</span>" +
         '<label class="size-slider" title="Stroke size"><input type="range" min="0" max="100" step="1" value="' + Math.round(sizePos(pen.s || 1)) + '" data-act="pen-size-range" aria-label="Stroke size"><i style="--sz:' + dotPx(tool, pen.s || 1) + 'px;--dot:' + colorOf({ c: pen.c === "ink" ? "" : pen.c, k: tool === "hl" ? "h" : "" }) + '"></i></label>';
     }
-    function workImage() { // the work in dark ink on white, for Ask Claude to check
+    function workImage() { // the work in dark ink on white, for Ask Gemini to check
       var bottom = 0;
       sc.strokes.forEach(function (s) { s.pts.forEach(function (q) { if (q[1] > bottom) bottom = q[1]; }); });
       sc.texts.forEach(function (t) { bottom = Math.max(bottom, t.y + t.size * 1.4); });
@@ -2941,10 +2997,10 @@ var Reader = (function () {
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps 41bc56d0a06b for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps 465ee753af3b for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "41bc56d0a06b", shown = false, last = 0;
+  var V = "465ee753af3b", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;

@@ -424,6 +424,18 @@ ul.wamap { margin: 0 0 10px; padding-left: 20px; line-height: 1.7; }
 .more-btn { align-self: flex-start; }
 .more-list { display: flex; flex-direction: column; gap: 14px; padding-left: 14px; border-left: 3px solid var(--accent-soft-border); }
 
+/* "Teach the reader" (ui.js, #/teach) */
+.teach-syms { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.teach-sym { min-width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); font: inherit; font-size: 17px; cursor: pointer; }
+.teach-sym.done { border-color: var(--good); color: var(--good); }
+.teach-sym.on { outline: 2px solid var(--accent); outline-offset: 1px; }
+.teach-now { font-size: 17px; margin-bottom: 10px; }
+.teach-big { font-size: 30px; margin: 0 4px; }
+.teach-boxes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.teach-box { width: 100%; height: 150px; border: 1.5px dashed var(--border-strong); border-radius: 10px; background: var(--surface); color: var(--ink); touch-action: none; cursor: crosshair; }
+.teach-box.bad { border-color: var(--bad); border-style: solid; }
+.teach-msg { min-height: 1.4em; margin: 8px 0; color: var(--bad); }
+
 </style>
 </head>
 <body>
@@ -4476,10 +4488,24 @@ var Reader = (function () {
       var p = glyphs[k], mine = hw.filter(function (t) { return t.l === lf.l; });
       if (mine.some(function (t) { return differ(p, t.p) < 0.05; })) return; // this very drawing is already known
       hw.push({ l: lf.l, p: p }); count++;
-      if (mine.length >= KEEP) hw.splice(hw.indexOf(mine[0]), 1);
+      var old = mine.filter(function (t) { return !t.c; }); // calibration samples (c) are kept; the oldest learned one goes
+      if (mine.length >= KEEP && old.length) hw.splice(hw.indexOf(old[0]), 1);
     });
     return count;
   }
+
+  // Calibration: the user writes one symbol by itself (ui.js, #/teach). Returns "ok" (learned), "auto" (geometry
+  // already names it, like + or a straight 1, so there is nothing to learn) or "split" (it came out as more
+  // than one symbol). Calibration samples are marked c and never pushed out by learn().
+  function teach(strokes, label) {
+    var sk = sketch(strokes, true);
+    if (!sk || sk.leaves.length !== 1 || sk.items.length !== 1) return "split";
+    var lf = sk.leaves[0];
+    if (lf.forced) return "auto";
+    hw.push({ l: label, p: glyph(lf.strokes), c: 1 });
+    return "ok";
+  }
+  function forget(label) { hw = hw.filter(function (t) { return !(t.c && t.l === label); }); }
 
   /* ---------- running the model ---------- */
   var st = { loading: null, enc: null, dec: null, vocab: null, ok: null, cmd: null, slash: null };
@@ -4622,7 +4648,7 @@ var Reader = (function () {
   }
 
   return { read: read, load: load, stored: stored, lastLine: lastLine, pieces: pieces, toTyped: toTyped,
-    quick: quick, learn: learn, sketch: sketch, differ: differ, glyph: glyph,
+    quick: quick, learn: learn, teach: teach, forget: forget, sketch: sketch, differ: differ, glyph: glyph,
     learned: function (list) { if (list) hw = list; return hw; }, megabytes: Math.round(TOTAL / 1e6) };
 })();
 
@@ -4927,7 +4953,7 @@ CONFIG.web = true;
         (COARSE ? '<label class="row scr-finger" style="gap:6px;font-size:13px"><input type="checkbox" class="ck" data-act="scr-finger"> Finger draws</label>' : "") +
         '<span class="spacer"></span>' + (CONFIG.web && typeof Reader !== "undefined" && p.type !== "choice" ? '<button class="btn small" data-act="scr-read" data-pid="' + p.pid + '" title="Types what you boxed (or the last line you wrote) into the answer box">' + readLabel(p.pid) + "</button>" +
           (p.calc ? "" : '<button class="btn small ghost" data-act="scr-calc" data-pid="' + p.pid + '" title="Reads what you boxed (or the last line) into the calculator">→ Calculator</button>') : "") +
-        (p.quiz || p.calc ? "" : '<button class="btn small" data-act="scr-ask" data-pid="' + p.pid + '"' + (CONFIG.web ? "" : " hidden") + ">" + (CONFIG.web ? "Ask Claude to check" : "Check my work") + "</button>") + "</div>" +
+        (p.quiz || p.calc ? "" : '<button class="btn small" data-act="scr-ask" data-pid="' + p.pid + '"' + (CONFIG.web ? "" : " hidden") + ">" + (CONFIG.web ? "Ask Gemini to check" : "Check my work") + "</button>") + "</div>" +
         '<div class="scr-canvas"><canvas></canvas></div><div class="scr-fb" hidden></div></div>' : "") + "</div>";
   }
   function inBox(strokes, b) { // strokes with most of their points inside the box
@@ -5111,7 +5137,7 @@ CONFIG.web = true;
 
   // What a problem's Scratch Pad frame (padapp.js, embed mode) calls. The frame saves the pad under scratchKey(pid)
   // itself, in the same format plus extra fields, and its pad api (strokes, selected, flash, dataURL, reload...)
-  // is put on the frame's wrapper, so the reading, Ask Claude and sync code here works unchanged.
+  // is put on the frame's wrapper, so the reading, Ask Gemini and sync code here works unchanged.
   function padWrap(pid) { return document.querySelector('.scratch-embed[data-pid="' + pid + '"]'); }
   window.__padHost = {
     key: KEY,
@@ -5407,7 +5433,7 @@ CONFIG.web = true;
     });
   }
 
-  /* ---------- "Check my work" hand-off to Claude (web version) ---------- */
+  /* ---------- "Ask Gemini to check": hand-off to Gemini (web version) ---------- */
   function dataURLBlob(u) {
     var parts = u.split(","), bin = atob(parts[1]), arr = new Uint8Array(bin.length);
     for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
@@ -5433,58 +5459,72 @@ CONFIG.web = true;
       "2. Otherwise point to the FIRST step that went wrong, say what the mistake is, and give one hint for fixing it. Don't give the final answer.\n" +
       "3. If you can't read part of my handwriting, say which part.";
   }
+  // Gemini can't be opened with a question filled in, so the picture carries it: the problem and what to do
+  // above the handwriting. One paste then has everything. (The answer key stays out of the picture.)
+  function geminiImage(pid, workURL) {
+    return new Promise(function (res, rej) {
+      var img = new Image();
+      img.onload = function () {
+        var W = Math.max(900, img.width), pad = 32, fs = 26, lh = 36, cv = document.createElement("canvas"), cx = cv.getContext("2d");
+        cx.font = fs + "px sans-serif";
+        function wrap(text, bold) {
+          cx.font = (bold ? "bold " : "") + fs + "px sans-serif";
+          var out = [], line = "";
+          text.split(/\s+/).forEach(function (w) { var tr = line ? line + " " + w : w; if (cx.measureText(tr).width > W - 2 * pad && line) { out.push(line); line = w; } else line = tr; });
+          if (line) out.push(line);
+          return out.map(function (l) { return { t: l, b: bold }; });
+        }
+        var lines = wrap("Please check my handwritten work below. I have ADHD: reply in 2 to 5 short sentences. If it's right, say so. If not, point to the first wrong step and give one hint, not the answer. Say if you can't read part of it.", false)
+          .concat([{ t: "" }], wrap("Problem: " + plainText(prompt(PROB[pid])), true));
+        var typed = (S.ans[pid] && S.ans[pid].val) || "";
+        if (typed) lines = lines.concat(wrap("The answer I typed: " + typed, false));
+        var top = pad + lines.length * lh + pad / 2;
+        cv.width = W; cv.height = top + img.height;
+        cx.fillStyle = "#fff"; cx.fillRect(0, 0, W, cv.height);
+        cx.fillStyle = "#1a1a1a"; cx.textBaseline = "top";
+        lines.forEach(function (l, i) { cx.font = (l.b ? "bold " : "") + fs + "px sans-serif"; cx.fillText(l.t, pad, pad + i * lh); });
+        cx.fillStyle = "#ccc"; cx.fillRect(pad, top - pad / 4, W - 2 * pad, 2);
+        cx.drawImage(img, 0, top);
+        cv.toBlob(function (bl) { if (bl) res(bl); else rej(new Error("image")); }, "image/png");
+      };
+      img.onerror = function () { rej(new Error("image")); };
+      img.src = workURL;
+    });
+  }
   function handoff(pid, btn, padEl) {
     var el = padEl || btn.closest(".scratch");
     if (!el || !el.__api) return;
     if (el.__api.isEmpty()) { toast("Write your steps on the scratch pad first."); return; }
-    var blob = dataURLBlob(el.__api.dataURL()), msg = tutorPrompt(pid, true);
-    var file = null;
-    try { file = new File([blob], "my-work-" + pid + ".png", { type: "image/png" }); } catch (e) {}
-    var canShareFiles = COARSE && file && navigator.canShare && navigator.canShare({ files: [file] });
-    if (canShareFiles) {
-      // iPad / phone: share sheet straight into the Claude app (pick Claude)
-      navigator.share({ files: [file], text: msg }).then(function () { mark(); }).catch(function (e) {
-        if (e && e.name === "AbortError") return;
-        desktopHandoff(blob, msg);
-      });
+    var blobP = geminiImage(pid, el.__api.dataURL());
+    if (COARSE && navigator.share && navigator.canShare) {
+      // iPad / phone: the share sheet, then pick Gemini
+      blobP.then(function (blob) {
+        var file = new File([blob], "my-work-" + pid + ".png", { type: "image/png" });
+        if (!navigator.canShare({ files: [file] })) return desktopHandoff(blobP);
+        return navigator.share({ files: [file], text: tutorPrompt(pid, true, 1) }).then(function () { mark(); }, function (e) { if (!e || e.name !== "AbortError") desktopHandoff(blobP); });
+      }, function () { toast("Couldn\u2019t make the picture. Try again."); });
       return;
     }
-    desktopHandoff(blob, msg, pid);
+    desktopHandoff(blobP);
   }
-  // Browsers on Windows won't hand an app a link longer than 2048 characters, so the app link carries
-  // the fullest prompt that fits. "" means none fits (or the app is turned off): use the website.
-  var APP_LINK_MAX = 2000;
-  function appLink(pid) {
-    if (!pid || COARSE || S.prefs.claudeApp === false) return "";
-    for (var brief = 0; brief < 3; brief++) {
-      var u = "claude://claude.ai/new?q=" + encodeURIComponent(tutorPrompt(pid, true, brief));
-      if (u.length <= APP_LINK_MAX) return u;
-    }
-    return "";
-  }
-  function desktopHandoff(blob, msg, pid) {
+  function desktopHandoff(blobP) {
+    var w = window.open("https://gemini.google.com/app", "_blank"); try { if (w) w.opener = null; } catch (e) {}
     var copied = null;
-    try {
-      if (navigator.clipboard && window.ClipboardItem) copied = navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-    } catch (e) {}
+    // the picture as a promise, so the copy still counts as part of the click (Safari needs that)
+    try { if (navigator.clipboard && window.ClipboardItem) copied = navigator.clipboard.write([new ClipboardItem({ "image/png": blobP })]); } catch (e) {}
     if (!copied) copied = Promise.reject(new Error("no clipboard"));
-    var app = appLink(pid), w = null;
-    if (!app) { w = window.open("https://claude.ai/new?q=" + encodeURIComponent(msg), "_blank"); try { if (w) w.opener = null; } catch (e) {} }
-    // the app opens after the copy settles: it takes focus, and a page that isn't focused can't write to the clipboard
-    function openApp() { if (!app) return; var a = document.createElement("a"); a.href = app; document.body.appendChild(a); a.click(); a.remove(); }
-    var opening = (app ? "The Claude app" : "Claude") + " is opening with the question filled in. ";
     copied.then(function () {
-      openApp();
-      toast(opening + "Paste (Ctrl+V or ⌘V) to add your handwriting, then send.", 9000);
+      toast("Gemini is opening. Paste (Ctrl+V or \u2318V) to add your work and the problem, then send.", 9000);
     }, function () {
       // clipboard blocked: save the picture so it can be attached instead
-      var u = URL.createObjectURL(blob), a = document.createElement("a");
-      a.href = u; a.download = "my-work.png"; document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(function () { URL.revokeObjectURL(u); }, 2000);
-      openApp();
-      toast(opening + "Your handwriting was saved as my-work.png: attach it, then send.", 9000);
+      blobP.then(function (blob) {
+        var u = URL.createObjectURL(blob), a = document.createElement("a");
+        a.href = u; a.download = "my-work.png"; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(u); }, 2000);
+        toast("Gemini is opening. Your work was saved as my-work.png: attach it, then send.", 9000);
+      });
     });
-    if (!app && !w) toast("Your browser blocked the new tab. Allow pop-ups for this site and try again.");
+    if (!w) toast("Your browser blocked the new tab. Allow pop-ups for this site and try again.");
     mark();
   }
 
@@ -5723,7 +5763,7 @@ CONFIG.web = true;
       "<li><b>Phone in another room</b> during a sprint, and take the 5-minute break when the timer says so, even if you feel fine.</li></ul></details>";
     h += '<section class="card"><div class="card-h"><h2>Settings &amp; backup</h2></div><div class="row">' +
       '<label class="row" style="gap:8px"><input type="checkbox" class="ck" data-act="pref-sound"' + (S.prefs.sound ? " checked" : "") + "> Chime when a timer ends</label></div>" +
-      (CONFIG.web && !COARSE ? '<div class="row" style="margin-top:8px"><label class="row" style="gap:8px"><input type="checkbox" class="ck" data-act="pref-claude-app"' + (S.prefs.claudeApp === false ? "" : " checked") + "> “Ask Claude to check” opens the Claude app (untick to use the Claude website)</label></div>" : "") +
+      (CONFIG.web && typeof Reader !== "undefined" ? '<div class="row" style="margin-top:8px"><a class="btn small" href="#/teach">Teach the reader my handwriting</a><span class="muted">' + teachCount() + " of " + TEACH_SYMS.length + " symbols done</span></div>" : "") +
       (CONFIG.web ? ghSettingsHTML() : CONFIG.hosted ? '<h3 style="font-size:15px;margin:16px 0 6px">Your progress</h3><p class="muted" style="margin:0 0 10px">Saved to your Claude account automatically. Open this page on your PC, MacBook or iPad and it\u2019s already up to date. Handwriting on the scratch pads saves too.</p>' : '<h3 style="font-size:15px;margin:16px 0 6px">Take your progress to another device</h3>') +
       (CONFIG.hosted ? "" : (EXT.on ? '<p class="muted" style="margin:0 0 10px"><b style="color:var(--good)">Study Sync is on.</b> Your progress syncs through your Firefox account to any computer where you\u2019re signed in to Firefox with the Study Sync extension installed. Firefox syncs about every 10 minutes, or right away with <b>Sync Now</b> in the Firefox menu.</p>' : "") +
       (FILE.ok ? '<p class="muted" style="margin:0 0 10px"><b style="color:var(--good)">Auto-save is on.</b> Your progress is saved inside this file as you go. Copy the file to another computer and it opens where you left off.</p>'
@@ -5904,7 +5944,7 @@ CONFIG.web = true;
       h += '<div class="prob-tools">' + (p.hint ? '<button class="link-btn" data-act="hint" data-pid="' + p.pid + '">Hint</button>' : "") + (p.sol ? '<button class="link-btn" data-act="sol" data-pid="' + p.pid + '">Show solution</button>' : "") + "</div>" +
         '<div class="reveal" data-r="hint" hidden>' + (p.hint || "") + '</div><div class="reveal" data-r="sol" hidden>' + (p.sol ? steps(p.sol) : "") + "<div>Answer: " + ansHTML(p) + "</div></div>";
     }
-    return h + scratchHTML(p) + "</div>"; // quiz items carry p.quiz, which leaves out "Ask Claude" (no hints in a quiz)
+    return h + scratchHTML(p) + "</div>"; // quiz items carry p.quiz, which leaves out "Ask Gemini" (no hints in a quiz)
   }
   var PRAISE = ["Correct.", "Nice.", "Right.", "That’s it.", "Correct, keep going."];
   function fbHTML(stt, msg, p, shape) {
@@ -6085,6 +6125,82 @@ CONFIG.web = true;
 
   /* ---------- mistakes ---------- */
   var mFilter = "open";
+  /* ---------- "Teach the reader": write each symbol three times (web version) ----------
+     Each sample goes straight into the personal reader (Reader.teach in reader.js), so it reads the user's
+     own handwriting from the start instead of waiting for right answers to learn from. Samples stay on this
+     device, like everything the reader learns: a pencil and a mouse write differently. */
+  var TEACH_SYMS = "0 1 2 3 4 5 6 7 8 9 x y t e c s i n o a l g ( ) / |".split(" ");
+  var TEACH = { i: 0, boxes: null, bad: {}, msg: "" };
+  var TEACH_AUTO = KEY + ":hw-auto"; // symbols the reader names by shape alone (a straight 1, a crossed x), so nothing was stored
+  function teachAuto() { try { return JSON.parse(localStorage.getItem(TEACH_AUTO) || "{}"); } catch (e) { return {}; } }
+  function teachShow(l) { return l === "c" ? "C" : /[a-z]/.test(l) ? "<i>" + l + "</i>" : l; }
+  function teachDone() { var d = teachAuto(); Reader.learned().forEach(function (t) { if (t.c) d[t.l] = true; }); return d; }
+  function teachCount() { var d = teachDone(); return TEACH_SYMS.filter(function (l) { return d[l]; }).length; }
+  function renderTeach() {
+    var d = teachDone(), l = TEACH_SYMS[TEACH.i], n = teachCount(), last = TEACH.i === TEACH_SYMS.length - 1;
+    return '<section class="card teach"><div class="card-h"><h2>Teach the reader my handwriting</h2><span class="muted">' + n + " of " + TEACH_SYMS.length + " done</span></div>" +
+      '<p class="muted" style="margin:0 0 12px">Write the symbol once in each box, the way you write it in your work, at the same size. It saves after each symbol, so you can stop and come back.</p>' +
+      '<div class="teach-syms">' + TEACH_SYMS.map(function (x, i) { return '<button class="teach-sym' + (i === TEACH.i ? " on" : "") + (d[x] ? " done" : "") + '" data-act="teach-go" data-i="' + i + '">' + teachShow(x) + "</button>"; }).join("") + "</div>" +
+      '<div class="teach-now">Write <b class="teach-big">' + teachShow(l) + "</b> three times" + (l === "c" ? ' <span class="muted">(the C in + C)</span>' : l === "|" ? ' <span class="muted">(an absolute value bar)</span>' : "") + "</div>" +
+      '<div class="teach-boxes">' + [0, 1, 2].map(function (k) { return '<canvas class="teach-box' + (TEACH.bad[k] ? " bad" : "") + '"></canvas>'; }).join("") + "</div>" +
+      '<p class="teach-msg">' + TEACH.msg + "</p>" +
+      '<div class="row"><button class="btn ghost small" data-act="teach-clear">Clear</button><span class="spacer"></span>' +
+      (TEACH.i ? '<button class="btn ghost small" data-act="teach-go" data-i="' + (TEACH.i - 1) + '">Back</button>' : "") +
+      '<button class="btn" data-act="teach-next">' + (last ? "Save and finish" : "Save and next") + "</button></div></section>";
+  }
+  function mountTeach() {
+    var cvs = $$("#page .teach-box"); if (!cvs.length) return;
+    var k = 1000 / ($("#page .teach-boxes").clientWidth || 1000); // the scratch pads' units (1000 across), so sizes match what the reader sees there
+    var boxes = TEACH.boxes = TEACH.boxes || [[], [], []], penSeen = false;
+    cvs.forEach(function (cv, b) {
+      var dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight, cx = cv.getContext("2d"), cur = null;
+      cv.width = w * dpr; cv.height = h * dpr; cx.scale(dpr / k, dpr / k);
+      function paint() {
+        cx.clearRect(0, 0, w * k, h * k); cx.lineCap = cx.lineJoin = "round"; cx.lineWidth = 3; cx.strokeStyle = getComputedStyle(cv).color;
+        boxes[b].forEach(function (st) { cx.beginPath(); st.pts.forEach(function (p, j) { if (j) cx.lineTo(p[0], p[1]); else cx.moveTo(p[0], p[1]); }); if (st.pts.length === 1) cx.lineTo(st.pts[0][0] + 0.1, st.pts[0][1]); cx.stroke(); });
+      }
+      function at(e) { var r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * k, (e.clientY - r.top) * k, 0.5]; }
+      cv.addEventListener("pointerdown", function (e) {
+        if (e.pointerType === "pen") penSeen = true; else if (e.pointerType === "touch" && penSeen) return; // a resting palm
+        e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (er) {}
+        cur = { pts: [at(e)] }; boxes[b].push(cur); paint();
+      });
+      cv.addEventListener("pointermove", function (e) {
+        if (!cur) return;
+        var evs = e.getCoalescedEvents ? e.getCoalescedEvents() : []; if (!evs.length) evs = [e];
+        evs.forEach(function (ev) { var p = at(ev), q = cur.pts[cur.pts.length - 1]; if (Math.abs(p[0] - q[0]) + Math.abs(p[1] - q[1]) > 1.5) cur.pts.push(p); });
+        paint();
+      });
+      function up() { cur = null; if (TEACH.bad[b]) { TEACH.bad[b] = false; cv.classList.remove("bad"); } }
+      cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+      cv.addEventListener("touchstart", function (e) { e.preventDefault(); }, { passive: false });
+      paint();
+    });
+  }
+  function teachGo(i) { TEACH.i = Math.max(0, Math.min(TEACH_SYMS.length - 1, i)); TEACH.boxes = null; TEACH.bad = {}; TEACH.msg = ""; render(); }
+  function teachSay(msg) { TEACH.msg = msg; var m = $("#page .teach-msg"); if (m) m.textContent = msg; }
+  function teachNext() {
+    var l = TEACH_SYMS[TEACH.i], boxes = TEACH.boxes || [[], [], []];
+    if (boxes.some(function (b) { return !b.length; })) { teachSay("Write it in all three boxes first."); return; }
+    var keep = Reader.learned().slice(), res = boxes.map(function (st) { return Reader.teach(JSON.parse(JSON.stringify(st)), l); });
+    Reader.learned(keep); // a dry run: save only when every box reads as one symbol
+    var bad = []; res.forEach(function (r, b) { if (r === "split") bad.push(b); });
+    if (bad.length) {
+      TEACH.bad = {}; bad.forEach(function (b) { TEACH.bad[b] = true; });
+      $$("#page .teach-box").forEach(function (cv, b) { cv.classList.toggle("bad", !!TEACH.bad[b]); });
+      var nums = bad.map(function (b) { return b + 1; }), which = nums.length === 1 ? "Box " + nums[0] + " looks" : "Boxes " + nums.slice(0, -1).join(", ") + " and " + nums[nums.length - 1] + " look";
+      teachSay(which + " like more than one symbol. Clear and write it with its pieces touching.");
+      return;
+    }
+    Reader.forget(l);
+    boxes.forEach(function (st) { Reader.teach(st, l); });
+    var auto = teachAuto(); if (res.indexOf("ok") < 0) auto[l] = true; else delete auto[l];
+    try { localStorage.setItem(TEACH_AUTO, JSON.stringify(auto)); } catch (e) {}
+    saveLearned();
+    if (TEACH.i === TEACH_SYMS.length - 1) { TEACH.boxes = null; toast("Saved. The reader knows your handwriting on this device now."); location.hash = "#/"; return; }
+    teachGo(TEACH.i + 1);
+  }
+
   function renderMistakes() {
     var list = S.mistakes.slice().reverse().filter(function (m) { return mFilter === "all" || !m.resolved; });
     var open = S.mistakes.filter(function (m) { return !m.resolved; }).length;
@@ -6118,6 +6234,7 @@ CONFIG.web = true;
     if ((m = /^#\/s\/([\w.]+)(?:\/(\w+))?/.exec(hsh))) { route = "s:" + m[1]; html = renderSession(m[1], m[2]); }
     else if (hsh === "#/plan") { route = "plan"; html = renderPlan(); }
     else if (hsh === "#/mistakes") { route = "mistakes"; html = renderMistakes(); }
+    else if (hsh === "#/teach" && CONFIG.web && typeof Reader !== "undefined") { route = "teach"; html = renderTeach(); }
     else { route = "today"; html = renderToday(); }
     $("#page").innerHTML = html;
     if (route !== currentRoute) window.scrollTo(0, 0);
@@ -6132,7 +6249,7 @@ CONFIG.web = true;
     render();
   }
   function afterRender() {
-    mountScratches();
+    mountScratches(); mountTeach();
     $$("#page .prob .ans").forEach(function (i) { if (i.value) preview(i); });
     var first = $("#tabBody .prob:not(.correct) .ans");
     if (first && S.prefs.oneAtATime && window.innerWidth > 860 && !$("#qbar")) first.focus({ preventScroll: true });
@@ -6182,6 +6299,9 @@ CONFIG.web = true;
       case "scr-clear": t.closest(".scratch").__api.clear(); break;
       case "scr-taller": t.closest(".scratch").__api.taller(); break;
       case "scr-read": readAnswer(t.dataset.pid, t); break;
+      case "teach-go": teachGo(+t.dataset.i); break;
+      case "teach-next": teachNext(); break;
+      case "teach-clear": TEACH.boxes = null; TEACH.bad = {}; TEACH.msg = ""; render(); break;
       case "scr-calc": if (CALC) { CALC.open(); readAnswer(t.dataset.pid, t, true); } break;
       case "scr-ask": if (CONFIG.web) handoff(t.dataset.pid, t); else askClaude(t.dataset.pid, t); break;
       case "gh-connect": ghConnect(($("#ghToken") || {}).value); break;
@@ -6237,7 +6357,6 @@ CONFIG.web = true;
     else if (a === "resolve") { var m = S.mistakes.filter(function (x) { return x.id === t.dataset.id; })[0]; if (m) { m.resolved = t.checked; m.auto = false; save(); render(); } }
     else if (a === "reason") { var m2 = S.mistakes.filter(function (x) { return x.id === t.dataset.id; })[0]; if (m2) { m2.reason = t.value; save(); render(); } }
     else if (a === "pref-sound") { S.prefs.sound = t.checked; save(); }
-    else if (a === "pref-claude-app") { S.prefs.claudeApp = t.checked; save(); }
     else if (a === "scr-finger") { var sc = t.closest(".scratch"); if (sc && sc.__api) sc.__api.finger(t.checked); }
     else if (a === "import" && t.files && t.files[0]) {
       var fr = new FileReader();
@@ -6376,10 +6495,10 @@ CONFIG.web = true;
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps 41bc56d0a06b for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps 465ee753af3b for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "41bc56d0a06b", shown = false, last = 0;
+  var V = "465ee753af3b", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;
