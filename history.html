@@ -3965,10 +3965,10 @@ CONFIG.web = true;
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps 316333b7cfec for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps 41bc56d0a06b for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "316333b7cfec", shown = false, last = 0;
+  var V = "41bc56d0a06b", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;
