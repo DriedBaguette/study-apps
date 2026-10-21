@@ -419,6 +419,11 @@ ul.wamap { margin: 0 0 10px; padding-left: 20px; line-height: 1.7; }
 .update-btn { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 12px; max-width: calc(100% - 32px); padding: 10px 12px 10px 18px; border: 0; border-radius: 10px; background: var(--ink); color: var(--bg); font: inherit; font-size: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.25); cursor: pointer; }
 .update-btn b { background: var(--accent); color: var(--accent-ink); padding: 6px 12px; border-radius: 7px; font-weight: 600; }
 
+/* "More like this": extra problems under a practice problem (more.js) */
+.more-wrap { display: flex; flex-direction: column; gap: 12px; margin-top: -4px; }
+.more-btn { align-self: flex-start; }
+.more-list { display: flex; flex-direction: column; gap: 14px; padding-left: 14px; border-left: 3px solid var(--accent-soft-border); }
+
 /* ---------- Scratch Pad app (added Oct 17): only what style.css doesn't already cover ---------- */
 :root { --solve: #B7791F;
   --pen-blue: #2563EB; --pen-red: #DC2626; --pen-green: #15803D; --pen-orange: #D97706; --pen-purple: #7C3AED;
@@ -2936,10 +2941,10 @@ var Reader = (function () {
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps b24717692aba for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps 88f4a0f16d51 for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "b24717692aba", shown = false, last = 0;
+  var V = "88f4a0f16d51", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;

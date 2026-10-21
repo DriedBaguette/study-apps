@@ -419,6 +419,11 @@ ul.wamap { margin: 0 0 10px; padding-left: 20px; line-height: 1.7; }
 .update-btn { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 12px; max-width: calc(100% - 32px); padding: 10px 12px 10px 18px; border: 0; border-radius: 10px; background: var(--ink); color: var(--bg); font: inherit; font-size: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.25); cursor: pointer; }
 .update-btn b { background: var(--accent); color: var(--accent-ink); padding: 6px 12px; border-radius: 7px; font-weight: 600; }
 
+/* "More like this": extra problems under a practice problem (more.js) */
+.more-wrap { display: flex; flex-direction: column; gap: 12px; margin-top: -4px; }
+.more-btn { align-self: flex-start; }
+.more-list { display: flex; flex-direction: column; gap: 14px; padding-left: 14px; border-left: 3px solid var(--accent-soft-border); }
+
 </style>
 </head>
 <body>
@@ -3096,7 +3101,10 @@ CONFIG.web = true;
   var BY = {}; SESSIONS.forEach(function (s, i) { s.idx = i; BY[s.id] = s; });
   var PROB = {};
   SESSIONS.forEach(function (s) {
-    (s.probs || []).forEach(function (p, i) { p.pid = s.id + "-" + (i + 1); p.sid = s.id; p.n = i; PROB[p.pid] = p; });
+    (s.probs || []).forEach(function (p, i) {
+      p.pid = s.id + "-" + (i + 1); p.sid = s.id; p.n = i; PROB[p.pid] = p;
+      (p.more || []).forEach(function (v, j) { v.pid = p.pid + "m" + (j + 1); v.sid = s.id; v.n = i; v.vn = j + 1; PROB[v.pid] = v; }); // "More like this" (more.js)
+    });
     if (s.quiz) s.quiz.pool.forEach(function (p, i) { p.pid = s.id + "-q" + (i + 1); p.sid = s.id; p.quiz = true; PROB[p.pid] = p; });
   });
   function diag(s) {
@@ -3455,17 +3463,25 @@ CONFIG.web = true;
     h += '<div class="prob-nav"><div class="pdots">' + s.probs.map(function (p, k) { var a = S.ans[p.pid]; return '<button class="pdot ' + (a ? a.status : "") + (one && k === i ? " cur" : "") + '" data-act="pgo" data-sid="' + s.id + '" data-i="' + k + '" aria-label="Problem ' + (k + 1) + (a ? ", " + a.status : "") + '">' + (k + 1) + "</button>"; }).join("") + "</div>" +
       '<div class="seg"><button class="' + (one ? "on" : "") + '" data-act="one" data-v="1">One at a time</button><button class="' + (one ? "" : "on") + '" data-act="one" data-v="0">Show all</button></div></div>';
     if (one) {
-      h += probHTML(s.probs[i]);
+      h += probHTML(s.probs[i]) + moreHTML(s.probs[i]);
       h += '<div class="row" style="justify-content:space-between"><button class="btn ghost" data-act="pgo" data-sid="' + s.id + '" data-i="' + (i - 1) + '"' + (i === 0 ? " disabled" : "") + '>← Previous</button>' +
         (i < n - 1 ? '<button class="btn" id="nextProb" data-act="pgo" data-sid="' + s.id + '" data-i="' + (i + 1) + '">Next problem →</button>' : (s.quiz ? '<button class="btn" data-act="tab" data-sid="' + s.id + '" data-tab="quiz">On to the quiz →</button>' : '<button class="btn good" data-act="done" data-sid="' + s.id + '">Finish session</button>')) + "</div>";
     } else {
-      s.probs.forEach(function (p) { h += probHTML(p); });
+      s.probs.forEach(function (p) { h += probHTML(p) + moreHTML(p); });
     }
     return h + "</div>";
   }
+  // Extra problems like this one (more.js), opened under it for more reps. They don't count toward the session.
+  var MORE_OPEN = {};
+  function moreHTML(p) {
+    if (!p.more || !p.more.length) return "";
+    var done = p.more.filter(function (v) { return (S.ans[v.pid] || {}).status === "correct"; }).length, open = MORE_OPEN[p.pid];
+    return '<div class="more-wrap"><button class="btn small ghost more-btn" data-act="more" data-pid="' + p.pid + '" aria-expanded="' + !!open + '">' + (open ? "Hide extra practice" : "More like this") + ' <span class="muted">' + done + "/" + p.more.length + "</span></button>" +
+      (open ? '<div class="more-list">' + p.more.map(function (v) { return probHTML(v); }).join("") + "</div>" : "") + "</div>";
+  }
   function probHTML(p, quiz) {
     var a = S.ans[p.pid] || {}, st = quiz ? "" : a.status || "";
-    var h = '<div class="prob ' + st + '" data-pid="' + p.pid + '"><div class="prob-q"><span class="qn">' + (p.n + 1 || "") + "</span><div>" + prompt(p) + "</div></div>";
+    var h = '<div class="prob ' + st + '" data-pid="' + p.pid + '"><div class="prob-q"><span class="qn">' + (p.vn ? p.n + 1 + "." + p.vn : p.n + 1 || "") + "</span><div>" + prompt(p) + "</div></div>";
     if (p.type === "choice") {
       h += '<div class="choices">' + p.opts.map(function (o, i) { var on = !quiz && a.val === String(i); return '<button class="choice' + (on ? " sel " + (a.status || "") : "") + '" data-act="' + (quiz ? "qchoose" : "choose") + '" data-pid="' + p.pid + '" data-i="' + i + '">' + o + "</button>"; }).join("") + "</div>";
     } else h +=
@@ -3746,6 +3762,7 @@ CONFIG.web = true;
         break;
       case "review": openPart[sid] = +t.dataset.i; S.tab[sid] = "learn"; save(); location.hash = "#/s/" + sid + "/learn"; break;
       case "pgo": S.pstep[sid] = Math.max(0, +t.dataset.i); save(); rerenderTab(); break;
+      case "more": MORE_OPEN[t.dataset.pid] = !MORE_OPEN[t.dataset.pid]; rerenderTab(); break;
       case "one": S.prefs.oneAtATime = t.dataset.v === "1"; save(); rerenderTab(); break;
       case "check": doCheck(t.dataset.pid); break;
       case "scratch-toggle": var wrap = t.closest(".scratch-wrap"), pp = t.dataset.pid; SCR_OPEN[pp] = !$(".scratch", wrap); var tmp = document.createElement("div"); tmp.innerHTML = scratchHTML(PROB[pp]); wrap.replaceWith(tmp.firstChild); mountScratches(); break;
@@ -3948,10 +3965,10 @@ CONFIG.web = true;
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps b24717692aba for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps 88f4a0f16d51 for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "b24717692aba", shown = false, last = 0;
+  var V = "88f4a0f16d51", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;

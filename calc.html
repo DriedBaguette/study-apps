@@ -419,6 +419,11 @@ ul.wamap { margin: 0 0 10px; padding-left: 20px; line-height: 1.7; }
 .update-btn { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 12px; max-width: calc(100% - 32px); padding: 10px 12px 10px 18px; border: 0; border-radius: 10px; background: var(--ink); color: var(--bg); font: inherit; font-size: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.25); cursor: pointer; }
 .update-btn b { background: var(--accent); color: var(--accent-ink); padding: 6px 12px; border-radius: 7px; font-weight: 600; }
 
+/* "More like this": extra problems under a practice problem (more.js) */
+.more-wrap { display: flex; flex-direction: column; gap: 12px; margin-top: -4px; }
+.more-btn { align-self: flex-start; }
+.more-list { display: flex; flex-direction: column; gap: 14px; padding-left: 14px; border-left: 3px solid var(--accent-soft-border); }
+
 </style>
 </head>
 <body>
@@ -931,7 +936,7 @@ var WAMAP = {
 
 var CANVAS = "https://canvas.uw.edu/courses/1931711/assignments/";
 var EXAMS = [
-  { id: "X1", title: "Exam 1", covers: "4.9–5.5", date: "2026-10-20", time: "2:05 PM", pts: 60, phase: 1, prep: "B8", canvas: "11483545" },
+  { id: "X1", title: "Exam 1", covers: "4.9–5.5", date: "2026-10-22", time: "11:45 AM", pts: 60, phase: 1, prep: "B8", canvas: "11483545" },
   { id: "X2", title: "Exam 2", covers: "6.1–6.7", date: "2026-11-10", time: "3:30 PM", pts: 60, phase: 2, prep: "C8", canvas: "11483546" },
   { id: "X3", title: "Exam 3", covers: "8.1–8.6, 8.9", date: "2026-12-08", time: "3:30 PM", pts: 60, phase: 3, prep: "E4", canvas: "11483547" },
   { id: "XF", title: "Final exam", covers: "everything", date: "2026-12-17", time: "5:30 PM", pts: 100, phase: 4, prep: "F3", canvas: "11483548" }
@@ -1329,7 +1334,7 @@ var SESSIONS = [
   topics: ["Everything on Exam 1: 4.9 and 5.1–5.5", "A 50-minute practice test under exam conditions", "A plan for Monday and exam day"],
   links: [["Paul: Calculus I practice problems (Integrals chapter)", "https://tutorial.math.lamar.edu/Problems/CalcI/IntegralsIntro.aspx"], ["Khan: Integration unit test", KA + "cs1-integration-and-accumulation-of-change"]],
   parts: [
-    { t: "What’s on Exam 1", h: "<p>Exam 1 is <b>Tue Oct 20, starting around 2:05 PM</b> (six 10-point questions, 70 minutes, calculator and one 4×6 note card allowed; see <a href=\"#/s/B9\">B9</a>) and covers 4.9 and 5.1–5.5. Here’s every skill on it and where you learned it. If a row makes you nervous, reread that session first.</p>" +
+    { t: "What’s on Exam 1", h: "<p>Exam 1 is <b>Thu Oct 22 at 11:45 AM</b> (moved from Oct 20 by an extension; six 10-point questions, 70 minutes, calculator and one 4×6 note card allowed; see <a href=\"#/s/B9\">B9</a>) and covers 4.9 and 5.1–5.5. Here’s every skill on it and where you learned it. If a row makes you nervous, reread that session first.</p>" +
       tbl(["Section", "Skill", "Review"], [
         ["4.9", "Antiderivatives, +C, rewriting roots and fractions as powers", '<a href="#/s/A3">A3</a>, <a href="#/s/A4">A4</a>'],
         ["4.9", "Initial value problems (use the point to find C)", '<a href="#/s/A5">A5</a>'],
@@ -1396,11 +1401,11 @@ var SESSIONS = [
 /* ================= B9 ================= */
 // The instructor's Exam 1 review guide (STMATH 125, uploaded by the user Oct 20, exam day), problem by problem.
 // Numbered like the guide so the user can match them to the PDF. Exam 1 covers 4.9–6.1, so 6.1 (motion) is here too.
-{ id: "B9", block: "B", date: "2026-10-20", title: "Exam 1 review guide", test: "Problem set", star: true,
+{ id: "B9", block: "B", date: "2026-10-21", title: "Exam 1 review guide", test: "Problem set", star: true,
   topics: ["Your instructor’s review guide, worked problem by problem", "What to put on your 4×6 note card", "Every answer checked, with full steps behind “Show solution”"],
   links: [["Paul: Calculus I practice problems (Integrals chapter)", "https://tutorial.math.lamar.edu/Problems/CalcI/IntegralsIntro.aspx"], ["Khan: Applications of integrals (6.1)", KA + "cs1-applications-of-integrals"]],
   parts: [
-    { t: "The exam", h: "<p>Exam 1 <b>starts around 2:05 PM</b> today (class time is 3:15, but the exam begins early, after a short review). 70 minutes, <b>six questions, 10 points each</b>. You may use an approved calculator and <b>one 4×6 note card</b>, both sides, anything on it. <b>Correct answers with no work get at most half credit</b>, so write every step.</p>" +
+    { t: "The exam", h: "<p>You take Exam 1 on <b>Thursday, Oct 22 at 11:45 AM</b> (an extension from the class date, Oct 20). 70 minutes, <b>six questions, 10 points each</b>. You may use an approved calculator and <b>one 4×6 note card</b>, both sides, anything on it. <b>Correct answers with no work get at most half credit</b>, so write every step.</p>" +
       "<p>Canvas says the exam covers 4.9–5.5; the review guide says 4.9–6.1. Put 4.9–5.5 first. Problems 25–30 below are 6.1 (motion, taught in <a href=\"#/s/C1\">C1</a>): do them if you have time.</p>" +
       tbl(["Guide problems", "Skill", "Review"], [
         ["1–5", "Antiderivatives, +C, initial value problems", '<a href="#/s/A3">A3</a>, <a href="#/s/A4">A4</a>, <a href="#/s/A5">A5</a>'],
@@ -2733,6 +2738,482 @@ SESSIONS.unshift({
   });
 })();
 
+/* ================= More practice ("More like this") =================
+   Added Oct 20, 2026 at the user's request: a set of extra problems under each practice problem, so a skill
+   that isn't sticking yet can get more reps. Five per problem to start, B3–B7 first (Exam 1 that day), then B2;
+   the other sessions get theirs next. Each list is keyed by the problem's id (B3-2 = B3's second practice problem)
+   and becomes p.more; the app numbers them B3-2m1 … B3-2m5. They don't count toward finishing a session.
+   Variants inherit the original's pts (domain) and v (variable) unless they set their own. steps.js writes full
+   steps for the mechanical ones, as it does for the originals; tests/check-answers.js verifies every answer.
+   Calc build only, after sols.js and before steps.js. */
+(function () {
+  function D(q, ans, inner, din, dout) { // a chain-rule derivative, with its steps
+    return { k: "d", q: q, type: "expr", ans: ans, sol: ["Inside: " + M(inner) + ". Its derivative: " + M(din) + ".", "Derivative of the outside, inside left alone: " + M(dout) + ".", "Multiply: " + M(ans)] };
+  }
+  function Dsimple(q, ans, how) { return { k: "d", q: q, type: "expr", ans: ans, sol: [how, M(ans)] }; }
+  function DI_(a, b, q, ans, sol) { return { k: "di", a: a, b: b, q: q, type: "number", ans: ans, sol: sol }; }
+  function F(a, b, q, ans, sol) { return { k: "ftc", a: a, b: b, q: q, type: "expr", ans: ans, sol: sol }; }
+  function U(q, ans, u, sol) { return { k: "i", q: q, type: "antideriv", ans: ans, sol: ["u = " + u].concat(sol, [M(ans)]) }; }
+  function N(text, ans, sol, chk) { var o = { k: "txt", text: text, type: "number", ans: ans, sol: sol }; if (chk) o.chk = chk; return o; }
+  function AVG(q, a, b, ans, sol) { return N("Average value of " + M(q) + " on [" + MI(a) + ", " + MI(b) + "].", ans, sol, [[q, a, b, "1/(" + b + " - (" + a + "))"]]); }
+  var INT = function (a, b, h) { return DIH(a, b, h); };
+  var A_ = mx("<i>A</i>(<i>x</i>) = ") + DIH("0", "x", "<i>f</i>(<i>t</i>)", "t");
+
+  var MORE = {
+    /* ---- B2: definite integrals (net area, properties, geometry) ---- */
+    "B2-1": [
+      DI_("0", "4", "2", "8", ["A rectangle: width 4, height 2.", "4 × 2 = 8"]),
+      DI_("1", "6", "5", "25", ["Rectangle: width 5, height 5.", "= 25"]),
+      DI_("-2", "3", "4", "20", ["Rectangle: width 3 − (−2) = 5, height 4.", "= 20"]),
+      DI_("0", "3", "-2", "-6", ["Rectangle below the axis: width 3, height 2.", "Below counts negative: −6"]),
+      DI_("2", "7", "3/2", "15/2", ["Rectangle: width 5, height 3/2.", "= 15/2"])],
+    "B2-2": [
+      DI_("0", "4", "x", "8", ["A triangle: base 4, height 4.", "½ · 4 · 4 = 8"]),
+      DI_("0", "10", "x", "50", ["Triangle: base 10, height 10.", "½ · 10 · 10 = 50"]),
+      DI_("2", "6", "x", "16", ["A trapezoid: heights 2 and 6, width 4.", "4 × (2 + 6)/2 = 16"]),
+      DI_("0", "3", "2x", "9", ["Triangle: base 3, height 2(3) = 6.", "½ · 3 · 6 = 9"]),
+      DI_("0", "4", "x + 1", "12", ["Trapezoid: heights 1 and 5, width 4.", "4 × (1 + 5)/2 = 12"])],
+    "B2-3": [
+      DI_("-2", "2", "sqrt(4 - x^2)", "2pi", ["Top half of a circle, radius 2.", "½ π (2²) = 2π"]),
+      DI_("0", "5", "sqrt(25 - x^2)", "25pi/4", ["A quarter circle, radius 5.", "¼ π (5²) = 25π/4"]),
+      DI_("-1", "1", "sqrt(1 - x^2)", "pi/2", ["Half circle, radius 1.", "½ π (1²) = π/2"]),
+      DI_("0", "2", "sqrt(4 - x^2)", "pi", ["Quarter circle, radius 2.", "¼ π (2²) = π"]),
+      DI_("-4", "4", "sqrt(16 - x^2)", "8pi", ["Half circle, radius 4.", "½ π (4²) = 8π"])],
+    "B2-4": [
+      DI_("-4", "0", "x", "-8", ["Triangle below the axis: base 4, height 4.", "−½ · 4 · 4 = −8"]),
+      DI_("-3", "3", "x", "0", ["Triangle below on [−3, 0] (−9/2), the same size above on [0, 3] (+9/2).", "They cancel: 0"]),
+      DI_("-2", "4", "x", "6", ["Below on [−2, 0]: −2. Above on [0, 4]: +8.", "−2 + 8 = 6"]),
+      DI_("-6", "0", "x/2", "-9", ["Triangle below: base 6, height 3.", "−½ · 6 · 3 = −9"]),
+      DI_("0", "3", "-x", "-9/2", ["Triangle below: base 3, height 3.", "−½ · 3 · 3 = −9/2"])],
+    "B2-5": [
+      N("If " + INT("0", "6", FX) + " = 10 and " + INT("0", "2", FX) + " = 3, find " + INT("2", "6", FX) + ".", "7", ["0 to 6 = (0 to 2) + (2 to 6)", "10 = 3 + ?, so ? = 7"]),
+      N("If " + INT("1", "5", FX) + " = 8 and " + INT("3", "5", FX) + " = 5, find " + INT("1", "3", FX) + ".", "3", ["1 to 5 = (1 to 3) + (3 to 5)", "8 = ? + 5, so ? = 3"]),
+      N("If " + INT("0", "3", FX) + " = 4 and " + INT("3", "7", FX) + " = 6, find " + INT("0", "7", FX) + ".", "10", ["Next-door intervals add: 4 + 6 = 10"]),
+      N("If " + INT("-2", "2", FX) + " = 1 and " + INT("0", "2", FX) + " = 4, find " + INT("-2", "0", FX) + ".", "-3", ["1 = ? + 4, so ? = −3"]),
+      N("If " + INT("0", "9", FX) + " = 12 and " + INT("5", "9", FX) + " = −2, find " + INT("0", "5", FX) + ".", "14", ["12 = ? + (−2), so ? = 14"])],
+    "B2-6": [
+      N("If " + INT("1", "4", FX) + " = 5, find " + INT("4", "1", "2" + FX) + ".", "-10", ["Swapping the limits flips the sign: " + INT("4", "1", FX) + " = −5", "2 × (−5) = −10"]),
+      N("If " + INT("0", "3", FX) + " = −2, find " + INT("3", "0", FX) + ".", "2", ["Swap the limits, flip the sign: 2"]),
+      N("If " + INT("2", "6", FX) + " = 4, find " + INT("6", "2", "5" + FX) + ".", "-20", ["Swapped: −4. Times 5: −20"]),
+      N("Find " + INT("3", "3", "7" + FX) + ".", "0", ["Same top and bottom limit: no width, so 0."]),
+      N("If " + INT("-1", "2", FX) + " = 6, find " + INT("2", "-1", "(−" + FX + ")") + ".", "6", ["Swapping flips the sign once, the minus in front flips it back: 6"])],
+    "B2-7": [
+      N("If " + INT("0", "4", FX) + " = 6 and " + INT("0", "4", GX) + " = 2, find " + INT("0", "4", "(" + FX + " + 3" + GX + ")") + ".", "12", ["6 + 3(2) = 12"]),
+      N("If " + INT("0", "4", FX) + " = 5 and " + INT("0", "4", GX) + " = −1, find " + INT("0", "4", "(4" + FX + " − 2" + GX + ")") + ".", "22", ["4(5) − 2(−1) = 20 + 2 = 22"]),
+      N("If " + INT("1", "3", FX) + " = 3, " + INT("1", "3", GX) + " = 7 and " + INT("1", "3", HX) + " = 1, find " + INT("1", "3", "(" + FX + " − " + GX + " + 2" + HX + ")") + ".", "-2", ["3 − 7 + 2(1) = −2"]),
+      N("If " + INT("0", "2", FX) + " = 8 and " + INT("0", "2", GX) + " = 2, find " + INT("0", "2", "(½" + FX + " − " + GX + ")") + ".", "2", ["½(8) − 2 = 2"]),
+      N("If " + INT("0", "5", FX) + " = 1, " + INT("0", "5", GX) + " = 4 and " + INT("0", "5", HX) + " = 5, find " + INT("0", "5", "(3" + FX + " + " + GX + " − " + HX + ")") + ".", "2", ["3(1) + 4 − 5 = 2"])],
+    "B2-8": [
+      N("If " + INT("0", "3", FX) + " = 5, find " + INT("0", "3", "(" + FX + " + 2)") + ".", "11", ["The 2 is a rectangle: 2 × 3 = 6", "5 + 6 = 11"]),
+      N("If " + INT("1", "5", FX) + " = 2 and " + INT("1", "5", GX) + " = 6, find " + INT("1", "5", "(" + GX + " − " + FX + " − 1)") + ".", "0", ["6 − 2 − (1 × 4) = 0"]),
+      N("If " + INT("0", "4", FX) + " = −3, find " + INT("0", "4", "(2" + FX + " + 5)") + ".", "14", ["2(−3) + 5 × 4 = −6 + 20 = 14"]),
+      N("If " + INT("-1", "3", FX) + " = 6, find " + INT("-1", "3", "(" + FX + " − 3)") + ".", "-6", ["6 − 3 × 4 = −6"]),
+      N("If " + INT("2", "4", FX) + " = 1 and " + INT("2", "4", GX) + " = 2, find " + INT("2", "4", "(3" + FX + " + " + GX + " + 1)") + ".", "7", ["3(1) + 2 + 1 × 2 = 7"])],
+    "B2-9": [
+      N("If " + INT("0", "2", FX) + " = 3, " + INT("2", "5", FX) + " = 4 and " + INT("0", "5", GX) + " = 1, find " + INT("0", "5", "(" + FX + " − " + GX + ")") + ".", "6", ["0 to 5 of f: 3 + 4 = 7", "7 − 1 = 6"]),
+      N("If " + INT("1", "4", FX) + " = 6, " + INT("4", "6", FX) + " = −1 and " + INT("1", "6", GX) + " = 2, find " + INT("1", "6", "(2" + FX + " + " + GX + ")") + ".", "12", ["1 to 6 of f: 6 − 1 = 5", "2(5) + 2 = 12"]),
+      N("If " + INT("0", "1", FX) + " = 2 and " + INT("1", "3", FX) + " = 3, find " + INT("0", "3", "4" + FX) + ".", "20", ["0 to 3 of f: 5", "4 × 5 = 20"]),
+      N("If " + INT("-2", "0", FX) + " = 5, " + INT("0", "4", FX) + " = 1 and " + INT("-2", "4", GX) + " = −3, find " + INT("-2", "4", "(" + FX + " + " + GX + ")") + ".", "3", ["−2 to 4 of f: 6", "6 + (−3) = 3"]),
+      N("If " + INT("2", "5", FX) + " = 7, " + INT("5", "9", FX) + " = −4 and " + INT("2", "9", GX) + " = 6, find " + INT("2", "9", "(" + FX + " − ½" + GX + ")") + ".", "0", ["2 to 9 of f: 3", "3 − ½(6) = 0"])],
+    "B2-10": [
+      N("Suppose 1 ≤ " + GX + " ≤ 4 on [0, 3], and " + INT("0", "3", FX) + " = 2. Smallest possible value of " + INT("0", "3", "(" + GX + " + " + FX + ")") + "?", "5", ["Smallest g: 1 the whole way, 1 × 3 = 3", "3 + 2 = 5"]),
+      N("Suppose 3 ≤ " + GX + " ≤ 7 on [2, 6]. Smallest possible value of " + INT("2", "6", GX) + "?", "12", ["3 × 4 = 12"]),
+      N("Suppose −1 ≤ " + GX + " ≤ 2 on [0, 5]. Smallest possible value of " + INT("0", "5", GX) + "?", "-5", ["−1 × 5 = −5"]),
+      N("Suppose 0 ≤ " + GX + " ≤ 3 on [1, 5], and " + INT("1", "5", FX) + " = −2. Smallest possible value of " + INT("1", "5", "(" + FX + " + " + GX + ")") + "?", "-2", ["Smallest g: 0, so its integral is 0", "−2 + 0 = −2"]),
+      N("Suppose 2 ≤ " + GX + " ≤ 6 on [0, 2]. Smallest possible value of " + INT("0", "2", "3" + GX) + "?", "12", ["3 × 2 × 2 = 12"])],
+    "B2-11": [
+      N("Suppose 1 ≤ " + GX + " ≤ 4 on [0, 3], and " + INT("0", "3", FX) + " = 2. Largest possible value of " + INT("0", "3", "(" + GX + " + " + FX + ")") + "?", "14", ["Largest g: 4 the whole way, 4 × 3 = 12", "12 + 2 = 14"]),
+      N("Suppose 3 ≤ " + GX + " ≤ 7 on [2, 6]. Largest possible value of " + INT("2", "6", GX) + "?", "28", ["7 × 4 = 28"]),
+      N("Suppose −1 ≤ " + GX + " ≤ 2 on [0, 5]. Largest possible value of " + INT("0", "5", GX) + "?", "10", ["2 × 5 = 10"]),
+      N("Suppose 0 ≤ " + GX + " ≤ 3 on [1, 5], and " + INT("1", "5", FX) + " = −2. Largest possible value of " + INT("1", "5", "(" + FX + " + " + GX + ")") + "?", "10", ["3 × 4 = 12", "−2 + 12 = 10"]),
+      N("Suppose 2 ≤ " + GX + " ≤ 6 on [0, 2]. Largest possible value of " + INT("0", "2", "3" + GX) + "?", "36", ["3 × 6 × 2 = 36"])],
+    "B2-12": [
+      N("If " + INT("a", "b", "2" + X_) + " = 12 and " + INT("a", "b", "3" + X_ + "<sup>2</sup>") + " = 30, find " + INT("a", "b", "(" + X_ + "<sup>2</sup> + " + X_ + ")") + ".", "16", ["∫x² = 30/3 = 10 and ∫x = 12/2 = 6", "10 + 6 = 16"]),
+      N("If " + INT("a", "b", "4" + X_ + "<sup>3</sup>") + " = 40 and " + INT("a", "b", "2" + X_) + " = 6, find " + INT("a", "b", "(" + X_ + "<sup>3</sup> − " + X_ + ")") + ".", "7", ["∫x³ = 10, ∫x = 3", "10 − 3 = 7"]),
+      N("If " + INT("a", "b", "3" + X_ + "<sup>2</sup>") + " = 15, find " + INT("a", "b", "2" + X_ + "<sup>2</sup>") + ".", "10", ["∫x² = 5", "2 × 5 = 10"]),
+      N("If " + INT("a", "b", "2" + X_) + " = 8 and b − a = 4, find " + INT("a", "b", "(" + X_ + " + 3)") + ".", "16", ["∫x = 4", "∫3 = 3 × 4 = 12", "4 + 12 = 16"]),
+      N("If " + INT("a", "b", "4" + X_ + "<sup>3</sup>") + " = 60 and " + INT("a", "b", "3" + X_ + "<sup>2</sup>") + " = 27, find " + INT("a", "b", "(2" + X_ + "<sup>3</sup> + " + X_ + "<sup>2</sup>)") + ".", "39", ["∫x³ = 15, ∫x² = 9", "2(15) + 9 = 39"])],
+    "B2-13": [
+      DI_("-2", "2", "abs(x)", "4", ["Two triangles, each ½ · 2 · 2 = 2", "2 + 2 = 4"]),
+      DI_("-4", "2", "abs(x)", "10", ["Left triangle ½ · 4 · 4 = 8, right ½ · 2 · 2 = 2", "= 10"]),
+      DI_("-1", "3", "abs(x)", "5", ["Left ½ · 1 · 1 = 1/2, right ½ · 3 · 3 = 9/2", "= 5"]),
+      DI_("-3", "-1", "abs(x)", "4", ["A trapezoid: heights 3 and 1, width 2", "2 × (3 + 1)/2 = 4"]),
+      DI_("-2", "1", "2abs(x)", "5", ["Left: ½ · 2 · 4 = 4, right: ½ · 1 · 2 = 1", "= 5"])],
+    "B2-14": [
+      DI_("0", "4", "2 - x", "0", ["Above on [0, 2]: ½ · 2 · 2 = 2. Below on [2, 4]: 2.", "2 − 2 = 0"]),
+      DI_("0", "5", "3 - x", "5/2", ["Above on [0, 3]: 9/2. Below on [3, 5]: 2.", "9/2 − 2 = 5/2"]),
+      DI_("0", "6", "x - 2", "6", ["Below on [0, 2]: 2. Above on [2, 6]: 8.", "−2 + 8 = 6"]),
+      DI_("-1", "3", "1 - x", "0", ["Above on [−1, 1]: 2. Below on [1, 3]: 2.", "= 0"]),
+      DI_("0", "3", "2x - 2", "3", ["Below on [0, 1]: 1. Above on [1, 3]: ½ · 2 · 4 = 4.", "−1 + 4 = 3"])],
+    "B2-15": [
+      DI_("0", "4", "abs(2 - x)", "4", ["Absolute value: both triangles count positive.", "2 + 2 = 4"]),
+      DI_("0", "5", "abs(3 - x)", "13/2", ["9/2 + 2 = 13/2"]),
+      DI_("0", "6", "abs(x - 1)", "13", ["Left: ½ · 1 · 1 = 1/2. Right: ½ · 5 · 5 = 25/2.", "= 13"]),
+      DI_("-1", "3", "abs(1 - x)", "4", ["2 + 2 = 4"]),
+      DI_("0", "3", "abs(2x - 2)", "5", ["1 + 4 = 5"])],
+    "B2-16": [
+      N("On [0, 5], f makes area 3 above the axis on [0, 2] and area 6 below it on [2, 5]. Find " + INT("0", "5", FX) + ".", "-3", ["Above +3, below −6", "3 − 6 = −3"]),
+      N("On [0, 4], f makes area 4 above the axis on [0, 2] and area 4 below on [2, 4]. Find " + INT("0", "4", FX) + ".", "0", ["4 − 4 = 0"]),
+      N("On [0, 4], f makes area 2 below the axis on [0, 1] and area 7 above on [1, 4]. Find " + INT("0", "4", FX) + ".", "5", ["−2 + 7 = 5"]),
+      N("On [0, 6], f makes area 6 above on [0, 3], 1 below on [3, 4] and 2 above on [4, 6]. Find " + INT("3", "6", FX) + ".", "1", ["Only [3, 6]: −1 + 2 = 1"]),
+      N("Areas 5 above on [0, 3], 2 below on [3, 5], 4 above on [5, 7] (as in problem 16). Find " + INT("0", "5", FX) + ".", "3", ["5 − 2 = 3"])],
+    "B2-17": [
+      N("Areas 3 above on [0, 2] and 6 below on [2, 5]. Find " + INT("0", "5", "|" + FX + "|") + ".", "9", ["Absolute value makes every area positive.", "3 + 6 = 9"]),
+      N("Areas 4 above on [0, 2] and 4 below on [2, 4]. Find " + INT("0", "4", "|" + FX + "|") + ".", "8", ["4 + 4 = 8"]),
+      N("Areas 2 below on [0, 1] and 7 above on [1, 4]. Find " + INT("0", "4", "|" + FX + "|") + ".", "9", ["2 + 7 = 9"]),
+      N("Areas 6 above on [0, 3], 1 below on [3, 4], 2 above on [4, 6]. Find " + INT("3", "6", "|" + FX + "|") + ".", "3", ["1 + 2 = 3"]),
+      N("Areas 5 above on [0, 3], 2 below on [3, 5], 4 above on [5, 7]. Find " + INT("0", "5", "|" + FX + "|") + ".", "7", ["5 + 2 = 7"])],
+    "B2-18": [
+      N("Areas 3 above on [0, 2] and 6 below on [2, 5]. Find " + INT("0", "5", "(" + FX + " + 1)") + ".", "2", ["∫f = −3, and ∫1 = 5", "−3 + 5 = 2"]),
+      N("Areas 4 above on [0, 2] and 4 below on [2, 4]. Find " + INT("0", "4", "(" + FX + " − 1)") + ".", "-4", ["∫f = 0, ∫1 = 4", "0 − 4 = −4"]),
+      N("Areas 2 below on [0, 1] and 7 above on [1, 4]. Find " + INT("0", "4", "2" + FX) + ".", "10", ["∫f = 5", "2 × 5 = 10"]),
+      N("Areas 6 above on [0, 3], 1 below on [3, 4], 2 above on [4, 6]. Find " + INT("0", "6", "(" + FX + " + 3)") + ".", "25", ["∫f = 6 − 1 + 2 = 7", "7 + 3 × 6 = 25"]),
+      N("Areas 5 above on [0, 3], 2 below on [3, 5], 4 above on [5, 7]. Find " + INT("0", "7", "3" + FX) + ".", "21", ["∫f = 7", "3 × 7 = 21"])],
+    "B2-19": [
+      N("Use the graph of f to find " + DIH("0", "2", FX) + "." + fig(GB1), "11/2", ["0 to 1: (1 + 3)/2 = 2", "1 to 2: (3 + 4)/2 = 3.5", "2 + 3.5 = 11/2"]),
+      N("Use the graph of f to find " + DIH("0", "6", FX) + "." + fig(GB1), "29/2", ["0 to 2: 5.5 (the problem before)", "2 to 6: 9 (problem 19)", "5.5 + 9 = 29/2"]),
+      N("Use the graph of f to find " + DIH("1", "3", FX) + "." + fig(GB1), "7", ["1 to 2: (3 + 4)/2 = 3.5", "2 to 3: (4 + 3)/2 = 3.5", "= 7"]),
+      N("Use the graph of f to find " + DIH("4", "6", FX) + "." + fig(GB1), "7/2", ["4 to 5: (1 + 2)/2 = 1.5", "5 to 6: (2 + 2)/2 = 2", "= 7/2"]),
+      N("Use the graph of f to find " + DIH("0", "1", FX) + "." + fig(GB1), "2", ["One trapezoid: (1 + 3)/2 × 1 = 2"])],
+
+    /* ---- B3: the chain rule ---- */
+    "B3-1": [
+      D("(3x - 2)^5", "15(3x - 2)^4", "3x - 2", "3", "5(3x - 2)^4"),
+      D("(5x + 1)^3", "15(5x + 1)^2", "5x + 1", "5", "3(5x + 1)^2"),
+      D("(1 - 4x)^6", "-24(1 - 4x)^5", "1 - 4x", "-4", "6(1 - 4x)^5"),
+      D("(x/2 + 3)^4", "2(x/2 + 3)^3", "x/2 + 3", "1/2", "4(x/2 + 3)^3"),
+      D("(7x + 2)^(-2)", "-14(7x + 2)^(-3)", "7x + 2", "7", "-2(7x + 2)^(-3)")],
+    "B3-2": [
+      D("sin(5x)", "5cos(5x)", "5x", "5", "cos(5x)"),
+      D("cos(4x)", "-4sin(4x)", "4x", "4", "-sin(4x)"),
+      D("sin(x/3)", "cos(x/3)/3", "x/3", "1/3", "cos(x/3)"),
+      D("cos(2x + 1)", "-2sin(2x + 1)", "2x + 1", "2", "-sin(2x + 1)"),
+      D("tan(6x)", "6sec(6x)^2", "6x", "6", "sec(6x)^2")],
+    "B3-3": [
+      D("e^(-2x)", "-2e^(-2x)", "-2x", "-2", "e^(-2x)"),
+      D("e^(x^2)", "2x e^(x^2)", "x^2", "2x", "e^(x^2)"),
+      D("e^(3x + 1)", "3e^(3x + 1)", "3x + 1", "3", "e^(3x + 1)"),
+      D("e^(x/4)", "e^(x/4)/4", "x/4", "1/4", "e^(x/4)"),
+      D("4e^(-x)", "-4e^(-x)", "-x", "-1", "4e^(-x)")],
+    "B3-4": [
+      D("ln(3x + 2)", "3/(3x + 2)", "3x + 2", "3", "1/(3x + 2)"),
+      D("ln(x^3 + 5)", "3x^2/(x^3 + 5)", "x^3 + 5", "3x^2", "1/(x^3 + 5)"),
+      D("ln(x^2 - 4x + 7)", "(2x - 4)/(x^2 - 4x + 7)", "x^2 - 4x + 7", "2x - 4", "1/(x^2 - 4x + 7)"),
+      D("ln(e^x + 1)", "e^x/(e^x + 1)", "e^x + 1", "e^x", "1/(e^x + 1)"),
+      D("ln(4x^2 + 1)", "8x/(4x^2 + 1)", "4x^2 + 1", "8x", "1/(4x^2 + 1)")],
+    "B3-5": [
+      D("sqrt(6x + 1)", "3/sqrt(6x + 1)", "6x + 1", "6", "1/(2sqrt(6x + 1))"),
+      D("sqrt(x^2 + 9)", "x/sqrt(x^2 + 9)", "x^2 + 9", "2x", "1/(2sqrt(x^2 + 9))"),
+      D("sqrt(5 - x)", "-1/(2sqrt(5 - x))", "5 - x", "-1", "1/(2sqrt(5 - x))"),
+      D("sqrt(x^3 + 1)", "3x^2/(2sqrt(x^3 + 1))", "x^3 + 1", "3x^2", "1/(2sqrt(x^3 + 1))"),
+      D("(2x + 5)^(1/3)", "(2/3)(2x + 5)^(-2/3)", "2x + 5", "2", "(1/3)(2x + 5)^(-2/3)")],
+    "B3-6": [
+      D("sin(x^2)", "2x cos(x^2)", "x^2", "2x", "cos(x^2)"),
+      D("cos(x^3)", "-3x^2 sin(x^3)", "x^3", "3x^2", "-sin(x^3)"),
+      D("sin(sqrt(x))", "cos(sqrt(x))/(2sqrt(x))", "sqrt(x)", "1/(2sqrt(x))", "cos(sqrt(x))"),
+      D("tan(x^2)", "2x sec(x^2)^2", "x^2", "2x", "sec(x^2)^2"),
+      D("cos(e^x)", "-e^x sin(e^x)", "e^x", "e^x", "-sin(e^x)")],
+    "B3-7": [
+      D("(x^2 + 3x)^4", "4(x^2 + 3x)^3(2x + 3)", "x^2 + 3x", "2x + 3", "4(x^2 + 3x)^3"),
+      D("(x^4 - 2x)^3", "3(x^4 - 2x)^2(4x^3 - 2)", "x^4 - 2x", "4x^3 - 2", "3(x^4 - 2x)^2"),
+      D("(x^2 + 1)^10", "20x(x^2 + 1)^9", "x^2 + 1", "2x", "10(x^2 + 1)^9"),
+      D("(2x^3 + x)^5", "5(2x^3 + x)^4(6x^2 + 1)", "2x^3 + x", "6x^2 + 1", "5(2x^3 + x)^4"),
+      D("(x^2 - 5x + 1)^7", "7(x^2 - 5x + 1)^6(2x - 5)", "x^2 - 5x + 1", "2x - 5", "7(x^2 - 5x + 1)^6")],
+
+    /* ---- B4: the Fundamental Theorem ---- */
+    "B4-1": [
+      DI_("0", "3", "2x", "9", [M("x^2") + " from 0 to 3", "9 − 0 = 9"]),
+      DI_("1", "2", "4x^3", "15", [M("x^4") + " from 1 to 2", "16 − 1 = 15"]),
+      DI_("0", "1", "x^2 + x", "5/6", [M("x^3/3 + x^2/2") + " from 0 to 1", "1/3 + 1/2 = 5/6"]),
+      DI_("1", "3", "3x^2", "26", [M("x^3") + " from 1 to 3", "27 − 1 = 26"]),
+      DI_("-1", "2", "x^2", "3", [M("x^3/3") + " from −1 to 2", "8/3 − (−1/3) = 3"])],
+    "B4-2": [
+      DI_("0", "2", "3x - 1", "4", [M("3x^2/2 - x") + " from 0 to 2", "6 − 2 = 4"]),
+      DI_("2", "5", "4x + 3", "51", [M("2x^2 + 3x") + " from 2 to 5", "65 − 14 = 51"]),
+      DI_("1", "3", "x^2 - 2x", "2/3", [M("x^3/3 - x^2") + " from 1 to 3", "0 − (−2/3) = 2/3"]),
+      DI_("0", "4", "6 - x", "16", [M("6x - x^2/2") + " from 0 to 4", "24 − 8 = 16"]),
+      DI_("-1", "1", "5x + 2", "4", [M("5x^2/2 + 2x") + " from −1 to 1", "9/2 − 1/2 = 4"])],
+    "B4-3": [
+      DI_("0", "pi", "sin(x)", "2", [M("-cos(x)") + " from 0 to π", "1 − (−1) = 2"]),
+      DI_("0", "pi/4", "sec(x)^2", "1", [M("tan(x)") + " from 0 to π/4", "1 − 0 = 1"]),
+      DI_("0", "pi/6", "cos(x)", "1/2", [M("sin(x)") + " from 0 to π/6", "1/2 − 0 = 1/2"]),
+      DI_("pi/2", "pi", "sin(x)", "1", [M("-cos(x)") + " from π/2 to π", "1 − 0 = 1"]),
+      DI_("0", "pi/2", "sin(x) + cos(x)", "2", [M("-cos(x) + sin(x)") + " from 0 to π/2", "1 − (−1) = 2"])],
+    "B4-4": [
+      DI_("1", "e^2", "1/x", "2", [M("ln(x)") + " from 1 to e²", "2 − 0 = 2"]),
+      DI_("1", "e", "3/x", "3", [M("3ln(x)") + " from 1 to e", "3 − 0 = 3"]),
+      DI_("1", "4", "2/x", "2ln(4)", [M("2ln(x)") + " from 1 to 4", "2 ln 4 − 0 = 2 ln 4 ≈ 2.77"]),
+      DI_("2", "6", "1/x", "ln(3)", [M("ln(x)") + " from 2 to 6", "ln 6 − ln 2 = ln 3"]),
+      DI_("1", "e", "1/x + 1", "e", [M("ln(x) + x") + " from 1 to e", "(1 + e) − (0 + 1) = e"])],
+    "B4-5": [
+      F("0", "x", "sqrt(1 + x^3)", "sqrt(1 + x^3)", ["The bottom limit is a number and the top is x: just put x in for t.", M("sqrt(1 + x^3)")]),
+      F("1", "x", "cos(x)/x", "cos(x)/x", ["Put x in for t.", M("cos(x)/x")]),
+      F("2", "x", "e^(x^2)", "e^(x^2)", ["Put x in for t.", M("e^(x^2)")]),
+      F("0", "x", "ln(x^2 + 1)", "ln(x^2 + 1)", ["Put x in for t.", M("ln(x^2 + 1)")]),
+      F("-1", "x", "x^4 - 3x", "x^4 - 3x", ["Put x in for t.", M("x^4 - 3x")])],
+    "B4-6": [
+      F("0", "x^2", "cos(x)", "2x cos(x^2)", ["Put x² in for t, then multiply by the derivative of x², 2x.", M("2x cos(x^2)")]),
+      F("0", "x^4", "e^x", "4x^3 e^(x^4)", ["Put x⁴ in for t, times its derivative 4x³.", M("4x^3 e^(x^4)")]),
+      F("0", "x^3", "1/(1 + x^2)", "3x^2/(1 + x^6)", ["Put x³ in for t: 1/(1 + x⁶). Times 3x².", M("3x^2/(1 + x^6)")]),
+      F("0", "sin(x)", "x^2", "sin(x)^2 cos(x)", ["Put sin x in for t: sin² x. Times the derivative of sin x, cos x.", M("sin(x)^2 cos(x)")]),
+      F("1", "x^2", "ln(x)", "2x ln(x^2)", ["Put x² in for t: ln(x²). Times 2x.", M("2x ln(x^2)")])],
+    "B4-7": [
+      DI_("0", "2", "e^x", "e^2 - 1", [M("e^x") + " from 0 to 2", "e² − 1"]),
+      DI_("0", "1", "2e^x", "2e - 2", [M("2e^x") + " from 0 to 1", "2e − 2"]),
+      DI_("-1", "0", "e^x", "1 - 1/e", [M("e^x") + " from −1 to 0", "1 − 1/e"]),
+      DI_("0", "ln(3)", "e^x", "2", [M("e^x") + " from 0 to ln 3", "3 − 1 = 2"]),
+      DI_("1", "2", "e^x", "e^2 - e", [M("e^x") + " from 1 to 2", "e² − e"])],
+    "B4-8": [
+      F("x", "3", "sqrt(1 + x^2)", "-sqrt(1 + x^2)", ["x is on the bottom: flip the limits and add a minus sign.", M("-sqrt(1 + x^2)")]),
+      F("x", "0", "sin(x)^2", "-sin(x)^2", ["x on the bottom: flip and add a minus.", M("-sin(x)^2")]),
+      F("x", "2", "e^(-x)", "-e^(-x)", ["x on the bottom: flip and add a minus.", M("-e^(-x)")]),
+      F("x^2", "4", "x^3", "-2x^7", ["x² on the bottom: flip, add a minus, put in x², times 2x.", "−(x²)³ · 2x", M("-2x^7")]),
+      F("x", "10", "1/x", "-1/x", ["x on the bottom: flip and add a minus.", M("-1/x")])],
+    "B4-9": [
+      F("x", "2x", "cos(x)", "2cos(2x) - cos(x)", ["Top: cos(2x) · 2. Bottom: cos(x) · 1. Top minus bottom.", M("2cos(2x) - cos(x)")]),
+      F("x", "x^2", "x^2", "2x^5 - x^2", ["Top: (x²)² · 2x = 2x⁵. Bottom: x² · 1.", M("2x^5 - x^2")]),
+      F("-x", "x", "e^x", "e^x + e^(-x)", ["Top: eˣ · 1. Bottom: e^(−x) · (−1). Top minus bottom: eˣ + e^(−x).", M("e^x + e^(-x)")]),
+      F("x", "x^2", "1/x", "1/x", ["Top: (1/x²) · 2x = 2/x. Bottom: 1/x. 2/x − 1/x = 1/x.", M("1/x")]),
+      F("x^2", "x^3", "x + 1", "3x^2(x^3 + 1) - 2x(x^2 + 1)", ["Top: (x³ + 1) · 3x². Bottom: (x² + 1) · 2x.", M("3x^2(x^3 + 1) - 2x(x^2 + 1)")])],
+    "B4-10": [
+      F("0", "cos(x)", "x^2", "-cos(x)^2 sin(x)", ["Put cos x in for t, times the derivative of cos x, −sin x.", M("-cos(x)^2 sin(x)")]),
+      F("1", "e^x", "1/x", "1", ["Put eˣ in: 1/eˣ. Times eˣ: 1.", "= 1"]),
+      F("1", "x^2 + 1", "1/x", "2x/(x^2 + 1)", ["Put x² + 1 in: 1/(x² + 1). Times 2x.", M("2x/(x^2 + 1)")]),
+      F("0", "tan(x)", "x^4", "tan(x)^4 sec(x)^2", ["Put tan x in: tan⁴ x. Times sec² x.", M("tan(x)^4 sec(x)^2")]),
+      F("0", "3x", "sin(x)", "3sin(3x)", ["Put 3x in: sin(3x). Times 3.", M("3sin(3x)")])],
+    "B4-11": [
+      N("Same A(x) and graph as problem 11. Find A(1)." + fig(GB4), "1/2", ["0 to 1: a triangle, ½ · 1 · 1 = 1/2"]),
+      N("Same A(x) and graph. Find A(2)." + fig(GB4), "2", ["0 to 2: a triangle, ½ · 2 · 2 = 2"]),
+      N("Same A(x) and graph. Find A(4)." + fig(GB4), "5", ["Triangle 2 + rectangle 2 + triangle (3 to 4) 1 = 5"]),
+      N("Same A(x) and graph. Find A(5)." + fig(GB4), "9/2", ["A(4) = 5", "4 to 5 is below the axis: ½ · 1 · 1 = 1/2, subtract", "5 − 1/2 = 9/2"]),
+      N("Same A(x) and graph. At what t is A(t) largest on [0, 6]?" + fig(GB4), "4", ["A grows while f is above the axis and shrinks after f goes below it.", "f crosses from + to − at t = 4."])],
+    "B4-12": [
+      N("Same graph. Let " + mx("<i>B</i>(<i>x</i>) = ") + DIH("2", "x", "<i>f</i>(<i>t</i>)", "t") + ". Find B(4)." + fig(GB4), "3", ["2 to 3: rectangle 2", "3 to 4: triangle 1", "B(4) = 3"]),
+      N("Same B(x), starting at 2. Find B(6)." + fig(GB4), "1", ["B(4) = 3", "4 to 6: triangle below the axis, 2", "3 − 2 = 1"]),
+      N("Same B(x), starting at 2. Find B(0)." + fig(GB4), "-2", ["From 2 back to 0 runs the limits backwards: −(area from 0 to 2)", "= −2"]),
+      N("Same A(x) (starting at 0). Find A′(3)." + fig(GB4), "2", ["FTC part 1: A′(x) = f(x)", "f(3) = 2"]),
+      N("Same A(x). Find A′(5)." + fig(GB4), "-1", ["A′(5) = f(5)", "f(5) = −1 (halfway from 0 at t = 4 to −2 at t = 6)"])],
+    "B4-13": [
+      DI_("0", "1", "1/(1 + x^2)", "pi/4", [M("arctan(x)") + " from 0 to 1", "π/4 − 0"]),
+      DI_("0", "1", "4/(1 + x^2)", "pi", [M("4arctan(x)") + " from 0 to 1", "4(π/4) = π"]),
+      DI_("-1", "1", "1/(1 + x^2)", "pi/2", [M("arctan(x)") + " from −1 to 1", "π/4 − (−π/4) = π/2"]),
+      DI_("1", "sqrt(3)", "1/(1 + x^2)", "pi/12", [M("arctan(x)") + " from 1 to √3", "π/3 − π/4 = π/12"]),
+      DI_("-sqrt(3)", "sqrt(3)", "3/(1 + x^2)", "2pi", [M("3arctan(x)") + " from −√3 to √3", "3(π/3 − (−π/3)) = 2π"])],
+    "B4-14": [
+      DI_("1", "4", "(x + 1)/sqrt(x)", "20/3", ["Split: " + M("x^(1/2) + x^(-1/2)"), M("(2/3)x^(3/2) + 2x^(1/2)") + " from 1 to 4", "(16/3 + 4) − (2/3 + 2) = 20/3"]),
+      DI_("1", "9", "(x - 1)/sqrt(x)", "40/3", ["Split: " + M("x^(1/2) - x^(-1/2)"), M("(2/3)x^(3/2) - 2x^(1/2)") + " from 1 to 9", "(18 − 6) − (2/3 − 2) = 40/3"]),
+      DI_("1", "4", "(2x^2 + 1)/x", "15 + ln(4)", ["Split: " + M("2x + 1/x"), M("x^2 + ln(x)") + " from 1 to 4", "(16 + ln 4) − 1 = 15 + ln 4"]),
+      DI_("1", "8", "(x + 2)/x^(1/3)", "138/5", ["Split: " + M("x^(2/3) + 2x^(-1/3)"), M("(3/5)x^(5/3) + 3x^(2/3)") + " from 1 to 8", "(96/5 + 12) − (3/5 + 3) = 138/5"]),
+      DI_("1", "4", "(x^2 + 3)/x^2", "21/4", ["Split: " + M("1 + 3x^(-2)"), M("x - 3/x") + " from 1 to 4", "(4 − 3/4) − (1 − 3) = 21/4"])],
+    "B4-15": [
+      DI_("0", "pi/4", "cos(2x)", "1/2", [M("sin(2x)/2") + " from 0 to π/4", "1/2 − 0"]),
+      DI_("0", "pi/2", "sin(2x)", "1", [M("-cos(2x)/2") + " from 0 to π/2", "1/2 − (−1/2) = 1"]),
+      DI_("0", "pi", "cos(x/2)", "2", [M("2sin(x/2)") + " from 0 to π", "2 − 0 = 2"]),
+      DI_("0", "pi/6", "sin(3x)", "1/3", [M("-cos(3x)/3") + " from 0 to π/6", "0 − (−1/3) = 1/3"]),
+      DI_("0", "pi/8", "sec(2x)^2", "1/2", [M("tan(2x)/2") + " from 0 to π/8", "1/2 − 0"])],
+
+    /* ---- B5: symmetry, average value ---- */
+    "B5-1": [
+      DI_("-2", "2", "x^3", "0", ["x³ is odd: the two halves cancel.", "= 0"]),
+      DI_("-1", "1", "x^5 - 3x", "0", ["Both terms are odd, so the whole thing is odd.", "= 0"]),
+      DI_("-pi", "pi", "x cos(x)", "0", ["x is odd, cos x is even: odd × even is odd.", "= 0"]),
+      DI_("-3", "3", "x/(x^2 + 1)", "0", ["Odd top over even bottom: odd.", "= 0"]),
+      DI_("-2", "2", "x^2 sin(x)", "0", ["Even × odd is odd.", "= 0"])],
+    "B5-2": [
+      DI_("-1", "1", "3x^2", "2", ["Even: 2" + DI("0", "1", "3x^2"), "2(1) = 2"]),
+      DI_("-3", "3", "x^2 - 4", "-6", ["Even: 2" + DI("0", "3", "x^2 - 4"), "2(9 − 12) = −6"]),
+      DI_("-2", "2", "x^4", "64/5", ["Even: 2" + DI("0", "2", "x^4"), "2(32/5) = 64/5"]),
+      DI_("-1", "1", "x^2 + x", "2/3", ["x is odd (gives 0), x² is even:", "2" + DI("0", "1", "x^2") + " = 2/3"]),
+      DI_("-pi/2", "pi/2", "cos(x)", "2", ["Even: 2" + DI("0", "pi/2", "cos(x)"), "2(1) = 2"])],
+    "B5-3": [
+      DI_("-2", "2", "x^3 + 5", "20", ["x³ is odd: 0. The 5 is even: 5 × 4 = 20.", "= 20"]),
+      DI_("-pi", "pi", "sin(x) + 1", "2pi", ["sin x is odd: 0. The 1 gives 2π.", "= 2π"]),
+      DI_("-1", "1", "x^3 cos(x)", "0", ["Odd × even is odd.", "= 0"]),
+      DI_("-pi/4", "pi/4", "tan(x)", "0", ["tan is odd.", "= 0"]),
+      DI_("-2", "2", "x^5 + x^2", "16/3", ["x⁵ is odd: 0. x² is even: 2(8/3) = 16/3.", "= 16/3"])],
+    "B5-4": [
+      AVG("3x", "0", "2", "3", [DI("0", "2", "3x") + " = 6", "6 ÷ 2 = 3"]),
+      AVG("x", "2", "6", "4", [DI("2", "6", "x") + " = 18 − 2 = 16", "16 ÷ 4 = 4"]),
+      AVG("4x + 1", "0", "3", "7", [DI("0", "3", "4x + 1") + " = 18 + 3 = 21", "21 ÷ 3 = 7"]),
+      AVG("6 - 2x", "0", "3", "3", [DI("0", "3", "6 - 2x") + " = 18 − 9 = 9", "9 ÷ 3 = 3"]),
+      AVG("2x", "1", "5", "6", [DI("1", "5", "2x") + " = 25 − 1 = 24", "24 ÷ 4 = 6"])],
+    "B5-5": [
+      AVG("x^2", "0", "3", "3", [DI("0", "3", "x^2") + " = 9", "9 ÷ 3 = 3"]),
+      AVG("3x^2", "0", "2", "4", [DI("0", "2", "3x^2") + " = 8", "8 ÷ 2 = 4"]),
+      AVG("x^3", "0", "2", "2", [DI("0", "2", "x^3") + " = 4", "4 ÷ 2 = 2"]),
+      AVG("x^2", "1", "4", "7", [DI("1", "4", "x^2") + " = (64 − 1)/3 = 21", "21 ÷ 3 = 7"]),
+      AVG("sqrt(x)", "0", "4", "4/3", [DI("0", "4", "sqrt(x)") + " = (2/3)(8) = 16/3", "(16/3) ÷ 4 = 4/3"])],
+    "B5-6": [
+      N("The average of " + M("x^2") + " on [0, 6] is 12. Find c in [0, 6] with " + mx("<i>c</i><sup>2</sup> = 12") + ".", "sqrt(12)", ["c² = 12", "c = √12 = 2√3 ≈ 3.46 (in [0, 6])"]),
+      N("The average of " + M("2x") + " on [0, 4] is 4. Find c in [0, 4] with " + mx("2<i>c</i> = 4") + ".", "2", ["2c = 4, c = 2"]),
+      N("The average of " + M("x^3") + " on [0, 2] is 2. Find c in [0, 2] with " + mx("<i>c</i><sup>3</sup> = 2") + ".", "2^(1/3)", ["c = ∛2 ≈ 1.26"]),
+      N("The average of " + M("3x^2") + " on [0, 2] is 4. Find c in [0, 2] with " + mx("3<i>c</i><sup>2</sup> = 4") + ".", "2/sqrt(3)", ["c² = 4/3", "c = 2/√3 ≈ 1.15"]),
+      N("The average of " + M("sqrt(x)") + " on [0, 4] is 4/3. Find c in [0, 4] with " + mx("√<i>c</i> = 4/3") + ".", "16/9", ["Square both sides: c = 16/9"])],
+    "B5-7": [
+      N("f is even and " + INT("0", "2", FX) + " = 7. Find " + INT("-2", "2", FX) + ".", "14", ["Even: the left half equals the right half.", "2 × 7 = 14"]),
+      N("f is even and " + INT("0", "4", FX) + " = −3. Find " + INT("-4", "4", FX) + ".", "-6", ["2 × (−3) = −6"]),
+      N("f is even and " + INT("-5", "0", FX) + " = 4. Find " + INT("-5", "5", FX) + ".", "8", ["The right half matches the left: 4 + 4 = 8"]),
+      N("f is even and " + INT("0", "1", FX) + " = 1/2. Find " + INT("-1", "1", FX) + ".", "1", ["2 × 1/2 = 1"]),
+      N("f is even and " + INT("-6", "6", FX) + " = 18. Find " + INT("0", "6", FX) + ".", "9", ["Half of 18 = 9"])],
+    "B5-8": [
+      N("f is even, " + INT("0", "2", FX) + " = 4 and " + INT("2", "5", FX) + " = 1. Find " + INT("-2", "5", FX) + ".", "9", ["−2 to 0 matches 0 to 2: 4", "4 + 4 + 1 = 9"]),
+      N("f is even, " + INT("0", "3", FX) + " = 2 and " + INT("3", "6", FX) + " = 5. Find " + INT("-6", "6", FX) + ".", "14", ["0 to 6 = 2 + 5 = 7", "Even: 2 × 7 = 14"]),
+      N("f is even, " + INT("0", "1", FX) + " = 3 and " + INT("1", "4", FX) + " = −1. Find " + INT("-1", "4", "2" + FX) + ".", "10", ["−1 to 4 of f: 3 + 3 − 1 = 5", "2 × 5 = 10"]),
+      N("f is even, " + INT("0", "3", FX) + " = 4 and " + INT("3", "7", FX) + " = 2. Find " + INT("-3", "7", "3" + FX) + ".", "30", ["−3 to 7 of f: 4 + 4 + 2 = 10", "3 × 10 = 30"]),
+      N("f is even, " + INT("0", "2", FX) + " = 5 and " + INT("2", "4", FX) + " = 3. Find " + INT("-4", "-2", FX) + ".", "3", ["Even: −4 to −2 mirrors 2 to 4", "= 3"])],
+    "B5-9": [
+      N("f is odd and " + INT("-3", "5", FX) + " = 6. Find " + INT("3", "5", FX) + ".", "6", ["−3 to 3 cancels (odd), so all 6 comes from 3 to 5."]),
+      N("f is odd and " + INT("-1", "4", FX) + " = −2. Find " + INT("1", "4", FX) + ".", "-2", ["−1 to 1 cancels, so 1 to 4 = −2."]),
+      N("f is odd and " + INT("0", "3", FX) + " = 5. Find " + INT("-3", "0", FX) + ".", "-5", ["Odd: the left half is the right half flipped below the axis.", "= −5"]),
+      N("f is odd and " + INT("2", "6", FX) + " = 7. Find " + INT("-6", "-2", FX) + ".", "-7", ["Odd: −6 to −2 is the mirror of 2 to 6, flipped: −7"]),
+      N("f is odd and " + INT("-5", "8", FX) + " = 10. Find " + INT("5", "8", FX) + ".", "10", ["−5 to 5 cancels, so 5 to 8 = 10."])],
+    "B5-10": [
+      N("The average value of f on [0, 4] is 3. Find " + INT("0", "4", "(2" + FX + " − 1)") + ".", "20", ["∫ from 0 to 4 of f = 3 × 4 = 12", "2(12) − 4 = 20"]),
+      N("The average value of f on [2, 5] is −1. Find " + INT("2", "5", FX) + ".", "-3", ["Integral = average × width = −1 × 3 = −3"]),
+      N("The average value of f on [0, 10] is 2. Find " + INT("0", "10", "(" + FX + " + 3)") + ".", "50", ["∫f = 2 × 10 = 20", "20 + 3 × 10 = 50"]),
+      N(INT("1", "5", FX) + " = 12. What is the average value of f on [1, 5]?", "3", ["12 ÷ (5 − 1) = 3"]),
+      N("The average value of f on [−2, 2] is 5. Find " + INT("-2", "2", "4" + FX) + ".", "80", ["∫f = 5 × 4 = 20", "4 × 20 = 80"])],
+    "B5-11": [
+      N("Average value of " + M("4x - x^2") + " between its two zeros.", "8/3", ["Zeros: x = 0 and x = 4", DI("0", "4", "4x - x^2") + " = 32 − 64/3 = 32/3", "(32/3) ÷ 4 = 8/3"], [["4x - x^2", "0", "4", "1/4"]]),
+      N("Average value of " + M("6x - 3x^2") + " between its two zeros.", "2", ["Zeros: 0 and 2", DI("0", "2", "6x - 3x^2") + " = 12 − 8 = 4", "4 ÷ 2 = 2"], [["6x - 3x^2", "0", "2", "1/2"]]),
+      N("Average value of " + M("9 - x^2") + " between its two zeros.", "6", ["Zeros: −3 and 3", DI("-3", "3", "9 - x^2") + " = 54 − 18 = 36", "36 ÷ 6 = 6"], [["9 - x^2", "-3", "3", "1/6"]]),
+      N("Average value of " + M("x - x^3") + " on [0, 1].", "1/4", [DI("0", "1", "x - x^3") + " = 1/2 − 1/4 = 1/4", "(1/4) ÷ 1 = 1/4"], [["x - x^3", "0", "1"]]),
+      N("Average value of " + M("2sqrt(x) - x") + " between its two zeros.", "2/3", ["Zeros: 0 and 4", DI("0", "4", "2sqrt(x) - x") + " = 32/3 − 8 = 8/3", "(8/3) ÷ 4 = 2/3"], [["2sqrt(x) - x", "0", "4", "1/4"]])],
+    "B5-12": [
+      AVG("1/x", "1", "e", "1/(e - 1)", [DI("1", "e", "1/x") + " = 1", "1 ÷ (e − 1)"]),
+      AVG("2/x", "1", "e^2", "4/(e^2 - 1)", [DI("1", "e^2", "2/x") + " = 2(2) = 4", "4 ÷ (e² − 1)"]),
+      AVG("e^x", "0", "1", "e - 1", [DI("0", "1", "e^x") + " = e − 1", "÷ 1 = e − 1"]),
+      AVG("3/x", "1", "3", "3ln(3)/2", [DI("1", "3", "3/x") + " = 3 ln 3", "÷ 2 = (3 ln 3)/2"]),
+      AVG("e^(2x)", "0", "1", "(e^2 - 1)/2", [DI("0", "1", "e^(2x)") + " = (e² − 1)/2", "÷ 1"])],
+
+    /* ---- B6: u-substitution ---- */
+    "B6-1": [
+      U("3x^2(x^3 - 1)^5", "(x^3 - 1)^6/6 + C", "x³ − 1, du = 3x² dx", ["∫u⁵ du = u⁶/6"]),
+      U("2x(x^2 - 7)^3", "(x^2 - 7)^4/4 + C", "x² − 7, du = 2x dx", ["∫u³ du = u⁴/4"]),
+      U("4x^3(x^4 + 2)^2", "(x^4 + 2)^3/3 + C", "x⁴ + 2, du = 4x³ dx", ["∫u² du = u³/3"]),
+      U("x(x^2 + 1)^5", "(x^2 + 1)^6/12 + C", "x² + 1, du = 2x dx, so x dx = du/2", ["(1/2)∫u⁵ du = u⁶/12"]),
+      U("(2x + 1)(x^2 + x)^3", "(x^2 + x)^4/4 + C", "x² + x, du = (2x + 1) dx", ["∫u³ du = u⁴/4"])],
+    "B6-2": [
+      U("sin(4x)", "-cos(4x)/4 + C", "4x, dx = du/4", ["(1/4)∫sin u du = −cos(u)/4"]),
+      U("cos(x/2)", "2sin(x/2) + C", "x/2, dx = 2 du", ["2∫cos u du = 2 sin u"]),
+      U("sec(3x)^2", "tan(3x)/3 + C", "3x, dx = du/3", ["(1/3)∫sec² u du = tan(u)/3"]),
+      U("sin(2x + 1)", "-cos(2x + 1)/2 + C", "2x + 1, dx = du/2", ["(1/2)∫sin u du = −cos(u)/2"]),
+      U("cos(pi x)", "sin(pi x)/pi + C", "πx, dx = du/π", ["(1/π)∫cos u du = sin(u)/π"])],
+    "B6-3": [
+      U("e^(-3x)", "-e^(-3x)/3 + C", "−3x, dx = −du/3", ["−(1/3)∫eᵘ du = −eᵘ/3"]),
+      U("e^(x/5)", "5e^(x/5) + C", "x/5, dx = 5 du", ["5∫eᵘ du = 5eᵘ"]),
+      U("e^(4x + 1)", "e^(4x + 1)/4 + C", "4x + 1, dx = du/4", ["(1/4)∫eᵘ du"]),
+      U("6e^(3x)", "2e^(3x) + C", "3x, dx = du/3", ["6 · (1/3)∫eᵘ du = 2eᵘ"]),
+      U("e^(1 - x)", "-e^(1 - x) + C", "1 − x, dx = −du", ["−∫eᵘ du = −eᵘ"])],
+    "B6-4": [
+      U("x(x^2 - 2)^4", "(x^2 - 2)^5/10 + C", "x² − 2, x dx = du/2", ["(1/2)∫u⁴ du = u⁵/10"]),
+      U("x^3(x^4 + 5)^2", "(x^4 + 5)^3/12 + C", "x⁴ + 5, x³ dx = du/4", ["(1/4)∫u² du = u³/12"]),
+      U("x^4(x^5 - 1)^3", "(x^5 - 1)^4/20 + C", "x⁵ − 1, x⁴ dx = du/5", ["(1/5)∫u³ du = u⁴/20"]),
+      U("x(3x^2 + 1)^5", "(3x^2 + 1)^6/36 + C", "3x² + 1, x dx = du/6", ["(1/6)∫u⁵ du = u⁶/36"]),
+      U("x^2(2x^3 + 1)^4", "(2x^3 + 1)^5/30 + C", "2x³ + 1, x² dx = du/6", ["(1/6)∫u⁴ du = u⁵/30"])],
+    "B6-5": [
+      U("3x^2/(x^3 + 4)", "ln|x^3 + 4| + C", "x³ + 4, du = 3x² dx", ["∫du/u = ln|u|"]),
+      U("x/(x^2 + 9)", "ln(x^2 + 9)/2 + C", "x² + 9, x dx = du/2", ["(1/2)∫du/u"]),
+      U("(2x + 1)/(x^2 + x + 1)", "ln(x^2 + x + 1) + C", "x² + x + 1, du = (2x + 1) dx", ["∫du/u = ln|u| (u is always positive here)"]),
+      U("4x^3/(x^4 + 1)", "ln(x^4 + 1) + C", "x⁴ + 1, du = 4x³ dx", ["∫du/u"]),
+      U("1/(3x + 2)", "ln|3x + 2|/3 + C", "3x + 2, dx = du/3", ["(1/3)∫du/u"])],
+    "B6-6": [
+      U("x^2 e^(x^3)", "e^(x^3)/3 + C", "x³, x² dx = du/3", ["(1/3)∫eᵘ du"]),
+      U("2x e^(x^2 + 1)", "e^(x^2 + 1) + C", "x² + 1, du = 2x dx", ["∫eᵘ du"]),
+      U("x e^(-x^2)", "-e^(-x^2)/2 + C", "−x², x dx = −du/2", ["−(1/2)∫eᵘ du"]),
+      U("cos(x)e^(sin(x))", "e^(sin(x)) + C", "sin x, du = cos x dx", ["∫eᵘ du"]),
+      { k: "i", q: "e^(sqrt(x))/sqrt(x)", type: "antideriv", ans: "2e^(sqrt(x)) + C", pts: [0.5, 1, 1.5, 2, 3, 4], sol: ["u = √x, du = dx/(2√x), so dx/√x = 2 du", "2∫eᵘ du = 2eᵘ", M("2e^(sqrt(x)) + C")] }],
+    "B6-7": [
+      U("sqrt(3x - 1)", "(2/9)(3x - 1)^(3/2) + C", "3x − 1, dx = du/3", ["(1/3)∫u^(1/2) du = (1/3)(2/3)u^(3/2)"]),
+      U("sqrt(4x + 1)", "(4x + 1)^(3/2)/6 + C", "4x + 1, dx = du/4", ["(1/4)(2/3)u^(3/2) = u^(3/2)/6"]),
+      U("1/sqrt(x + 5)", "2sqrt(x + 5) + C", "x + 5, du = dx", ["∫u^(−1/2) du = 2u^(1/2)"]),
+      U("(5x + 2)^(3/2)", "(2/25)(5x + 2)^(5/2) + C", "5x + 2, dx = du/5", ["(1/5)∫u^(3/2) du = (1/5)(2/5)u^(5/2)"]),
+      U("(2x + 3)^(1/3)", "(3/8)(2x + 3)^(4/3) + C", "2x + 3, dx = du/2", ["(1/2)∫u^(1/3) du = (1/2)(3/4)u^(4/3)"])],
+    "B6-8": [
+      U("x/(x^4 + 1)", "arctan(x^2)/2 + C", "x², x dx = du/2", ["(1/2)∫du/(u² + 1) = arctan(u)/2"]),
+      U("x^3/(x^8 + 1)", "arctan(x^4)/4 + C", "x⁴, x³ dx = du/4", ["(1/4)∫du/(u² + 1)"]),
+      U("e^x/(1 + e^(2x))", "arctan(e^x) + C", "eˣ, du = eˣ dx (and e^(2x) = u²)", ["∫du/(1 + u²) = arctan u"]),
+      U("cos(x)/(1 + sin(x)^2)", "arctan(sin(x)) + C", "sin x, du = cos x dx", ["∫du/(1 + u²)"]),
+      U("1/(1 + 4x^2)", "arctan(2x)/2 + C", "2x, dx = du/2 (and 4x² = u²)", ["(1/2)∫du/(1 + u²)"])],
+    "B6-9": [
+      { k: "i", q: "x^2/sqrt(1 - x^6)", type: "antideriv", ans: "arcsin(x^3)/3 + C", pts: [-0.7, -0.4, 0.15, 0.35, 0.6, 0.85], sol: ["u = x³, x² dx = du/3", "(1/3)∫du/√(1 − u²) = arcsin(u)/3", M("arcsin(x^3)/3 + C")] },
+      { k: "i", q: "1/sqrt(1 - 4x^2)", type: "antideriv", ans: "arcsin(2x)/2 + C", pts: [-0.4, -0.2, 0.05, 0.15, 0.3, 0.45], sol: ["u = 2x, dx = du/2", "(1/2)∫du/√(1 − u²)", M("arcsin(2x)/2 + C")] },
+      { k: "i", q: "e^x/sqrt(1 - e^(2x))", type: "antideriv", ans: "arcsin(e^x) + C", pts: [-3, -2, -1.5, -1, -0.5, -0.2], sol: ["u = eˣ, du = eˣ dx", "∫du/√(1 − u²) = arcsin u", M("arcsin(e^x) + C")] },
+      { k: "i", q: "x^3/sqrt(1 - x^8)", type: "antideriv", ans: "arcsin(x^4)/4 + C", pts: [-0.8, -0.5, 0.2, 0.4, 0.6, 0.9], sol: ["u = x⁴, x³ dx = du/4", "(1/4)∫du/√(1 − u²)", M("arcsin(x^4)/4 + C")] },
+      { k: "i", q: "1/sqrt(1 - 9x^2)", type: "antideriv", ans: "arcsin(3x)/3 + C", pts: [-0.3, -0.15, 0.05, 0.1, 0.2, 0.3], sol: ["u = 3x, dx = du/3", "(1/3)∫du/√(1 − u²)", M("arcsin(3x)/3 + C")] }],
+    "B6-10": [
+      U("(4x + 1)/(x^2 + 1)", "2ln(x^2 + 1) + arctan(x) + C", "x² + 1 for the first piece", ["Split: 4x/(x² + 1) + 1/(x² + 1)", "2∫du/u = 2 ln(x² + 1), and ∫1/(x² + 1) = arctan x"]),
+      U("(x - 2)/(x^2 + 1)", "ln(x^2 + 1)/2 - 2arctan(x) + C", "x² + 1 for the first piece", ["Split: x/(x² + 1) − 2/(x² + 1)", "(1/2) ln(x² + 1) − 2 arctan x"]),
+      U("(6x + 5)/(x^2 + 1)", "3ln(x^2 + 1) + 5arctan(x) + C", "x² + 1 for the first piece", ["Split: 6x/(x² + 1) + 5/(x² + 1)", "3 ln(x² + 1) + 5 arctan x"]),
+      U("(2x - 1)/(x^2 + 1)", "ln(x^2 + 1) - arctan(x) + C", "x² + 1 for the first piece", ["Split: 2x/(x² + 1) − 1/(x² + 1)", "ln(x² + 1) − arctan x"]),
+      U("(x + 4)/(x^2 + 1)", "ln(x^2 + 1)/2 + 4arctan(x) + C", "x² + 1 for the first piece", ["Split: x/(x² + 1) + 4/(x² + 1)", "(1/2) ln(x² + 1) + 4 arctan x"])],
+    "B6-11": [
+      U("e^(2x)/(e^(2x) + 3)", "ln(e^(2x) + 3)/2 + C", "e^(2x) + 3, du = 2e^(2x) dx", ["(1/2)∫du/u"]),
+      U("e^(-x)/(e^(-x) + 2)", "-ln(e^(-x) + 2) + C", "e^(−x) + 2, du = −e^(−x) dx", ["−∫du/u"]),
+      U("3e^x/(e^x + 5)", "3ln(e^x + 5) + C", "eˣ + 5, du = eˣ dx", ["3∫du/u"]),
+      U("e^(3x)/(1 + e^(3x))", "ln(1 + e^(3x))/3 + C", "1 + e^(3x), du = 3e^(3x) dx", ["(1/3)∫du/u"]),
+      U("e^x/(2e^x + 1)", "ln(2e^x + 1)/2 + C", "2eˣ + 1, du = 2eˣ dx", ["(1/2)∫du/u"])],
+    "B6-12": [
+      U("sin(x)/(cos(x) + 3)", "-ln(cos(x) + 3) + C", "cos x + 3, du = −sin x dx", ["−∫du/u"]),
+      U("cos(x)/(2sin(x) + 3)", "ln(2sin(x) + 3)/2 + C", "2 sin x + 3, du = 2cos x dx", ["(1/2)∫du/u"]),
+      U("sin(2x)/(cos(2x) + 4)", "-ln(cos(2x) + 4)/2 + C", "cos(2x) + 4, du = −2 sin(2x) dx", ["−(1/2)∫du/u"]),
+      U("sec(x)^2/(tan(x) + 5)", "ln|tan(x) + 5| + C", "tan x + 5, du = sec² x dx", ["∫du/u"]),
+      U("cos(x)/sin(x)", "ln|sin(x)| + C", "sin x, du = cos x dx", ["∫du/u"])],
+    "B6-13": [
+      U("sin(x)cos(x)/(cos(x)^2 + 1)", "-ln(cos(x)^2 + 1)/2 + C", "cos² x + 1, du = −2 sin x cos x dx", ["−(1/2)∫du/u"]),
+      U("sin(x)cos(x)/(sin(x)^2 + 1)", "ln(sin(x)^2 + 1)/2 + C", "sin² x + 1, du = 2 sin x cos x dx", ["(1/2)∫du/u"]),
+      U("2sin(x)cos(x)/(sin(x)^2 + 5)", "ln(sin(x)^2 + 5) + C", "sin² x + 5, du = 2 sin x cos x dx", ["∫du/u"]),
+      U("sin(x)cos(x)/(cos(x)^2 + 2)", "-ln(cos(x)^2 + 2)/2 + C", "cos² x + 2, du = −2 sin x cos x dx", ["−(1/2)∫du/u"]),
+      U("tan(x)sec(x)^2/(tan(x)^2 + 1)", "ln(tan(x)^2 + 1)/2 + C", "tan² x + 1, du = 2 tan x sec² x dx", ["(1/2)∫du/u"])],
+    "B6-14": [
+      U("ln(x)^2/x", "ln(x)^3/3 + C", "ln x, du = dx/x", ["∫u² du = u³/3"]),
+      U("ln(x)/x", "ln(x)^2/2 + C", "ln x, du = dx/x", ["∫u du = u²/2"]),
+      U("1/(x ln(x))", "ln|ln(x)| + C", "ln x, du = dx/x", ["∫du/u = ln|u|"]),
+      { k: "i", q: "sqrt(ln(x))/x", type: "antideriv", ans: "(2/3)ln(x)^(3/2) + C", pts: [1.5, 2, 2.5, 3, 4, 5], sol: ["u = ln x, du = dx/x", "∫u^(1/2) du = (2/3)u^(3/2)", M("(2/3)ln(x)^(3/2) + C")] },
+      U("(ln(x) + 1)^2/x", "(ln(x) + 1)^3/3 + C", "ln x + 1, du = dx/x", ["∫u² du = u³/3"])],
+
+    /* ---- B7: u-substitution on definite integrals ---- */
+    "B7-1": [
+      DI_("0", "2", "2x(x^2 + 1)^2", "124/3", ["u = x² + 1, du = 2x dx. Limits: 1 to 5.", "∫ from 1 to 5 of u² du = (125 − 1)/3 = 124/3"]),
+      DI_("0", "1", "x(x^2 + 1)^3", "15/8", ["u = x² + 1, x dx = du/2. Limits: 1 to 2.", "(1/2)(u⁴/4) from 1 to 2 = (16 − 1)/8 = 15/8"]),
+      DI_("1", "2", "2x(x^2 - 1)^2", "9", ["u = x² − 1, du = 2x dx. Limits: 0 to 3.", "u³/3 from 0 to 3 = 9"]),
+      DI_("0", "1", "3x^2(x^3 + 1)^3", "15/4", ["u = x³ + 1, du = 3x² dx. Limits: 1 to 2.", "u⁴/4 from 1 to 2 = 15/4"]),
+      DI_("-1", "1", "x(x^2 + 2)^2", "0", ["x(x² + 2)² is odd (x is odd, the rest even).", "Over [−1, 1]: 0. (u-sub agrees: the limits become 3 to 3.)"])],
+    "B7-2": [
+      DI_("0", "1", "x e^(x^2)", "(e - 1)/2", ["u = x², x dx = du/2. Limits: 0 to 1.", "(1/2)eᵘ from 0 to 1 = (e − 1)/2"]),
+      DI_("0", "1", "2x e^(x^2)", "e - 1", ["u = x², du = 2x dx. Limits 0 to 1.", "eᵘ from 0 to 1 = e − 1"]),
+      DI_("0", "1", "x^2 e^(x^3)", "(e - 1)/3", ["u = x³, x² dx = du/3. Limits 0 to 1.", "(1/3)(e − 1)"]),
+      DI_("0", "ln(2)", "e^(2x)", "3/2", ["u = 2x, dx = du/2. Limits 0 to 2 ln 2 = ln 4.", "(1/2)(4 − 1) = 3/2"]),
+      DI_("0", "1", "e^(3x)", "(e^3 - 1)/3", ["u = 3x, dx = du/3. Limits 0 to 3.", "(1/3)(e³ − 1)"])],
+    "B7-3": [
+      DI_("0", "pi/2", "sin(2x)", "1", ["u = 2x, dx = du/2. Limits 0 to π.", "(1/2)(−cos u) from 0 to π = (1/2)(1 + 1) = 1"]),
+      DI_("0", "pi/6", "cos(3x)", "1/3", ["u = 3x, dx = du/3. Limits 0 to π/2.", "(1/3) sin u from 0 to π/2 = 1/3"]),
+      DI_("0", "pi", "sin(x/2)", "2", ["u = x/2, dx = 2 du. Limits 0 to π/2.", "2(−cos u) from 0 to π/2 = 2(0 + 1) = 2"]),
+      DI_("0", "pi/8", "sec(2x)^2", "1/2", ["u = 2x, dx = du/2. Limits 0 to π/4.", "(1/2) tan u from 0 to π/4 = 1/2"]),
+      DI_("0", "pi/2", "sin(x)cos(x)", "1/2", ["u = sin x, du = cos x dx. Limits 0 to 1.", "u²/2 from 0 to 1 = 1/2"])],
+    "B7-4": [
+      DI_("0", "2", "2x/(x^2 + 1)", "ln(5)", ["u = x² + 1, du = 2x dx. Limits 1 to 5.", "ln u from 1 to 5 = ln 5"]),
+      DI_("0", "1", "x/(x^2 + 1)", "ln(2)/2", ["u = x² + 1, x dx = du/2. Limits 1 to 2.", "(1/2) ln 2"]),
+      DI_("0", "1", "1/(2x + 1)", "ln(3)/2", ["u = 2x + 1, dx = du/2. Limits 1 to 3.", "(1/2) ln 3"]),
+      DI_("0", "1", "4x^3/(x^4 + 1)", "ln(2)", ["u = x⁴ + 1, du = 4x³ dx. Limits 1 to 2.", "ln 2"]),
+      DI_("0", "pi/2", "cos(x)/(1 + sin(x))", "ln(2)", ["u = 1 + sin x, du = cos x dx. Limits 1 to 2.", "ln 2"])],
+    "B7-5": [
+      DI_("0", "4", "x/sqrt(x^2 + 9)", "2", ["u = x² + 9, x dx = du/2. Limits 9 to 25.", "(1/2)·2√u from 9 to 25 = 5 − 3 = 2"]),
+      DI_("0", "5", "1/sqrt(x + 4)", "2", ["u = x + 4. Limits 4 to 9.", "2√u from 4 to 9 = 6 − 4 = 2"]),
+      DI_("0", "2", "1/sqrt(4x + 1)", "1", ["u = 4x + 1, dx = du/4. Limits 1 to 9.", "(1/4)·2√u from 1 to 9 = (1/2)(3 − 1) = 1"]),
+      DI_("0", "1", "x/sqrt(x^2 + 1)", "sqrt(2) - 1", ["u = x² + 1, x dx = du/2. Limits 1 to 2.", "√u from 1 to 2 = √2 − 1"]),
+      DI_("0", "4", "sqrt(2x + 1)", "26/3", ["u = 2x + 1, dx = du/2. Limits 1 to 9.", "(1/2)(2/3)u^(3/2) from 1 to 9 = (1/3)(27 − 1) = 26/3"])]
+  };
+
+  SESSIONS.forEach(function (s) {
+    (s.probs || []).forEach(function (p, i) {
+      var m = MORE[s.id + "-" + (i + 1)]; if (!m) return;
+      m.forEach(function (v) { if (!v.pts && p.pts) v.pts = p.pts; if (!v.v && p.v) v.v = p.v; });
+      p.more = m;
+    });
+  });
+})();
+
 /* ================= Full worked steps =================
    Added Oct 17, 2026 at the user's request: "make it so all steps are shown for every problem".
    For problems that are mechanical (sums of powers of x, roots, e^x, e^(kx), ln, the basic trig
@@ -3075,6 +3556,7 @@ SESSIONS.unshift({
   var stats = { replaced: 0, kept: 0, mismatch: [] };
   SESSIONS.forEach(function (s) {
     var all = (s.probs || []).map(function (p, i) { return [s.id + "-" + (i + 1), p, i]; }).concat(((s.quiz && s.quiz.pool) || []).map(function (p, i) { return [s.id + "-q" + (i + 1), p, -1]; }));
+    (s.probs || []).forEach(function (p, i) { (p.more || []).forEach(function (v, j) { all.push([s.id + "-" + (i + 1) + "m" + (j + 1), v, i]); }); }); // "More like this" (more.js): same rules as the original
     all.forEach(function (row) {
       var id = row[0], p = row[1];
       if (p.g === "sym" && /even/.test((p.sol || []).join(" "))) { var ev2 = null; try { ev2 = evenSteps(p); } catch (e) {} if (ev2 && same(p, ev2.ans)) { p.sol = ev2.sol; p.auto = true; stats.replaced++; return; } }
@@ -4677,7 +5159,10 @@ CONFIG.web = true;
   var BY = {}; SESSIONS.forEach(function (s, i) { s.idx = i; BY[s.id] = s; });
   var PROB = {};
   SESSIONS.forEach(function (s) {
-    (s.probs || []).forEach(function (p, i) { p.pid = s.id + "-" + (i + 1); p.sid = s.id; p.n = i; PROB[p.pid] = p; });
+    (s.probs || []).forEach(function (p, i) {
+      p.pid = s.id + "-" + (i + 1); p.sid = s.id; p.n = i; PROB[p.pid] = p;
+      (p.more || []).forEach(function (v, j) { v.pid = p.pid + "m" + (j + 1); v.sid = s.id; v.n = i; v.vn = j + 1; PROB[v.pid] = v; }); // "More like this" (more.js)
+    });
     if (s.quiz) s.quiz.pool.forEach(function (p, i) { p.pid = s.id + "-q" + (i + 1); p.sid = s.id; p.quiz = true; PROB[p.pid] = p; });
   });
   function diag(s) {
@@ -5036,17 +5521,25 @@ CONFIG.web = true;
     h += '<div class="prob-nav"><div class="pdots">' + s.probs.map(function (p, k) { var a = S.ans[p.pid]; return '<button class="pdot ' + (a ? a.status : "") + (one && k === i ? " cur" : "") + '" data-act="pgo" data-sid="' + s.id + '" data-i="' + k + '" aria-label="Problem ' + (k + 1) + (a ? ", " + a.status : "") + '">' + (k + 1) + "</button>"; }).join("") + "</div>" +
       '<div class="seg"><button class="' + (one ? "on" : "") + '" data-act="one" data-v="1">One at a time</button><button class="' + (one ? "" : "on") + '" data-act="one" data-v="0">Show all</button></div></div>';
     if (one) {
-      h += probHTML(s.probs[i]);
+      h += probHTML(s.probs[i]) + moreHTML(s.probs[i]);
       h += '<div class="row" style="justify-content:space-between"><button class="btn ghost" data-act="pgo" data-sid="' + s.id + '" data-i="' + (i - 1) + '"' + (i === 0 ? " disabled" : "") + '>← Previous</button>' +
         (i < n - 1 ? '<button class="btn" id="nextProb" data-act="pgo" data-sid="' + s.id + '" data-i="' + (i + 1) + '">Next problem →</button>' : (s.quiz ? '<button class="btn" data-act="tab" data-sid="' + s.id + '" data-tab="quiz">On to the quiz →</button>' : '<button class="btn good" data-act="done" data-sid="' + s.id + '">Finish session</button>')) + "</div>";
     } else {
-      s.probs.forEach(function (p) { h += probHTML(p); });
+      s.probs.forEach(function (p) { h += probHTML(p) + moreHTML(p); });
     }
     return h + "</div>";
   }
+  // Extra problems like this one (more.js), opened under it for more reps. They don't count toward the session.
+  var MORE_OPEN = {};
+  function moreHTML(p) {
+    if (!p.more || !p.more.length) return "";
+    var done = p.more.filter(function (v) { return (S.ans[v.pid] || {}).status === "correct"; }).length, open = MORE_OPEN[p.pid];
+    return '<div class="more-wrap"><button class="btn small ghost more-btn" data-act="more" data-pid="' + p.pid + '" aria-expanded="' + !!open + '">' + (open ? "Hide extra practice" : "More like this") + ' <span class="muted">' + done + "/" + p.more.length + "</span></button>" +
+      (open ? '<div class="more-list">' + p.more.map(function (v) { return probHTML(v); }).join("") + "</div>" : "") + "</div>";
+  }
   function probHTML(p, quiz) {
     var a = S.ans[p.pid] || {}, st = quiz ? "" : a.status || "";
-    var h = '<div class="prob ' + st + '" data-pid="' + p.pid + '"><div class="prob-q"><span class="qn">' + (p.n + 1 || "") + "</span><div>" + prompt(p) + "</div></div>";
+    var h = '<div class="prob ' + st + '" data-pid="' + p.pid + '"><div class="prob-q"><span class="qn">' + (p.vn ? p.n + 1 + "." + p.vn : p.n + 1 || "") + "</span><div>" + prompt(p) + "</div></div>";
     if (p.type === "choice") {
       h += '<div class="choices">' + p.opts.map(function (o, i) { var on = !quiz && a.val === String(i); return '<button class="choice' + (on ? " sel " + (a.status || "") : "") + '" data-act="' + (quiz ? "qchoose" : "choose") + '" data-pid="' + p.pid + '" data-i="' + i + '">' + o + "</button>"; }).join("") + "</div>";
     } else h +=
@@ -5327,6 +5820,7 @@ CONFIG.web = true;
         break;
       case "review": openPart[sid] = +t.dataset.i; S.tab[sid] = "learn"; save(); location.hash = "#/s/" + sid + "/learn"; break;
       case "pgo": S.pstep[sid] = Math.max(0, +t.dataset.i); save(); rerenderTab(); break;
+      case "more": MORE_OPEN[t.dataset.pid] = !MORE_OPEN[t.dataset.pid]; rerenderTab(); break;
       case "one": S.prefs.oneAtATime = t.dataset.v === "1"; save(); rerenderTab(); break;
       case "check": doCheck(t.dataset.pid); break;
       case "scratch-toggle": var wrap = t.closest(".scratch-wrap"), pp = t.dataset.pid; SCR_OPEN[pp] = !$(".scratch", wrap); var tmp = document.createElement("div"); tmp.innerHTML = scratchHTML(PROB[pp]); wrap.replaceWith(tmp.firstChild); mountScratches(); break;
@@ -5529,10 +6023,10 @@ CONFIG.web = true;
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps b24717692aba for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps 88f4a0f16d51 for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "b24717692aba", shown = false, last = 0;
+  var V = "88f4a0f16d51", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;
