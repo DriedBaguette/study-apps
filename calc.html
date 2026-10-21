@@ -435,6 +435,7 @@ ul.wamap { margin: 0 0 10px; padding-left: 20px; line-height: 1.7; }
 .teach-box { width: 100%; height: 150px; border: 1.5px dashed var(--border-strong); border-radius: 10px; background: var(--surface); color: var(--ink); touch-action: none; cursor: crosshair; }
 .teach-box.bad { border-color: var(--bad); border-style: solid; }
 .teach-msg { min-height: 1.4em; margin: 8px 0; color: var(--bad); }
+.badge.soft { background: var(--sunken); color: var(--ink-soft); border-color: var(--border); }
 
 </style>
 </head>
@@ -5688,7 +5689,8 @@ CONFIG.web = true;
       '<nav class="nav-main" aria-label="Main">' +
       '<a href="#/" class="' + (route === "today" ? "on" : "") + '">Today</a>' +
       '<a href="#/plan" class="' + (route === "plan" ? "on" : "") + '">' + (CONFIG.dated ? "Full plan &amp; homework" : "Full plan") + "</a>" +
-      '<a href="#/mistakes" class="' + (route === "mistakes" ? "on" : "") + '">Mistake log ' + (open ? '<span class="badge">' + open + "</span>" : "") + "</a></nav>";
+      '<a href="#/mistakes" class="' + (route === "mistakes" ? "on" : "") + '">Mistake log ' + (open ? '<span class="badge">' + open + "</span>" : "") + "</a>" +
+      (CONFIG.web && typeof Reader !== "undefined" ? '<a href="#/teach" class="' + (route === "teach" ? "on" : "") + '" title="Write each symbol a few times so Read my answer reads your handwriting right">Calibrate my handwriting <span class="badge soft">' + teachCount() + "/" + TEACH_SYMS.length + "</span></a>" : "") + "</nav>";
     PHASES.forEach(function (ph) {
       var xe = examFor(ph);
       h += '<div class="nav-phase"><div class="nav-ph"><b>' + (ph.due ? (ph.id === 4 && xe ? "Final " + fmtD(xe.date, true) : "Due " + fmtD(ph.due, true)) : ph.title) + "</b><span>" + (ph.due ? ph.title + (xe && ph.id !== 4 ? " \u00b7 exam " + fmtD(xe.date, true) : "") : ph.sub) + "</span></div>";
@@ -5763,7 +5765,7 @@ CONFIG.web = true;
       "<li><b>Phone in another room</b> during a sprint, and take the 5-minute break when the timer says so, even if you feel fine.</li></ul></details>";
     h += '<section class="card"><div class="card-h"><h2>Settings &amp; backup</h2></div><div class="row">' +
       '<label class="row" style="gap:8px"><input type="checkbox" class="ck" data-act="pref-sound"' + (S.prefs.sound ? " checked" : "") + "> Chime when a timer ends</label></div>" +
-      (CONFIG.web && typeof Reader !== "undefined" ? '<div class="row" style="margin-top:8px"><a class="btn small" href="#/teach">Teach the reader my handwriting</a><span class="muted">' + teachCount() + " of " + TEACH_SYMS.length + " symbols done</span></div>" : "") +
+      (CONFIG.web && typeof Reader !== "undefined" ? '<div class="row" style="margin-top:8px"><a class="btn small" href="#/teach">Calibrate my handwriting</a><span class="muted">' + teachCount() + " of " + TEACH_SYMS.length + " symbols done</span></div>" : "") +
       (CONFIG.web ? ghSettingsHTML() : CONFIG.hosted ? '<h3 style="font-size:15px;margin:16px 0 6px">Your progress</h3><p class="muted" style="margin:0 0 10px">Saved to your Claude account automatically. Open this page on your PC, MacBook or iPad and it\u2019s already up to date. Handwriting on the scratch pads saves too.</p>' : '<h3 style="font-size:15px;margin:16px 0 6px">Take your progress to another device</h3>') +
       (CONFIG.hosted ? "" : (EXT.on ? '<p class="muted" style="margin:0 0 10px"><b style="color:var(--good)">Study Sync is on.</b> Your progress syncs through your Firefox account to any computer where you\u2019re signed in to Firefox with the Study Sync extension installed. Firefox syncs about every 10 minutes, or right away with <b>Sync Now</b> in the Firefox menu.</p>' : "") +
       (FILE.ok ? '<p class="muted" style="margin:0 0 10px"><b style="color:var(--good)">Auto-save is on.</b> Your progress is saved inside this file as you go. Copy the file to another computer and it opens where you left off.</p>'
@@ -6138,8 +6140,8 @@ CONFIG.web = true;
   function teachCount() { var d = teachDone(); return TEACH_SYMS.filter(function (l) { return d[l]; }).length; }
   function renderTeach() {
     var d = teachDone(), l = TEACH_SYMS[TEACH.i], n = teachCount(), last = TEACH.i === TEACH_SYMS.length - 1;
-    return '<section class="card teach"><div class="card-h"><h2>Teach the reader my handwriting</h2><span class="muted">' + n + " of " + TEACH_SYMS.length + " done</span></div>" +
-      '<p class="muted" style="margin:0 0 12px">Write the symbol once in each box, the way you write it in your work, at the same size. It saves after each symbol, so you can stop and come back.</p>' +
+    return '<section class="card teach"><div class="card-h"><h2>Calibrate my handwriting</h2><span class="muted">' + n + " of " + TEACH_SYMS.length + " done</span></div>" +
+      '<p class="muted" style="margin:0 0 12px">This teaches “Read my answer” how you write. Write the symbol once in each box, the way you write it in your work, at the same size. It saves after each symbol, so you can stop and come back.</p>' +
       '<div class="teach-syms">' + TEACH_SYMS.map(function (x, i) { return '<button class="teach-sym' + (i === TEACH.i ? " on" : "") + (d[x] ? " done" : "") + '" data-act="teach-go" data-i="' + i + '">' + teachShow(x) + "</button>"; }).join("") + "</div>" +
       '<div class="teach-now">Write <b class="teach-big">' + teachShow(l) + "</b> three times" + (l === "c" ? ' <span class="muted">(the C in + C)</span>' : l === "|" ? ' <span class="muted">(an absolute value bar)</span>' : "") + "</div>" +
       '<div class="teach-boxes">' + [0, 1, 2].map(function (k) { return '<canvas class="teach-box' + (TEACH.bad[k] ? " bad" : "") + '"></canvas>'; }).join("") + "</div>" +
@@ -6495,10 +6497,10 @@ CONFIG.web = true;
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps 465ee753af3b for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps 16e9e3044daf for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "465ee753af3b", shown = false, last = 0;
+  var V = "16e9e3044daf", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;

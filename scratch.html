@@ -435,6 +435,7 @@ ul.wamap { margin: 0 0 10px; padding-left: 20px; line-height: 1.7; }
 .teach-box { width: 100%; height: 150px; border: 1.5px dashed var(--border-strong); border-radius: 10px; background: var(--surface); color: var(--ink); touch-action: none; cursor: crosshair; }
 .teach-box.bad { border-color: var(--bad); border-style: solid; }
 .teach-msg { min-height: 1.4em; margin: 8px 0; color: var(--bad); }
+.badge.soft { background: var(--sunken); color: var(--ink-soft); border-color: var(--border); }
 
 /* ---------- Scratch Pad app (added Oct 17): only what style.css doesn't already cover ---------- */
 :root { --solve: #B7791F;
@@ -2997,10 +2998,10 @@ var Reader = (function () {
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps 465ee753af3b for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps 16e9e3044daf for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "465ee753af3b", shown = false, last = 0;
+  var V = "16e9e3044daf", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;
