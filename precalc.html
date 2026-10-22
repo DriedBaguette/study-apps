@@ -3250,51 +3250,45 @@ CONFIG.web = true;
   }
   // Gemini can't be opened with a question filled in, so the picture carries it: the problem and what to do
   // above the handwriting. One paste then has everything. (The answer key stays out of the picture.)
-  function geminiImage(pid, workURL) {
-    return new Promise(function (res, rej) {
-      var img = new Image();
-      img.onload = function () {
-        var W = Math.max(900, img.width), pad = 32, fs = 26, lh = 36, cv = document.createElement("canvas"), cx = cv.getContext("2d");
-        cx.font = fs + "px sans-serif";
-        function wrap(text, bold) {
-          cx.font = (bold ? "bold " : "") + fs + "px sans-serif";
-          var out = [], line = "";
-          text.split(/\s+/).forEach(function (w) { var tr = line ? line + " " + w : w; if (cx.measureText(tr).width > W - 2 * pad && line) { out.push(line); line = w; } else line = tr; });
-          if (line) out.push(line);
-          return out.map(function (l) { return { t: l, b: bold }; });
-        }
-        var lines = wrap("Please check my handwritten work below. I have ADHD: reply in 2 to 5 short sentences. If it's right, say so. If not, point to the first wrong step and give one hint, not the answer. Say if you can't read part of it.", false)
-          .concat([{ t: "" }], wrap("Problem: " + plainText(prompt(PROB[pid])), true));
-        var typed = (S.ans[pid] && S.ans[pid].val) || "";
-        if (typed) lines = lines.concat(wrap("The answer I typed: " + typed, false));
-        var top = pad + lines.length * lh + pad / 2;
-        cv.width = W; cv.height = top + img.height;
-        cx.fillStyle = "#fff"; cx.fillRect(0, 0, W, cv.height);
-        cx.fillStyle = "#1a1a1a"; cx.textBaseline = "top";
-        lines.forEach(function (l, i) { cx.font = (l.b ? "bold " : "") + fs + "px sans-serif"; cx.fillText(l.t, pad, pad + i * lh); });
-        cx.fillStyle = "#ccc"; cx.fillRect(pad, top - pad / 4, W - 2 * pad, 2);
-        cx.drawImage(img, 0, top);
-        cv.toBlob(function (bl) { if (bl) res(bl); else rej(new Error("image")); }, "image/png");
-      };
-      img.onerror = function () { rej(new Error("image")); };
-      img.src = workURL;
-    });
+  // Built without waiting on anything: Safari only opens the share sheet straight from a tap, and loading an
+  // image first used up the tap, so on the iPad nothing opened.
+  function geminiBlob(pid, work) {
+    var W = Math.max(900, work.width), pad = 32, fs = 26, lh = 36, cv = document.createElement("canvas"), cx = cv.getContext("2d");
+    function wrap(text, bold) {
+      cx.font = (bold ? "bold " : "") + fs + "px sans-serif";
+      var out = [], line = "";
+      text.split(/\s+/).forEach(function (w) { var tr = line ? line + " " + w : w; if (cx.measureText(tr).width > W - 2 * pad && line) { out.push(line); line = w; } else line = tr; });
+      if (line) out.push(line);
+      return out.map(function (l) { return { t: l, b: bold }; });
+    }
+    var lines = wrap("Please check my handwritten work below. I have ADHD: reply in 2 to 5 short sentences. If it's right, say so. If not, point to the first wrong step and give one hint, not the answer. Say if you can't read part of it.", false)
+      .concat([{ t: "" }], wrap("Problem: " + plainText(prompt(PROB[pid])), true));
+    var typed = (S.ans[pid] && S.ans[pid].val) || "";
+    if (typed) lines = lines.concat(wrap("The answer I typed: " + typed, false));
+    var top = pad + lines.length * lh + pad / 2;
+    cv.width = W; cv.height = top + work.height;
+    cx.fillStyle = "#fff"; cx.fillRect(0, 0, W, cv.height);
+    cx.fillStyle = "#1a1a1a"; cx.textBaseline = "top";
+    lines.forEach(function (l, i) { cx.font = (l.b ? "bold " : "") + fs + "px sans-serif"; cx.fillText(l.t, pad, pad + i * lh); });
+    cx.fillStyle = "#ccc"; cx.fillRect(pad, top - pad / 4, W - 2 * pad, 2);
+    cx.drawImage(work, 0, top);
+    return dataURLBlob(cv.toDataURL("image/png"));
   }
   function handoff(pid, btn, padEl) {
     var el = padEl || btn.closest(".scratch");
     if (!el || !el.__api) return;
     if (el.__api.isEmpty()) { toast("Write your steps on the scratch pad first."); return; }
-    var blobP = geminiImage(pid, el.__api.dataURL());
-    if (COARSE && navigator.share && navigator.canShare) {
-      // iPad / phone: the share sheet, then pick Gemini
-      blobP.then(function (blob) {
-        var file = new File([blob], "my-work-" + pid + ".png", { type: "image/png" });
-        if (!navigator.canShare({ files: [file] })) return desktopHandoff(blobP);
-        return navigator.share({ files: [file], text: tutorPrompt(pid, true, 1) }).then(function () { mark(); }, function (e) { if (!e || e.name !== "AbortError") desktopHandoff(blobP); });
-      }, function () { toast("Couldn\u2019t make the picture. Try again."); });
+    var blob = geminiBlob(pid, el.__api.workCanvas()), file = null;
+    try { file = new File([blob], "my-work-" + pid + ".png", { type: "image/png" }); } catch (e) {}
+    if (COARSE && file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      // iPad / phone: the share sheet; pick Gemini and the picture goes into a new chat (it carries the instructions, so no text)
+      navigator.share({ files: [file] }).then(function () { mark(); }, function (e) {
+        if (e && e.name === "AbortError") return;
+        desktopHandoff(Promise.resolve(blob));
+      });
       return;
     }
-    desktopHandoff(blobP);
+    desktopHandoff(Promise.resolve(blob));
   }
   function desktopHandoff(blobP) {
     var w = window.open("https://gemini.google.com/app", "_blank"); try { if (w) w.opener = null; } catch (e) {}
@@ -4299,10 +4293,10 @@ CONFIG.web = true;
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps 438028ec8f63 for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps 09a746015574 for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "438028ec8f63", shown = false, last = 0;
+  var V = "09a746015574", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;
