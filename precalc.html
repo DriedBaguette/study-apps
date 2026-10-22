@@ -438,6 +438,12 @@ ul.wamap { margin: 0 0 10px; padding-left: 20px; line-height: 1.7; }
 .badge.soft { background: var(--sunken); color: var(--ink-soft); border-color: var(--border); }
 .teach-try { height: 170px; }
 
+/* Ask Gemini on the iPad: "Picture copied" + Open Gemini (ui.js geminiBar) */
+.gem-bar { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; max-width: calc(100% - 32px); padding: 12px 14px; border-radius: 12px; background: var(--ink); color: var(--bg); box-shadow: 0 8px 30px rgba(0,0,0,.25); font-size: 15px; }
+.gem-bar[hidden] { display: none; }
+.gem-bar .btn { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); text-decoration: none; }
+.gem-bar .btn.ghost { background: transparent; color: var(--bg); border-color: transparent; }
+
 </style>
 </head>
 <body>
@@ -3280,15 +3286,28 @@ CONFIG.web = true;
     if (el.__api.isEmpty()) { toast("Write your steps on the scratch pad first."); return; }
     var blob = geminiBlob(pid, el.__api.workCanvas()), file = null;
     try { file = new File([blob], "my-work-" + pid + ".png", { type: "image/png" }); } catch (e) {}
-    if (COARSE && file && navigator.canShare && navigator.canShare({ files: [file] })) {
-      // iPad / phone: the share sheet; pick Gemini and the picture goes into a new chat (it carries the instructions, so no text)
-      navigator.share({ files: [file] }).then(function () { mark(); }, function (e) {
-        if (e && e.name === "AbortError") return;
-        desktopHandoff(Promise.resolve(blob));
-      });
-      return;
-    }
+    if (COARSE) { iPadHandoff(blob, file); return; }
     desktopHandoff(Promise.resolve(blob));
+  }
+  // iPad: copy the picture in the tap itself, then a bar with a link that opens the Gemini app. The link is one
+  // of the paths Gemini's apple-app-site-association hands to the app, so a tap on it opens the app, not the
+  // (slow) website. It has to be a tap: a link opened from code after the copy goes to the website instead.
+  var GEMINI_APP = "https://gemini.google.com/app/download/mobile";
+  function iPadHandoff(blob, file) {
+    var copied = null;
+    try { if (navigator.clipboard && window.ClipboardItem) copied = navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]); } catch (e) {}
+    if (!copied) copied = Promise.reject(new Error("no clipboard"));
+    copied.then(function () { geminiBar(true, file); }, function () { geminiBar(false, file); });
+    mark();
+  }
+  function geminiBar(copied, file) {
+    var bar = $("#geminiBar");
+    if (!bar) { bar = document.createElement("div"); bar.id = "geminiBar"; bar.className = "gem-bar"; bar.setAttribute("role", "status"); document.body.appendChild(bar); }
+    bar.innerHTML = (copied ? "<span>Picture copied. Open Gemini, then touch and hold in the message box and tap <b>Paste</b>.</span>" : "<span>Couldn\u2019t copy the picture. Share it to Gemini instead.</span>") +
+      (copied ? '<a class="btn" href="' + GEMINI_APP + '" target="_blank" rel="noopener" data-act="gem-close">Open Gemini</a>' : '<button class="btn" data-act="gem-share">Share to Gemini</button>') +
+      '<button class="btn ghost small" data-act="gem-close" aria-label="Close">\u2715</button>';
+    bar.hidden = false; geminiBar.file = file;
+    clearTimeout(geminiBar.t); geminiBar.t = setTimeout(function () { bar.hidden = true; }, 30000);
   }
   function desktopHandoff(blobP) {
     var w = window.open("https://gemini.google.com/app", "_blank"); try { if (w) w.opener = null; } catch (e) {}
@@ -4096,6 +4115,8 @@ CONFIG.web = true;
       case "scr-clear": t.closest(".scratch").__api.clear(); break;
       case "scr-taller": t.closest(".scratch").__api.taller(); break;
       case "scr-read": readAnswer(t.dataset.pid, t); break;
+      case "gem-close": setTimeout(function () { var b = $("#geminiBar"); if (b) b.hidden = true; }, 0); break;
+      case "gem-share": if (geminiBar.file && navigator.share) navigator.share({ files: [geminiBar.file] }).catch(function () {}); var gb = $("#geminiBar"); if (gb) gb.hidden = true; break;
       case "teach-go": teachGo(+t.dataset.i); break;
       case "teach-next": teachNext(); break;
       case "teach-clear": TEACH.boxes = null; TEACH.bad = {}; TEACH.msg = ""; render(); break;
@@ -4293,10 +4314,10 @@ CONFIG.web = true;
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps 09a746015574 for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps 7741958b5cec for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "09a746015574", shown = false, last = 0;
+  var V = "7741958b5cec", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;

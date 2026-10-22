@@ -438,6 +438,12 @@ ul.wamap { margin: 0 0 10px; padding-left: 20px; line-height: 1.7; }
 .badge.soft { background: var(--sunken); color: var(--ink-soft); border-color: var(--border); }
 .teach-try { height: 170px; }
 
+/* Ask Gemini on the iPad: "Picture copied" + Open Gemini (ui.js geminiBar) */
+.gem-bar { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; max-width: calc(100% - 32px); padding: 12px 14px; border-radius: 12px; background: var(--ink); color: var(--bg); box-shadow: 0 8px 30px rgba(0,0,0,.25); font-size: 15px; }
+.gem-bar[hidden] { display: none; }
+.gem-bar .btn { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); text-decoration: none; }
+.gem-bar .btn.ghost { background: transparent; color: var(--bg); border-color: transparent; }
+
 /* ---------- Scratch Pad app (added Oct 17): only what style.css doesn't already cover ---------- */
 :root { --solve: #B7791F;
   --pen-blue: #2563EB; --pen-red: #DC2626; --pen-green: #15803D; --pen-orange: #D97706; --pen-purple: #7C3AED;
@@ -2971,10 +2977,10 @@ var Reader = (function () {
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps 09a746015574 for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps 7741958b5cec for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "09a746015574", shown = false, last = 0;
+  var V = "7741958b5cec", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;
