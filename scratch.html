@@ -436,6 +436,7 @@ ul.wamap { margin: 0 0 10px; padding-left: 20px; line-height: 1.7; }
 .teach-box.bad { border-color: var(--bad); border-style: solid; }
 .teach-msg { min-height: 1.4em; margin: 8px 0; color: var(--bad); }
 .badge.soft { background: var(--sunken); color: var(--ink-soft); border-color: var(--border); }
+.teach-try { height: 170px; }
 
 /* ---------- Scratch Pad app (added Oct 17): only what style.css doesn't already cover ---------- */
 :root { --solve: #B7791F;
@@ -540,6 +541,7 @@ html.embed .scr-rail { overflow-y: auto; } /* max-height set by railAt() */
     <b class="pad-title">Scratch Pad</b>
     <span class="spacer"></span>
     <button id="syncChip" class="chip" hidden></button>
+    <a class="chip" href="calc.html?from=scratch#/teach" title="Teach the reader how you write each symbol (this app keeps its own copy on an iPad Home Screen)">Calibrate handwriting</a>
     <button class="icon-btn" id="calcBtn" aria-label="Calculator" title="Calculator"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="14" height="18" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 7h8M8 12h2M14 12h2M8 16h2M14 16h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
     <button class="icon-btn" id="themeBtn" aria-label="Switch theme"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/></svg></button>
   </header>
@@ -1400,17 +1402,41 @@ var Reader = (function () {
   }
   // Read the last line with what has been learned. -> { text, latex, box, mode: "personal", sure, worst } or null.
   // sure means every symbol was close to a learned one and opt.valid (if given) accepts the text.
+  // A symbol that is close to two learned labels (a 0 and an o, a 5 and an s, a C and a "(") is left open, and
+  // every way of naming the open symbols is tried: when exactly one of them is valid math, that's the reading,
+  // and it counts as sure. (Calibration teaches look-alike letters, so without this one similar pair was enough
+  // to send the whole line to the model, which doesn't know the user's writing.)
+  function ranked(p) {
+    var by = {}; hw.forEach(function (t) { var d = differ(p, t.p); if (!(by[t.l] <= d)) by[t.l] = d; });
+    return Object.keys(by).map(function (l) { return { l: l, d: by[l] }; }).sort(function (a, b) { return a.d - b.d; });
+  }
   function quick(strokes, opt) {
     if (!hw.length) return null;
     var sk = sketch(strokes, opt && opt.whole);
     if (!sk || !sk.leaves.length) return null;
-    var known = true;
+    var known = true, open = [];
     sk.leaves.forEach(function (lf) {
       if (lf.forced) { lf.l = lf.forced; return; }
-      var hit = nearest(glyph(lf.strokes)); lf.l = hit.l; if (!hit.sure) known = false;
+      var r = ranked(glyph(lf.strokes)), best = r[0];
+      lf.l = best.l;
+      if (best.d > SURE) { known = false; return; }
+      var near = r.filter(function (c) { return c.d <= SURE && c.d - best.d < CLEAR; });
+      if (near.length > 1) open.push({ lf: lf, ls: near.slice(0, 4).map(function (c) { return c.l; }) });
     });
-    var latex = emit(sk.items), text = toTyped(latex, opt && opt.vars);
-    return { text: text, latex: latex, box: sk.line.box, mode: "personal", sure: known && !!text && (!opt || !opt.valid || opt.valid(text)) };
+    var vars = opt && opt.vars, valid = function (t) { return !!t && (!opt || !opt.valid || opt.valid(t)); };
+    var latex = emit(sk.items), text = toTyped(latex, vars), sure = known && !open.length && valid(text);
+    var combos = open.reduce(function (n, o) { return n * o.ls.length; }, 1);
+    if (open.length && combos <= 256) {
+      var hits = [];
+      for (var c = 0; c < combos; c++) {
+        for (var k = 0, rest = c; k < open.length; k++) { open[k].lf.l = open[k].ls[rest % open[k].ls.length]; rest = Math.floor(rest / open[k].ls.length); }
+        var lx = emit(sk.items), tx = toTyped(lx, vars);
+        if (valid(tx) && !hits.some(function (h) { return h.text === tx; })) hits.push({ text: tx, latex: lx });
+      }
+      if (hits.length) { text = hits[0].text; latex = hits[0].latex; } // the first is the nearest labels, when it's valid
+      sure = known && hits.length === 1;
+    }
+    return { text: text, latex: latex, box: sk.line.box, mode: "personal", sure: sure };
   }
   // Does a reading have as many symbols as the line has? (The model can return valid math that isn't what
   // was written, like an extra "sin x +".) true when it can't be counted.
@@ -2944,10 +2970,10 @@ var Reader = (function () {
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps 124e33255d72 for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps 438028ec8f63 for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "124e33255d72", shown = false, last = 0;
+  var V = "438028ec8f63", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;

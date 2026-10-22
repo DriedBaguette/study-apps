@@ -436,6 +436,7 @@ ul.wamap { margin: 0 0 10px; padding-left: 20px; line-height: 1.7; }
 .teach-box.bad { border-color: var(--bad); border-style: solid; }
 .teach-msg { min-height: 1.4em; margin: 8px 0; color: var(--bad); }
 .badge.soft { background: var(--sunken); color: var(--ink-soft); border-color: var(--border); }
+.teach-try { height: 170px; }
 
 </style>
 </head>
@@ -2015,17 +2016,41 @@ var Reader = (function () {
   }
   // Read the last line with what has been learned. -> { text, latex, box, mode: "personal", sure, worst } or null.
   // sure means every symbol was close to a learned one and opt.valid (if given) accepts the text.
+  // A symbol that is close to two learned labels (a 0 and an o, a 5 and an s, a C and a "(") is left open, and
+  // every way of naming the open symbols is tried: when exactly one of them is valid math, that's the reading,
+  // and it counts as sure. (Calibration teaches look-alike letters, so without this one similar pair was enough
+  // to send the whole line to the model, which doesn't know the user's writing.)
+  function ranked(p) {
+    var by = {}; hw.forEach(function (t) { var d = differ(p, t.p); if (!(by[t.l] <= d)) by[t.l] = d; });
+    return Object.keys(by).map(function (l) { return { l: l, d: by[l] }; }).sort(function (a, b) { return a.d - b.d; });
+  }
   function quick(strokes, opt) {
     if (!hw.length) return null;
     var sk = sketch(strokes, opt && opt.whole);
     if (!sk || !sk.leaves.length) return null;
-    var known = true;
+    var known = true, open = [];
     sk.leaves.forEach(function (lf) {
       if (lf.forced) { lf.l = lf.forced; return; }
-      var hit = nearest(glyph(lf.strokes)); lf.l = hit.l; if (!hit.sure) known = false;
+      var r = ranked(glyph(lf.strokes)), best = r[0];
+      lf.l = best.l;
+      if (best.d > SURE) { known = false; return; }
+      var near = r.filter(function (c) { return c.d <= SURE && c.d - best.d < CLEAR; });
+      if (near.length > 1) open.push({ lf: lf, ls: near.slice(0, 4).map(function (c) { return c.l; }) });
     });
-    var latex = emit(sk.items), text = toTyped(latex, opt && opt.vars);
-    return { text: text, latex: latex, box: sk.line.box, mode: "personal", sure: known && !!text && (!opt || !opt.valid || opt.valid(text)) };
+    var vars = opt && opt.vars, valid = function (t) { return !!t && (!opt || !opt.valid || opt.valid(t)); };
+    var latex = emit(sk.items), text = toTyped(latex, vars), sure = known && !open.length && valid(text);
+    var combos = open.reduce(function (n, o) { return n * o.ls.length; }, 1);
+    if (open.length && combos <= 256) {
+      var hits = [];
+      for (var c = 0; c < combos; c++) {
+        for (var k = 0, rest = c; k < open.length; k++) { open[k].lf.l = open[k].ls[rest % open[k].ls.length]; rest = Math.floor(rest / open[k].ls.length); }
+        var lx = emit(sk.items), tx = toTyped(lx, vars);
+        if (valid(tx) && !hits.some(function (h) { return h.text === tx; })) hits.push({ text: tx, latex: lx });
+      }
+      if (hits.length) { text = hits[0].text; latex = hits[0].latex; } // the first is the nearest labels, when it's valid
+      sure = known && hits.length === 1;
+    }
+    return { text: text, latex: latex, box: sk.line.box, mode: "personal", sure: sure };
   }
   // Does a reading have as many symbols as the line has? (The model can return valid math that isn't what
   // was written, like an extra "sin x +".) true when it can't be counted.
@@ -3721,7 +3746,7 @@ CONFIG.web = true;
      own handwriting from the start instead of waiting for right answers to learn from. Samples stay on this
      device, like everything the reader learns: a pencil and a mouse write differently. */
   var TEACH_SYMS = "0 1 2 3 4 5 6 7 8 9 x y t e c s i n o a l g ( ) / |".split(" ");
-  var TEACH = { i: 0, boxes: null, bad: {}, msg: "" };
+  var TEACH = { i: 0, boxes: null, bad: {}, msg: "" }, FROM_PAD = /[?&]from=scratch(&|$)/.test(location.search); // opened from the Scratch Pad
   var TEACH_AUTO = KEY + ":hw-auto"; // symbols the reader names by shape alone (a straight 1, a crossed x), so nothing was stored
   function teachAuto() { try { return JSON.parse(localStorage.getItem(TEACH_AUTO) || "{}"); } catch (e) { return {}; } }
   function teachShow(l) { return l === "c" ? "C" : /[a-z]/.test(l) ? "<i>" + l + "</i>" : l; }
@@ -3729,7 +3754,7 @@ CONFIG.web = true;
   function teachCount() { var d = teachDone(); return TEACH_SYMS.filter(function (l) { return d[l]; }).length; }
   function renderTeach() {
     var d = teachDone(), l = TEACH_SYMS[TEACH.i], n = teachCount(), last = TEACH.i === TEACH_SYMS.length - 1;
-    return '<section class="card teach"><div class="card-h"><h2>Calibrate my handwriting</h2><span class="muted">' + n + " of " + TEACH_SYMS.length + " done</span></div>" +
+    return (FROM_PAD ? '<p style="margin:0 0 10px"><a href="scratch.html">← Back to the Scratch Pad</a></p>' : "") + '<section class="card teach"><div class="card-h"><h2>Calibrate my handwriting</h2><span class="muted">' + n + " of " + TEACH_SYMS.length + " done</span></div>" +
       '<p class="muted" style="margin:0 0 12px">This teaches “Read my answer” how you write. Write the symbol once in each box, the way you write it in your work, at the same size. It saves after each symbol, so you can stop and come back.</p>' +
       '<div class="teach-syms">' + TEACH_SYMS.map(function (x, i) { return '<button class="teach-sym' + (i === TEACH.i ? " on" : "") + (d[x] ? " done" : "") + '" data-act="teach-go" data-i="' + i + '">' + teachShow(x) + "</button>"; }).join("") + "</div>" +
       '<div class="teach-now">Write <b class="teach-big">' + teachShow(l) + "</b> three times" + (l === "c" ? ' <span class="muted">(the C in + C)</span>' : l === "|" ? ' <span class="muted">(an absolute value bar)</span>' : "") + "</div>" +
@@ -3737,36 +3762,49 @@ CONFIG.web = true;
       '<p class="teach-msg">' + TEACH.msg + "</p>" +
       '<div class="row"><button class="btn ghost small" data-act="teach-clear">Clear</button><span class="spacer"></span>' +
       (TEACH.i ? '<button class="btn ghost small" data-act="teach-go" data-i="' + (TEACH.i - 1) + '">Back</button>' : "") +
-      '<button class="btn" data-act="teach-next">' + (last ? "Save and finish" : "Save and next") + "</button></div></section>";
+      '<button class="btn" data-act="teach-next">' + (last ? "Save and finish" : "Save and next") + "</button></div></section>" +
+      '<section class="card"><div class="card-h"><h2>Try it</h2><button class="btn ghost small" data-act="teach-try-clear">Clear</button></div>' +
+      '<canvas class="teach-box teach-try"></canvas><p class="teach-read muted" style="margin:8px 0 0"></p></section>';
   }
-  function mountTeach() {
-    var cvs = $$("#page .teach-box"); if (!cvs.length) return;
-    var k = 1000 / ($("#page .teach-boxes").clientWidth || 1000); // the scratch pads' units (1000 across), so sizes match what the reader sees there
-    var boxes = TEACH.boxes = TEACH.boxes || [[], [], []], penSeen = false;
-    cvs.forEach(function (cv, b) {
-      var dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight, cx = cv.getContext("2d"), cur = null;
-      cv.width = w * dpr; cv.height = h * dpr; cx.scale(dpr / k, dpr / k);
-      function paint() {
-        cx.clearRect(0, 0, w * k, h * k); cx.lineCap = cx.lineJoin = "round"; cx.lineWidth = 3; cx.strokeStyle = getComputedStyle(cv).color;
-        boxes[b].forEach(function (st) { cx.beginPath(); st.pts.forEach(function (p, j) { if (j) cx.lineTo(p[0], p[1]); else cx.moveTo(p[0], p[1]); }); if (st.pts.length === 1) cx.lineTo(st.pts[0][0] + 0.1, st.pts[0][1]); cx.stroke(); });
-      }
-      function at(e) { var r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * k, (e.clientY - r.top) * k, 0.5]; }
-      cv.addEventListener("pointerdown", function (e) {
-        if (e.pointerType === "pen") penSeen = true; else if (e.pointerType === "touch" && penSeen) return; // a resting palm
-        e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (er) {}
-        cur = { pts: [at(e)] }; boxes[b].push(cur); paint();
-      });
-      cv.addEventListener("pointermove", function (e) {
-        if (!cur) return;
-        var evs = e.getCoalescedEvents ? e.getCoalescedEvents() : []; if (!evs.length) evs = [e];
-        evs.forEach(function (ev) { var p = at(ev), q = cur.pts[cur.pts.length - 1]; if (Math.abs(p[0] - q[0]) + Math.abs(p[1] - q[1]) > 1.5) cur.pts.push(p); });
-        paint();
-      });
-      function up() { cur = null; if (TEACH.bad[b]) { TEACH.bad[b] = false; cv.classList.remove("bad"); } }
-      cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
-      cv.addEventListener("touchstart", function (e) { e.preventDefault(); }, { passive: false });
+  // a box to write in: strokes go into list, in the scratch pads' units (k per screen pixel)
+  function inkBox(cv, list, k, onUp) {
+    var dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight, cx = cv.getContext("2d"), cur = null;
+    cv.width = w * dpr; cv.height = h * dpr; cx.scale(dpr / k, dpr / k);
+    function paint() {
+      cx.clearRect(0, 0, w * k, h * k); cx.lineCap = cx.lineJoin = "round"; cx.lineWidth = 3; cx.strokeStyle = getComputedStyle(cv).color;
+      list.forEach(function (st) { cx.beginPath(); st.pts.forEach(function (p, j) { if (j) cx.lineTo(p[0], p[1]); else cx.moveTo(p[0], p[1]); }); if (st.pts.length === 1) cx.lineTo(st.pts[0][0] + 0.1, st.pts[0][1]); cx.stroke(); });
+    }
+    function at(e) { var r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * k, (e.clientY - r.top) * k, 0.5]; }
+    cv.addEventListener("pointerdown", function (e) {
+      if (e.pointerType === "pen") inkBox.pen = true; else if (e.pointerType === "touch" && inkBox.pen) return; // a resting palm
+      e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (er) {}
+      cur = { pts: [at(e)] }; list.push(cur); paint();
+    });
+    cv.addEventListener("pointermove", function (e) {
+      if (!cur) return;
+      var evs = e.getCoalescedEvents ? e.getCoalescedEvents() : []; if (!evs.length) evs = [e];
+      evs.forEach(function (ev) { var p = at(ev), q = cur.pts[cur.pts.length - 1]; if (Math.abs(p[0] - q[0]) + Math.abs(p[1] - q[1]) > 1.5) cur.pts.push(p); });
       paint();
     });
+    function up() { if (!cur) return; cur = null; if (onUp) onUp(); }
+    cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+    cv.addEventListener("touchstart", function (e) { e.preventDefault(); }, { passive: false });
+    paint();
+  }
+  function mountTeach() {
+    var cvs = $$("#page .teach-box:not(.teach-try)"); if (!cvs.length) return;
+    var k = 1000 / ($("#page .teach-boxes").clientWidth || 1000); // the scratch pads' units (1000 across), so sizes match what the reader sees there
+    var boxes = TEACH.boxes = TEACH.boxes || [[], [], []];
+    cvs.forEach(function (cv, b) { inkBox(cv, boxes[b], k, function () { if (TEACH.bad[b]) { TEACH.bad[b] = false; cv.classList.remove("bad"); } }); });
+    var tryCv = $("#page .teach-try"); if (!tryCv) return;
+    var ink = TEACH.tryInk = TEACH.tryInk || [], out = $("#page .teach-read"), t = null;
+    function show() {
+      if (!ink.length) { out.textContent = "Write an answer, like 3x^2 + C, and see what the reader gets."; return; }
+      var r = null; try { r = Reader.quick(ink, { whole: true, vars: "x", valid: function (x) { try { E.parse(x); return true; } catch (e) { return false; } } }); } catch (e) {}
+      out.innerHTML = !r || !r.text ? "It can\u2019t make that out yet." : r.sure ? "Reads as <b>" + esc(r.text) + "</b> \u2713" : "Best guess <b>" + esc(r.text) + "</b>, not sure. On a pad, the downloaded reader would take over here.";
+    }
+    inkBox(tryCv, ink, k, function () { clearTimeout(t); t = setTimeout(show, 400); });
+    show();
   }
   function teachGo(i) { TEACH.i = Math.max(0, Math.min(TEACH_SYMS.length - 1, i)); TEACH.boxes = null; TEACH.bad = {}; TEACH.msg = ""; render(); }
   function teachSay(msg) { TEACH.msg = msg; var m = $("#page .teach-msg"); if (m) m.textContent = msg; }
@@ -3788,7 +3826,7 @@ CONFIG.web = true;
     var auto = teachAuto(); if (res.indexOf("ok") < 0) auto[l] = true; else delete auto[l];
     try { localStorage.setItem(TEACH_AUTO, JSON.stringify(auto)); } catch (e) {}
     saveLearned();
-    if (TEACH.i === TEACH_SYMS.length - 1) { TEACH.boxes = null; toast("Saved. The reader knows your handwriting on this device now."); location.hash = "#/"; return; }
+    if (TEACH.i === TEACH_SYMS.length - 1) { TEACH.boxes = null; toast("Saved. The reader knows your handwriting on this device now."); if (FROM_PAD) location.href = "scratch.html"; else location.hash = "#/"; return; }
     teachGo(TEACH.i + 1);
   }
 
@@ -3893,6 +3931,7 @@ CONFIG.web = true;
       case "teach-go": teachGo(+t.dataset.i); break;
       case "teach-next": teachNext(); break;
       case "teach-clear": TEACH.boxes = null; TEACH.bad = {}; TEACH.msg = ""; render(); break;
+      case "teach-try-clear": TEACH.tryInk = null; render(); break;
       case "scr-calc": if (CALC) { CALC.open(); readAnswer(t.dataset.pid, t, true); } break;
       case "scr-ask": if (CONFIG.web) handoff(t.dataset.pid, t); else askClaude(t.dataset.pid, t); break;
       case "gh-connect": ghConnect(($("#ghToken") || {}).value); break;
@@ -4086,10 +4125,10 @@ CONFIG.web = true;
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps 124e33255d72 for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps 438028ec8f63 for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "124e33255d72", shown = false, last = 0;
+  var V = "438028ec8f63", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;
