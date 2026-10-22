@@ -530,6 +530,7 @@ html.embed .scr-rail { overflow-y: auto; } /* max-height set by railAt() */
 .pens .dots { display: inline-flex; align-items: center; gap: 4px; }
 .scr-rail .pens { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
 .scr-rail .pens .dots { display: grid; grid-template-columns: repeat(2, 24px); justify-content: center; gap: 8px; }
+.sel-menu > button.sel-read { font-weight: 600; }
 
 </style>
 </head>
@@ -1635,9 +1636,6 @@ var Reader = (function () {
    Pictures (added Oct 17): paste a screenshot or upload an image; it sits under the writing and the Image tool
    moves, resizes or deletes it. Pictures live in IndexedDB on the device (too big for localStorage) and sync
    through a gist of their own (its id is D.imgGist), so the other apps' syncs don't download them.
-   Like Math Notes on the iPad (added Oct 18): write an expression and an "=" at the end of the line, pause,
-   and the answer appears after it in handwriting-style ink, updating when the line changes. Readings are cached
-   per line in the page (p.solved), so other devices show the answers without reading again.
    Sync can be turned on here too: an app added to the iPad Home Screen has its own storage, apart from Safari,
    so it doesn't see the token the other apps saved there.
    Embed mode (Oct 18): the Calc and Precalc web apps show this page in a frame as each problem's pad
@@ -1667,7 +1665,7 @@ var Reader = (function () {
   // before anything is written on it, so each device doesn't add an empty page to everyone's tabs.
   var EMB = null; // set when this page is a problem's pad inside another study app
   try { var em = /[?&]embed=([^&]+)/.exec(location.search); if (em && window.parent !== window && window.parent.__padHost) EMB = { pid: decodeURIComponent(em[1]), host: window.parent.__padHost }; } catch (e) {}
-  function embedLoad() { var r = fetchJSON(EMB.key) || {}; D.pages[EMB.pid] = { n: 0, h: r.h || 420, strokes: r.strokes || [], texts: r.texts, solved: r.solved, updated: r.updated || 0 }; }
+  function embedLoad() { var r = fetchJSON(EMB.key) || {}; D.pages[EMB.pid] = { n: 0, h: r.h || 420, strokes: r.strokes || [], texts: r.texts, updated: r.updated || 0 }; }
   if (EMB) {
     EMB.key = EMB.host.key + ":scratch:" + EMB.pid;
     D = { v: 1, pages: {} }; P = JSON.parse(JSON.stringify(P)); P.cur = EMB.pid; embedLoad();
@@ -1679,7 +1677,7 @@ var Reader = (function () {
   var saveT = null;
   function saveLocal() {
     clearTimeout(saveT); saveT = null;
-    if (EMB) { var r = D.pages[EMB.pid]; store(EMB.key, { v: 1, h: r.h, updated: r.updated, strokes: r.strokes, texts: r.texts, solved: r.solved }); EMB.host.saved(EMB.pid); return; }
+    if (EMB) { var r = D.pages[EMB.pid]; store(EMB.key, { v: 1, h: r.h, updated: r.updated, strokes: r.strokes, texts: r.texts }); EMB.host.saved(EMB.pid); return; }
     store(KEY, D);
   }
   function changed(id) { if (id === fresh) fresh = null; D.pages[id].updated = Date.now(); clearTimeout(saveT); saveT = setTimeout(saveLocal, 400); queueSync(); }
@@ -1772,13 +1770,13 @@ var Reader = (function () {
     }).catch(function () { toast("Your browser didn’t allow that. Press " + how + " to paste your screenshot instead.", 7000); });
   }
 
-  /* ---------- answers after "=" (like Math Notes) ---------- */
+  /* ---------- "=" at the end of a line, and answers after "=" in typed text boxes ---------- */
   function bb(st) {
     var b = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9 };
     st.pts.forEach(function (q) { if (q[0] < b.x0) b.x0 = q[0]; if (q[0] > b.x1) b.x1 = q[0]; if (q[1] < b.y0) b.y0 = q[1]; if (q[1] > b.y1) b.y1 = q[1]; });
     b.w = b.x1 - b.x0; b.h = b.y1 - b.y0; return b;
   }
-  // Each "=" written at the end of a line, with nothing after it: { eq: [i, j], expr: [stroke indexes], box, eqBox }.
+  // (Read & copy leaves this "=" out of what it reads.) Each "=" written at the end of a line, with nothing after it: { eq: [i, j], expr: [stroke indexes], box, eqBox }.
   // An "=" is two flat strokes of similar width, one above the other. Its line is found by Reader.lastLine, which
   // picks the line of the last stroke it's given (so a stacked fraction before the "=" stays in the line).
   function equalsLines(strokes) {
@@ -1809,11 +1807,6 @@ var Reader = (function () {
     }
     return out;
   }
-  function lineKey(strokes, l) { // the same writing gives the same key on every device (encode rounds the points)
-    var str = encode(l.expr.map(function (q) { return strokes[q]; })).join("|"), h = 5381;
-    for (var i = 0; i < str.length; i++) h = ((h * 33) ^ str.charCodeAt(i)) >>> 0;
-    return h.toString(36) + str.length.toString(36);
-  }
   // The answer to a reading: a number as text, "x" when it has x in it (no answer), or null when it isn't math
   function answerOf(text) {
     if (!text) return null;
@@ -1825,42 +1818,8 @@ var Reader = (function () {
       return Math.abs(g1 - n) < 1e-9 * Math.max(1, Math.abs(g1)) ? String(n) : String(+g1.toPrecision(6));
     } catch (e) { return null; }
   }
-  var SOLVE = { on: P.solve !== false, busy: false, t: null, warned: false };
-  function scheduleSolve(ms) { clearTimeout(SOLVE.t); if (SOLVE.on && HAS_READER) SOLVE.t = setTimeout(solveNow, ms || 900); }
-  // Reads one unanswered line at a time, then looks again. Only lines ending in "=" are read, after a pause.
-  function solveNow() {
-    var pad = mainPad(); if (!pad || !pad.__api || !SOLVE.on) return;
-    if (pad.__api.busy() || SOLVE.busy) { scheduleSolve(); return; }
-    var pid = pad.dataset.pid, page = D.pages[pid]; if (!page || page.deleted) return;
-    var strokes = pad.__api.strokes(), lines = equalsLines(strokes), cache = page.solved || {}, keys = {};
-    lines.forEach(function (l) { keys[lineKey(strokes, l)] = l; });
-    var stale = Object.keys(cache).filter(function (k) { return !keys[k]; });
-    if (stale.length) { stale.forEach(function (k) { delete cache[k]; }); if (!Object.keys(cache).length) delete page.solved; changed(pid); }
-    var key = Object.keys(keys).filter(function (k) { return !cache[k]; })[0];
-    if (!key) return;
-    var st = keys[key].expr.map(function (q) { return strokes[q]; }), opts = readOpts(); opts.whole = true;
-    function finish(r) {
-      var p = D.pages[pid]; if (!p || p.deleted) return;
-      p.solved = p.solved || {}; p.solved[key] = { t: (r && r.text) || "", s: !!(r && r.sure) };
-      changed(pid); redrawAll(); scheduleSolve(60);
-    }
-    var fast = null;
-    try { fast = Reader.quick(st, opts); } catch (e) {}
-    if (fast && fast.sure) { finish(fast); return; }
-    SOLVE.busy = true;
-    Reader.stored().then(function (have) {
-      if (!have) {
-        SOLVE.busy = false;
-        if (!SOLVE.warned) { SOLVE.warned = true; toast("To answer what you write before “=”, the handwriting reader needs a one-time " + Reader.megabytes + " MB download. Press Read & copy once to get it.", 9000); }
-        return;
-      }
-      return Reader.load(function () {}).then(function () { return Reader.read(st, opts); }).then(function (r) { SOLVE.busy = false; finish(r); });
-    }).catch(function () { SOLVE.busy = false; });
-  }
-  if (document.fonts && document.fonts.load) document.fonts.load('48px "Caveat"').then(function () { redrawAll(); }, function () {});
-
   /* ---------- the pad (started from mountScratches in ui.js; Notes-style tools added Oct 18) ---------- */
-  // src: { load() -> { h, strokes, imgs?, texts? }, save(sc), answers?(strokes) }. dest: "clip" (the page) or "calc" (the calculator's pad).
+  // src: { load() -> { h, strokes, imgs?, texts? }, save(sc), full? (pens, text boxes) }. dest: "clip" (the page) or "calc" (the calculator's pad).
   // A stroke is { pts: [[x, y, pressure]], c: colour name (none = ink), w: width factor (none = 1), k: "h" for highlighter }.
   var PEN_COLORS = ["ink", "blue", "red", "green", "orange", "purple"], HL_COLORS = ["yellow", "green", "pink", "blue", "orange"];
   var PENS = P.pens || {}; // per tool: colour and size
@@ -1930,8 +1889,8 @@ var Reader = (function () {
     return null;
   }
   function mountPad(el, src, grow) {
-    var pid = el.dataset.pid, full = !!src.answers, cv = $("canvas", el), box = $(".scr-canvas", el), vctx = cv.getContext("2d"), base = document.createElement("canvas"), ctx = base.getContext("2d"), layer = $(".scr-texts", el), menu = $(".sel-menu", el);
-    var tool = "pen", eraseMode = "stroke", finger = false, cur = null, undo = [], redo = [], sc = src.load(), readBox = null, readT = null, answers = null;
+    var pid = el.dataset.pid, full = !!src.full, cv = $("canvas", el), box = $(".scr-canvas", el), vctx = cv.getContext("2d"), base = document.createElement("canvas"), ctx = base.getContext("2d"), layer = $(".scr-texts", el), menu = $(".sel-menu", el);
+    var tool = "pen", eraseMode = "stroke", finger = false, cur = null, undo = [], redo = [], sc = src.load(), readBox = null, readT = null;
     var lasso = null, sel = null, drag = null, holdT = null, scroll = null, penAt = 0, textSnap = null, dot = $(".hover-dot", el), taps = { ids: {}, n: 0, max: 0, t0: 0, late: false, moved: false };
     function hover(e) { // Apple Pencil hovering just above the glass: show where it will draw, how big, in what colour
       if (e.pointerType !== "pen" || e.buttons || drawing()) { dot.hidden = true; return; }
@@ -1962,7 +1921,7 @@ var Reader = (function () {
     sc.imgs = sc.imgs || []; sc.texts = sc.texts || [];
     function snap() { return JSON.stringify({ s: sc.strokes, i: sc.imgs, t: sc.texts }); }
     function keep(u) { undo.push(u); if (undo.length > 60) undo.shift(); redo = []; }
-    function restore(u) { var o = JSON.parse(u); sc.strokes = o.s; sc.imgs = o.i || []; sc.texts = o.t || []; setSel(null); answers = null; renderTexts(); fit(); draw(); src.save(sc); }
+    function restore(u) { var o = JSON.parse(u); sc.strokes = o.s; sc.imgs = o.i || []; sc.texts = o.t || []; setSel(null); renderTexts(); fit(); draw(); src.save(sc); }
     function ink(s) { return s.k !== "h"; }
     function scale() { return box.clientWidth / 1000; }
     var win = { y: 0, h: 0, w: 0 }, rail = $(".scr-rail", el), lastW = 0;
@@ -2049,13 +2008,6 @@ var Reader = (function () {
         shown.forEach(function (s) { if (ink(s)) drawStroke(ctx, s, halo, 4); });
       }
       shown.forEach(function (s) { if (ink(s)) drawStroke(ctx, s, colorOf(s)); });
-      if (src.answers) { // answers after "=", in handwriting-style ink
-        if (!answers) answers = src.answers(sc.strokes.filter(ink));
-        answers.forEach(function (a) {
-          ctx.save(); ctx.font = Math.round(a.size) + 'px "Caveat", "Segoe Print", "Bradley Hand", cursive'; ctx.textBaseline = "middle";
-          ctx.fillStyle = cssVar(a.faint ? "--ink-faint" : "--solve"); ctx.fillText(a.text, a.x, a.y); ctx.restore();
-        });
-      }
       compose();
     }
     function compose() { // the page as drawn, plus what's moving: the stroke under way, the lasso, the selection
@@ -2176,13 +2128,18 @@ var Reader = (function () {
       sel.s.forEach(function (i, n) { var o = orig.s[n], st = sc.strokes[i]; st.pts = o.pts.map(function (q) { var n = q.slice(); n[0] = X(q[0]); n[1] = Y(q[1]); return n; }); if (f) { var w = (o.w || 1) * f; if (Math.abs(w - 1) < 0.01) delete st.w; else st.w = Math.round(w * 100) / 100; } });
       sel.i.forEach(function (i, n) { var o = orig.i[n], m = sc.imgs[i]; m.x = X(o.x); m.y = Y(o.y); if (f) { m.w = o.w * f; m.h = o.h * f; } });
       sel.t.forEach(function (i, n) { var o = orig.t[n], t = sc.texts[i]; t.x = X(o.x); t.y = Y(o.y); if (f) t.size = Math.max(10, o.size * f); });
-      sel.box = selBox(sel); answers = null; layoutTexts();
+      sel.box = selBox(sel); layoutTexts();
     }
     function showMenu() {
       if (!menu) return;
       if (!sel || drag) { menu.hidden = true; return; }
       var k = scale(), b = sel.box, cols = sel.s.length ? PEN_COLORS.map(function (c) { return '<button class="dot-btn" data-act="sel-color" data-c="' + c + '" style="--dot:var(--pen-' + c + ', var(--ink))" aria-label="Make it ' + c + '"></button>'; }).join("") : "";
-      menu.innerHTML = '<button data-act="sel-copy">Copy</button><button data-act="sel-dup">Duplicate</button><button data-act="sel-del">Delete</button>' + (cols ? '<span class="sel-cols">' + cols + "</span>" : "") + '<button data-act="sel-done">Done</button>';
+      // the pad's own read buttons, again on the bar: they read just what is selected
+      var reads = sel.s.length ? $$('[data-act="scr-read"], [data-act="scr-calc"]', el).filter(function (n) { return !menu.contains(n); }).map(function (n) {
+        var a = n.dataset.act, t = a === "scr-calc" ? "→ Calculator" : /calculator/i.test(n.textContent) ? "Read into calculator" : /answer/i.test(n.textContent) ? "Read answer" : "Read & copy";
+        return '<button class="sel-read" data-act="' + a + '">' + t + "</button>";
+      }).join("") : "";
+      menu.innerHTML = reads + '<button data-act="sel-copy">Copy</button><button data-act="sel-dup">Duplicate</button><button data-act="sel-del">Delete</button>' + (cols ? '<span class="sel-cols">' + cols + "</span>" : "") + '<button data-act="sel-done">Done</button>';
       menu.hidden = false;
       var top = b[1] * k - menu.offsetHeight - 8; if (top < 0) top = b[3] * k + 8;
       menu.style.top = top + "px"; menu.style.left = Math.max(0, Math.min(box.clientWidth - menu.offsetWidth, b[0] * k)) + "px";
@@ -2199,12 +2156,12 @@ var Reader = (function () {
       c.s.forEach(function (st) { st.pts = st.pts.map(function (q) { var n = q.slice(); n[0] += dx; n[1] += dy; return n; }); s.s.push(sc.strokes.push(st) - 1); });
       c.i.forEach(function (m) { m.x += dx; m.y += dy; s.i.push(sc.imgs.push(m) - 1); });
       c.t.forEach(function (t) { t.x += dx; t.y += dy; s.t.push(sc.texts.push(t) - 1); });
-      renderTexts(); el.__api.tool("lasso", true); setSel(s); fit(); answers = null; draw(); src.save(sc);
+      renderTexts(); el.__api.tool("lasso", true); setSel(s); fit(); draw(); src.save(sc);
     }
 
     /* erasing */
     function eraseAt(q) {
-      var hit = false; answers = null;
+      var hit = false;
       if (eraseMode === "stroke") { sc.strokes = sc.strokes.filter(function (s) { var r = s.k === "h" ? 10 * (s.w || 1) : 12, near = s.pts.some(function (p) { return Math.abs(p[0] - q[0]) < r && Math.abs(p[1] - q[1]) < r; }); if (near) hit = true; return !near; }); return hit; }
       var out = [];
       sc.strokes.forEach(function (s) { // part: cut the stroke where the eraser passes
@@ -2328,9 +2285,9 @@ var Reader = (function () {
         if (lasso) { var s = selectLasso(lasso); lasso = null; setSel(s); draw(); }
         return;
       }
-      if (cur && !cur.shape && cur.k !== "h" && scratchOut(cur.pts)) { cur = null; answers = null; draw(); src.save(sc); return; }
+      if (cur && !cur.shape && cur.k !== "h" && scratchOut(cur.pts)) { cur = null; draw(); src.save(sc); return; }
       var added = cur && cur.pts.length; if (added) { delete cur.shape; sc.strokes.push(cur); }
-      cur = null; answers = null;
+      cur = null;
       if (added) { var hb = sc.h; fit(); if (sc.h === hb) draw(); } else draw();
       src.save(sc);
     }
@@ -2372,7 +2329,7 @@ var Reader = (function () {
       },
       undo: function () { if (undo.length) { redo.push(snap()); restore(undo.pop()); } },
       redo: function () { if (redo.length) { undo.push(snap()); restore(redo.pop()); } },
-      clear: function () { if (!sc.strokes.length && !sc.texts.length) return; keep(snap()); sc.strokes = []; sc.texts = []; setSel(null); renderTexts(); answers = null; draw(); src.save(sc); toast(sc.imgs.length ? "Cleared your writing (pictures stay). Undo brings it back." : "Cleared. Undo brings it back."); },
+      clear: function () { if (!sc.strokes.length && !sc.texts.length) return; keep(snap()); sc.strokes = []; sc.texts = []; setSel(null); renderTexts(); draw(); src.save(sc); toast(sc.imgs.length ? "Cleared your writing (pictures stay). Undo brings it back." : "Cleared. Undo brings it back."); },
       addImage: function (id, nw, nh) { // place it at the top of what's on screen, no wider than the pad
         var r = box.getBoundingClientRect(), k = Math.min(1, 900 / nw, 800 / nh), w = nw * k, h = nh * k;
         var y = r.width > 0 ? Math.max(20, Math.min(sc.h - 60, (viewport()[0] + 70) * 1000 / r.width)) : 20;
@@ -2388,7 +2345,7 @@ var Reader = (function () {
         keep(snap());
         if (a === "del") removeSel();
         if (a === "color") sel.s.forEach(function (i) { var st = sc.strokes[i]; if (st.k === "h") return; if (c === "ink") delete st.c; else st.c = c; });
-        answers = null; draw(); src.save(sc);
+        draw(); src.save(sc);
       },
       pasteInk: function () {
         if (!INK) return;
@@ -2410,11 +2367,11 @@ var Reader = (function () {
       finger: function (on) { finger = on; },
       isEmpty: function () { return !sc.strokes.filter(ink).length; },
       busy: function () { return drawing(); },
-      strokes: function () { return sc.strokes.filter(ink); }, // the reader and the answers skip highlighter
+      strokes: function () { return sc.strokes.filter(ink); }, // the reader skips highlighter
       selected: function () { return sel ? sel.s.map(function (i) { return sc.strokes[i]; }).filter(ink) : null; }, // selected writing, or null when nothing is selected
       flash: function (b) { readBox = b; compose(); clearTimeout(readT); readT = setTimeout(function () { readBox = null; compose(); }, 3500); },
-      reload: function () { sc = src.load(); sc.imgs = sc.imgs || []; sc.texts = sc.texts || []; undo = []; redo = []; answers = null; setSel(null); renderTexts(); size(); },
-      redraw: function () { answers = null; draw(); },
+      reload: function () { sc = src.load(); sc.imgs = sc.imgs || []; sc.texts = sc.texts || []; undo = []; redo = []; setSel(null); renderTexts(); size(); },
+      redraw: function () { draw(); },
       dataURL: function () { return workImage().toDataURL("image/png"); },
       image: function () { var c = workImage(); return new Promise(function (res) { c.toBlob(res, "image/png"); }); }
     };
@@ -2449,7 +2406,6 @@ var Reader = (function () {
     $("#pages").innerHTML = '<div class="seg">' + ids.map(function (id, i) {
       return '<button role="tab" data-page="' + id + '"' + (id === P.cur ? ' class="on" aria-selected="true"' : ' aria-selected="false"') + ">Page " + (i + 1) + "</button>";
     }).join("") + '</div><button class="btn small ghost" data-act="page-new">+ New page</button>' +
-      (HAS_READER ? '<label class="row pad-solve" title="Write an expression and = at the end of the line; the answer appears after a moment"><input type="checkbox" class="ck" data-act="solve"' + (SOLVE.on ? " checked" : "") + "> Answer after =</label>" : "") +
       '<span class="spacer"></span>' +
       '<button class="btn small ghost" data-act="page-del">' + (delArm ? "Click again to delete this page" : "Delete page") + "</button>";
   }
@@ -2462,18 +2418,9 @@ var Reader = (function () {
         var tx = (sc.texts || []).filter(function (t) { return String(t.t || "").trim(); });
         if (tx.length) p.texts = tx.map(function (t) { return { x: Math.round(t.x), y: Math.round(t.y), size: Math.round(t.size * 10) / 10, t: t.t }; }); else delete p.texts;
         if (sc.imgs.length) p.imgs = sc.imgs.map(function (m) { return { id: m.id, x: Math.round(m.x), y: Math.round(m.y), w: Math.round(m.w), h: Math.round(m.h) }; }); else delete p.imgs;
-        changed(id); scheduleSolve();
+        changed(id);
       },
-      answers: function (strokes) {
-        var p = D.pages[id], cache = (p && p.solved) || {};
-        if (!SOLVE.on) return [];
-        return equalsLines(strokes).map(function (l) {
-          var c = cache[lineKey(strokes, l)]; if (!c) return null;
-          var v = answerOf(c.t); if (v === "x") return null; // has x in it: nothing to work out
-          var size = Math.max(50, Math.min(200, (l.box[3] - l.box[1]) * 1.8, (l.eqBox[2] - l.eqBox[0]) * 2.4)); // Caveat runs small, so a bit over the writing height
-          return { x: l.eqBox[2] + size * 0.22, y: (l.eqBox[1] + l.eqBox[3]) / 2, size: size, text: v === null ? "?" : v + (c.s ? "" : " ?"), faint: v === null || !c.s };
-        }).filter(Boolean);
-      }
+      full: true
     };
   }
   function mainPad() { return $("#padHost .scratch"); }
@@ -2482,7 +2429,7 @@ var Reader = (function () {
     $("#padHost").innerHTML = padHTML(id, "clip");
     mountPad(mainPad(), mainSrc(id), 400);
     $("#padOut").hidden = true;
-    renderPages(); scheduleSolve(300);
+    renderPages();
   }
 
   /* ---------- clipboard ---------- */
@@ -2638,7 +2585,6 @@ var Reader = (function () {
     if (t.dataset && t.dataset.act === "pen-size-range") { var sp = t.closest(".scratch"); if (sp && sp.__api) sp.__api.pen("s", sizeAt(+t.value)); }
     if (t.dataset && t.dataset.act === "scr-finger") { var sc = t.closest(".scratch"); if (sc && sc.__api) sc.__api.finger(t.checked); }
     if (t.dataset && t.dataset.act === "img-file") { if (t.files && t.files[0]) importImage(t.files[0]); t.value = ""; }
-    if (t.dataset && t.dataset.act === "solve") { SOLVE.on = t.checked; P.solve = t.checked; store(KEY + ":prefs", P); redrawAll(); if (SOLVE.on) scheduleSolve(100); }
   });
   document.addEventListener("paste", function (e) { // a copied screenshot pasted anywhere on the page (not into a text box)
     if (/INPUT|TEXTAREA/.test(e.target.tagName) || !e.clipboardData) return;
@@ -2977,7 +2923,7 @@ var Reader = (function () {
     EMB.host.ready(pid, api);
     function tell() { var h = $("#padHost"); EMB.host.height(pid, h.getBoundingClientRect().bottom + window.scrollY + 2); } // the frame's own height can't tell it to shrink
     if (window.ResizeObserver) new ResizeObserver(tell).observe($("#padHost"));
-    tell(); scheduleSolve(300);
+    tell();
   }
   if (EMB) {
     embedTheme();
@@ -2998,10 +2944,10 @@ var Reader = (function () {
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps 16e9e3044daf for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps 124e33255d72 for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "16e9e3044daf", shown = false, last = 0;
+  var V = "124e33255d72", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;
