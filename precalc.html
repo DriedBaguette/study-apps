@@ -342,7 +342,8 @@ input[type="checkbox"].ck:checked { background: var(--good); border-color: var(-
 input[type="checkbox"].ck:checked::after { content: ""; position: absolute; left: 5px; top: 1px; width: 5px; height: 10px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(40deg); }
 
 .calc { position: fixed; right: 16px; bottom: 16px; width: min(380px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 12px; z-index: 45; }
-.calc-h { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.calc-h { display: flex; flex-wrap: wrap; justify-content: flex-start; align-items: center; gap: 8px; position: relative; padding-right: 40px; }
+.calc-h > [data-x] { position: absolute; top: 0; right: 0; } /* the close button stays in the top right, even when the header wraps */
 .calc input { width: 100%; box-sizing: border-box; margin-top: 8px; }
 .calc-lims { gap: 8px; flex-wrap: nowrap; }
 .calc-lims input { flex: 1; min-width: 0; }
@@ -803,9 +804,28 @@ var MathEngine = (function () {
   }
 
   function isSum(src) { try { var n = parse(src, { sym: true }); return n.t === "bin" && (n.op === "+" || n.op === "-"); } catch (e) { return false; } }
+  // The exact value behind a decimal, for the calculator: a fraction p/q, a multiple of pi over q, or a
+  // multiple of a square root over q (q up to 12), as an expression parse() reads, like "sqrt(3)/2" or
+  // "2pi/3". null when the number isn't one of those.
+  var EXACT_BASES = [[1, "", 200], [Math.PI, "pi", 48], [Math.SQRT2, "sqrt(2)", 24], [Math.sqrt(3), "sqrt(3)", 24], [Math.sqrt(5), "sqrt(5)", 24], [Math.sqrt(6), "sqrt(6)", 24], [Math.sqrt(7), "sqrt(7)", 24]];
+  function exact(v) {
+    if (!isFinite(v)) return null;
+    var tol = 1e-10 * Math.max(1, Math.abs(v));
+    for (var k = 0; k < EXACT_BASES.length; k++) {
+      var B = EXACT_BASES[k][0], name = EXACT_BASES[k][1], maxP = EXACT_BASES[k][2];
+      for (var q = 1; q <= 12; q++) {
+        var p = Math.round(v / B * q);
+        if (!p && name) continue;
+        if (Math.abs(p) > maxP * q || Math.abs(p / q * B - v) > tol) continue;
+        var a = Math.abs(p), num = name ? (a === 1 ? name : a + name) : String(a);
+        return (p < 0 ? "-" : "") + num + (q > 1 ? "/" + q : "");
+      }
+    }
+    return null;
+  }
   // ev with angles in degrees when deg is true. Only the calculator uses it; answer checking stays in radians.
   function evAngle(n, x, C, deg) { var keep = UNIT; UNIT = deg ? Math.PI / 180 : 1; try { return ev(n, x, C); } finally { UNIT = keep; } }
-  return { parse: parse, pretty: pretty, check: check, ev: ev, evAngle: evAngle, isSum: isSum, subVar: subVar };
+  return { parse: parse, pretty: pretty, check: check, ev: ev, evAngle: evAngle, exact: exact, isSum: isSum, subVar: subVar };
 })();
 
 /* helpers for writing content */
@@ -4245,6 +4265,11 @@ CONFIG.web = true;
     function num(s) { return E.evAngle(E.parse(s), 0, 0, deg); }
     function fn(s) { var a = E.parse(s); return function (x) { return E.evAngle(a, x, 0, deg); }; }
     function r(x) { return isFinite(x) ? String(+x.toPrecision(10)) : "undefined"; }
+    function exactHTML(x) { // like sqrt(3)/2 or pi/6; a plain fraction only when its decimal doesn't end (1/3, not 1/4)
+      var ex = E.exact(x);
+      if (!ex || ex === r(x) || (!/pi|sqrt/.test(ex) && r(x).replace(/^-|\./g, "").length < 10)) return "";
+      return '<span class="m">' + E.pretty(E.parse(ex)) + "</span>";
+    }
     function f4(x) { return (Math.abs(x) < 5e-5 ? 0 : x).toFixed(4); }
     function simpson(f, a, b, n) { var h = (b - a) / n, s = f(a) + f(b); for (var i = 1; i < n; i++) s += f(a + i * h) * (i % 2 ? 4 : 2); return s * h / 3; }
     function draw(fs, A, B, roots) {
@@ -4270,12 +4295,12 @@ CONFIG.web = true;
           if (!v("e")) { out.textContent = ""; return; }
           var ast = E.parse(v("e")), pv = '<span class="m">' + E.pretty(ast) + "</span>", g1 = E.evAngle(ast, 0.3, 0.37, deg), g2 = E.evAngle(ast, 0.7, 0.91, deg);
           if (g1 !== g2 && !(isNaN(g1) && isNaN(g2))) { out.innerHTML = pv + '<br><span class="muted">This has x (or C) in it, so it isn’t a single number. Put a number in place of x, or use the Integral or Graph tab.</span>'; return; }
-          out.innerHTML = pv + " = <b>" + r(g1) + "</b>"; return;
+          var exv = exactHTML(g1); out.innerHTML = pv + " = " + (exv ? "<b>" + exv + "</b> ≈ " + r(g1) : "<b>" + r(g1) + "</b>"); return;
         }
         if (mode === "int") {
           if (!v("f") || !v("a") || !v("b")) { out.textContent = "Enter the function and both limits."; return; }
           var f = fn(v("f")), a = num(v("a")), b = num(v("b")), s1 = simpson(f, a, b, 2000), s2 = simpson(f, a, b, 4000);
-          out.innerHTML = "≈ <b>" + r(s2) + "</b>" + (!isFinite(s2) || Math.abs(s1 - s2) > 1e-6 * Math.max(1, Math.abs(s2)) ? ' <span class="muted">The function blows up or jumps somewhere in there, so don’t trust this one.</span>' : "");
+          var exi = exactHTML(s2); out.innerHTML = "≈ <b>" + r(s2) + "</b>" + (exi ? ' <span class="muted">(looks like ' + exi + ")</span>" : "") + (!isFinite(s2) || Math.abs(s1 - s2) > 1e-6 * Math.max(1, Math.abs(s2)) ? ' <span class="muted">The function blows up or jumps somewhere in there, so don’t trust this one.</span>' : "");
           return;
         }
         if (!v("g1")) { out.textContent = ""; plot.innerHTML = ""; return; }
@@ -4333,10 +4358,10 @@ CONFIG.web = true;
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps cb1e2d6c85e0 for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps 7a16c34743d2 for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "cb1e2d6c85e0", shown = false, last = 0;
+  var V = "7a16c34743d2", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;
