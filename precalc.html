@@ -342,7 +342,7 @@ input[type="checkbox"].ck:checked { background: var(--good); border-color: var(-
 input[type="checkbox"].ck:checked::after { content: ""; position: absolute; left: 5px; top: 1px; width: 5px; height: 10px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(40deg); }
 
 .calc { position: fixed; right: 16px; bottom: 16px; width: min(380px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 12px; z-index: 45; }
-.calc-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.calc-h { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
 .calc input { width: 100%; box-sizing: border-box; margin-top: 8px; }
 .calc-lims { gap: 8px; flex-wrap: nowrap; }
 .calc-lims input { flex: 1; min-width: 0; }
@@ -468,6 +468,7 @@ ul.wamap { margin: 0 0 10px; padding-left: 20px; line-height: 1.7; }
 <script>
 /* ===== Math engine: parse, pretty-print, evaluate, compare ===== */
 var MathEngine = (function () {
+  var UNIT = 1; // radians; evAngle() switches to degrees for one evaluation (the calculator's Deg mode)
   var NAMES = ["arcsin", "arccos", "arctan", "sqrt", "cbrt", "sin", "cos", "tan", "sec", "csc", "cot", "exp", "abs", "log", "ln", "pi", "e", "x", "c"];
   var FNS = { arcsin: 1, arccos: 1, arctan: 1, sqrt: 1, cbrt: 1, sin: 1, cos: 1, tan: 1, sec: 1, csc: 1, cot: 1, exp: 1, abs: 1, log: 1, ln: 1 };
 
@@ -616,12 +617,12 @@ var MathEngine = (function () {
       case "fn":
         var v = ev(n.a, x, C);
         switch (n.name) {
-          case "sin": return Math.sin(v); case "cos": return Math.cos(v); case "tan": return Math.tan(v);
-          case "sec": return 1 / Math.cos(v); case "csc": return 1 / Math.sin(v); case "cot": return Math.cos(v) / Math.sin(v);
+          case "sin": return Math.sin(v * UNIT); case "cos": return Math.cos(v * UNIT); case "tan": return Math.tan(v * UNIT);
+          case "sec": return 1 / Math.cos(v * UNIT); case "csc": return 1 / Math.sin(v * UNIT); case "cot": return Math.cos(v * UNIT) / Math.sin(v * UNIT);
           case "exp": return Math.exp(v); case "ln": return Math.log(v);
           case "log": return n.base ? Math.log(v) / Math.log(ev(n.base, x, C)) : Math.log10(v);
           case "sqrt": return Math.sqrt(v); case "cbrt": return Math.cbrt(v); case "abs": return Math.abs(v);
-          case "arcsin": return Math.asin(v); case "arccos": return Math.acos(v); case "arctan": return Math.atan(v);
+          case "arcsin": return Math.asin(v) / UNIT; case "arccos": return Math.acos(v) / UNIT; case "arctan": return Math.atan(v) / UNIT;
         }
     }
     return NaN;
@@ -802,7 +803,9 @@ var MathEngine = (function () {
   }
 
   function isSum(src) { try { var n = parse(src, { sym: true }); return n.t === "bin" && (n.op === "+" || n.op === "-"); } catch (e) { return false; } }
-  return { parse: parse, pretty: pretty, check: check, ev: ev, isSum: isSum, subVar: subVar };
+  // ev with angles in degrees when deg is true. Only the calculator uses it; answer checking stays in radians.
+  function evAngle(n, x, C, deg) { var keep = UNIT; UNIT = deg ? Math.PI / 180 : 1; try { return ev(n, x, C); } finally { UNIT = keep; } }
+  return { parse: parse, pretty: pretty, check: check, ev: ev, evAngle: evAngle, isSum: isSum, subVar: subVar };
 })();
 
 /* helpers for writing content */
@@ -2244,10 +2247,11 @@ var Reader = (function () {
   // yet. A stacked fraction has no slash and needs no parentheses, so both are optional.
   function spell(typed, parens, slash) {
     var s = String(typed).replace(/\s+/g, ""), out = [];
-    if (/sqrt|cbrt|abs|pi|exp|[=_,<>]/i.test(s)) return null;
+    if (/sqrt|cbrt|abs|exp|[=_,<>]/i.test(s)) return null;
     for (var i = 0; i < s.length; i++) {
       var c = s[i];
-      if (c === "*") out.push("\\cdot"); // a typed * is a written multiplication dot
+      if (c === "p" && s[i + 1] === "i") { out.push("\\pi"); i++; } // pi is one written symbol, π
+      else if (c === "*") out.push("\\cdot"); // a typed * is a written multiplication dot
       else if (/[0-9.+\-|]/.test(c)) out.push(c); else if (/[a-zA-Z]/.test(c)) out.push(c.toLowerCase());
       else if (c === "(" || c === ")") { if (parens) out.push(c); }
       else if (c === "/") { if (slash) out.push(c); }
@@ -3932,11 +3936,11 @@ CONFIG.web = true;
      Each sample goes straight into the personal reader (Reader.teach in reader.js), so it reads the user's
      own handwriting from the start instead of waiting for right answers to learn from. Samples stay on this
      device, like everything the reader learns: a pencil and a mouse write differently. */
-  var TEACH_SYMS = "0 1 2 3 4 5 6 7 8 9 x y t e c s i n o a l g ( ) / |".split(" ");
+  var TEACH_SYMS = "0 1 2 3 4 5 6 7 8 9 x y t e c s i n o a l g ( ) / | \\pi".split(" ");
   var TEACH = { i: 0, boxes: null, bad: {}, msg: "" }, FROM_PAD = /[?&]from=scratch(&|$)/.test(location.search); // opened from the Scratch Pad
   var TEACH_AUTO = KEY + ":hw-auto"; // symbols the reader names by shape alone (a straight 1, a crossed x), so nothing was stored
   function teachAuto() { try { return JSON.parse(localStorage.getItem(TEACH_AUTO) || "{}"); } catch (e) { return {}; } }
-  function teachShow(l) { return l === "c" ? "C" : /[a-z]/.test(l) ? "<i>" + l + "</i>" : l; }
+  function teachShow(l) { return l === "\\pi" ? "π" : l === "c" ? "C" : /[a-z]/.test(l) ? "<i>" + l + "</i>" : l; }
   function teachDone() { var d = teachAuto(); Reader.learned().forEach(function (t) { if (t.c) d[t.l] = true; }); return d; }
   function teachCount() { var d = teachDone(); return TEACH_SYMS.filter(function (l) { return d[l]; }).length; }
   function renderTeach() {
@@ -4209,13 +4213,13 @@ CONFIG.web = true;
     var btn = document.getElementById("calcBtn"); if (!btn) return;
     if (CONFIG.noPad || CONFIG.noCalc) { btn.hidden = true; return; } // not for apps without math, like History
     var box = document.createElement("div"); box.className = "calc"; box.hidden = true; box.setAttribute("role", "dialog"); box.setAttribute("aria-label", "Calculator");
-    box.innerHTML = '<div class="calc-h"><div class="seg"><button class="on" data-m="val">Calculate</button><button data-m="int">Integral</button><button data-m="gr">Graph</button></div><button class="icon-btn" data-x aria-label="Close calculator">×</button></div>' +
+    box.innerHTML = '<div class="calc-h"><div class="seg"><button class="on" data-m="val">Calculate</button><button data-m="int">Integral</button><button data-m="gr">Graph</button></div><div class="seg calc-unit" title="Angles in radians or degrees"><button data-u="rad">Rad</button><button data-u="deg">Deg</button></div><button class="icon-btn" data-x aria-label="Close calculator">×</button></div>' +
       '<div data-p="val"><input class="calc-in" data-f="e" placeholder="e.g. ln(865)/9 or sin(2)" aria-label="Expression" autocomplete="off" autocapitalize="off" spellcheck="false"></div>' +
       '<div data-p="int" hidden><input class="calc-in" data-f="f" placeholder="f(x), e.g. sqrt(1 + 4x^2)" aria-label="Function to integrate" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="row calc-lims"><input class="calc-in" data-f="a" placeholder="from" aria-label="Lower limit"><input class="calc-in" data-f="b" placeholder="to" aria-label="Upper limit"></div></div>' +
       '<div data-p="gr" hidden><input class="calc-in" data-f="g1" placeholder="y = …, e.g. x^3/10 + 1" aria-label="First curve" autocomplete="off" autocapitalize="off" spellcheck="false"><input class="calc-in" data-f="g2" placeholder="second curve (optional)" aria-label="Second curve" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="row calc-lims"><input class="calc-in" data-f="ga" value="-5" aria-label="x from"><input class="calc-in" data-f="gb" value="5" aria-label="x to"></div><div class="calc-plot"></div></div>' +
       (CONFIG.web && typeof Reader !== "undefined" ? '<div class="row calc-from"><button class="btn small" data-from-pad title="Reads what you boxed on the problem’s scratch pad (or its last line) into the box above">Read from the problem’s scratch pad</button></div>' : "") +
       '<div class="calc-pad"></div>' +
-      '<p class="muted calc-note">Radians. Type pi for π and e for Euler’s number, the same way as in answer boxes.</p><div class="calc-out" aria-live="polite"></div>';
+      '<p class="muted calc-note"><span data-unit>Radians</span>. Type pi for π and e for Euler’s number, the same way as in answer boxes.</p><div class="calc-out" aria-live="polite"></div>';
     document.body.appendChild(box);
     var mode = "val", out = box.querySelector(".calc-out"), plot = box.querySelector(".calc-plot"), lastIn = null;
     if (CONFIG.web && typeof Reader !== "undefined") { // the calculator's own pad, with the same tools and reader
@@ -4224,8 +4228,11 @@ CONFIG.web = true;
     }
     box.addEventListener("focusin", function (ev) { if (ev.target.classList.contains("calc-in")) lastIn = ev.target; });
     function v(n) { return box.querySelector('[data-f="' + n + '"]').value.trim(); }
-    function num(s) { return E.ev(E.parse(s), 0, 0); }
-    function fn(s) { var a = E.parse(s); return function (x) { return E.ev(a, x, 0); }; }
+    var deg = S.prefs.calcDeg === true;
+    function unit() { box.querySelectorAll("[data-u]").forEach(function (b) { b.classList.toggle("on", (b.dataset.u === "deg") === deg); }); box.querySelector("[data-unit]").textContent = deg ? "Degrees" : "Radians"; }
+    unit();
+    function num(s) { return E.evAngle(E.parse(s), 0, 0, deg); }
+    function fn(s) { var a = E.parse(s); return function (x) { return E.evAngle(a, x, 0, deg); }; }
     function r(x) { return isFinite(x) ? String(+x.toPrecision(10)) : "undefined"; }
     function f4(x) { return (Math.abs(x) < 5e-5 ? 0 : x).toFixed(4); }
     function simpson(f, a, b, n) { var h = (b - a) / n, s = f(a) + f(b); for (var i = 1; i < n; i++) s += f(a + i * h) * (i % 2 ? 4 : 2); return s * h / 3; }
@@ -4250,7 +4257,7 @@ CONFIG.web = true;
       try {
         if (mode === "val") {
           if (!v("e")) { out.textContent = ""; return; }
-          var ast = E.parse(v("e")), pv = '<span class="m">' + E.pretty(ast) + "</span>", g1 = E.ev(ast, 0.3, 0.37), g2 = E.ev(ast, 0.7, 0.91);
+          var ast = E.parse(v("e")), pv = '<span class="m">' + E.pretty(ast) + "</span>", g1 = E.evAngle(ast, 0.3, 0.37, deg), g2 = E.evAngle(ast, 0.7, 0.91, deg);
           if (g1 !== g2 && !(isNaN(g1) && isNaN(g2))) { out.innerHTML = pv + '<br><span class="muted">This has x (or C) in it, so it isn’t a single number. Put a number in place of x, or use the Integral or Graph tab.</span>'; return; }
           out.innerHTML = pv + " = <b>" + r(g1) + "</b>"; return;
         }
@@ -4286,6 +4293,7 @@ CONFIG.web = true;
         if (!pad) { toast("Open a problem’s scratch pad and write on it first."); return; }
         readAnswer(pad.dataset.pid, t, true, pad); return;
       }
+      if (t.dataset.u) { deg = t.dataset.u === "deg"; S.prefs.calcDeg = deg; save(); unit(); run(); return; }
       if (t.dataset.m) {
         mode = t.dataset.m;
         box.querySelectorAll("[data-m]").forEach(function (b) { b.classList.toggle("on", b === t); });
@@ -4314,10 +4322,10 @@ CONFIG.web = true;
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps 7741958b5cec for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps b23e545666e6 for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "7741958b5cec", shown = false, last = 0;
+  var V = "b23e545666e6", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;
