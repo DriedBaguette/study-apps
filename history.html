@@ -1962,6 +1962,17 @@ var Reader = (function () {
         if (join) group[root(i)] = root(j);
       });
     });
+    // pi: a flat bar with two or more legs hanging just under it is one symbol, touching or not (most people
+    // lift the pen between the bar and each leg). A fraction bar is never one: it has ink over it too.
+    rest.forEach(function (i) {
+      if (!flat(i)) return;
+      var b = bs[i], legs = rest.filter(function (j) {
+        if (j === i || flat(j)) return false;
+        var o = bs[j], drop = o.y0 - b.y1;
+        return o.h > o.w && o.cx >= b.x0 - 0.1 * b.w && o.cx <= b.x1 + 0.1 * b.w && drop >= -0.4 * o.h && drop <= Math.max(6, 0.35 * b.w) && o.h <= 2.5 * b.w && o.y1 > b.y1 + 0.5 * o.h;
+      });
+      if (legs.length >= 2) legs.forEach(function (j) { group[root(j)] = root(i); });
+    });
     var bySym = {}, items = [];
     rest.forEach(function (i) { (bySym[root(i)] = bySym[root(i)] || []).push(i); });
     Object.keys(bySym).forEach(function (r) {
@@ -4148,10 +4159,10 @@ CONFIG.web = true;
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps b23e545666e6 for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps cb1e2d6c85e0 for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "b23e545666e6", shown = false, last = 0;
+  var V = "cb1e2d6c85e0", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;
