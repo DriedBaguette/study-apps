@@ -5671,7 +5671,7 @@ CONFIG.web = true;
   function touched(s) { return partsRead(s) > 0 || (s.probs || []).some(function (p) { return S.ans[p.pid]; }) || !!S.quiz[s.id]; }
   function status(s) {
     if (S.done[s.id]) return "done";
-    if (s.date && s.date < today()) return "behind";
+    if (s.date && s.date < today() && !BLOCKS[s.block].past) return "behind"; // a past block (its exam is over) is review, not overdue
     if (touched(s)) return "active";
     if (s.date === today()) return "today";
     return "todo";
@@ -5795,7 +5795,7 @@ CONFIG.web = true;
     var ds = new Date();
     h += '<div><div class="eyebrow">' + DOW[ds.getDay()] + ", " + MON[ds.getMonth()] + " " + ds.getDate() + '</div><h1>One thing at a time.</h1><p class="lede">Here’s your next step. You don’t have to plan the rest of the day, just this.</p></div>';
     if (s) {
-      var st = nextStep(s), behind = SESSIONS.filter(function (x) { return !S.done[x.id] && x.date < t; }).length;
+      var st = nextStep(s), behind = SESSIONS.filter(function (x) { return !S.done[x.id] && x.date < t && !BLOCKS[x.block].past; }).length;
       h += '<section class="card next"><div class="eyebrow">Next step' + (!s.date ? "" : s.date > t ? " · ahead of schedule" : behind > 1 ? " · " + behind + " sessions behind" : "") + '</div>' +
         '<div class="big">' + s.id + " · " + s.title + "</div>" +
         '<div class="where">' + st.label + (s.date ? " · planned for " + fmtD(s.date, true) : "") + "</div>" +
@@ -5818,7 +5818,7 @@ CONFIG.web = true;
     for (var i = 0; i < 7; i++) {
       var dd = new Date(monday); dd.setDate(monday.getDate() + i); var k = ymd(dd);
       var ss = SESSIONS.filter(function (x) { return x.date === k; })[0];
-      var cls = ss ? (S.done[ss.id] ? "done" : k < t ? "behind" : "todo") : "", exd = EXS.filter(function (e) { return e.date === k; })[0];
+      var cls = ss ? (S.done[ss.id] ? "done" : k < t && !BLOCKS[ss.block].past ? "behind" : "todo") : "", exd = EXS.filter(function (e) { return e.date === k; })[0];
       wk += '<a class="wd' + (k === t ? " is-today" : "") + '"' + (ss ? ' href="#/s/' + ss.id + '"' : "") + '><span class="wdn">' + DOW[dd.getDay()] + '</span><span class="wdd">' + dd.getDate() + "</span>" + (exd ? '<span class="wds exam" title="' + exd.title + " " + exd.time + '">Exam</span>' : ss ? '<span class="wds ' + cls + '">' + ss.id + "</span>" : '<span class="muted" style="font-size:11px">—</span>') + "</a>";
     }
     var streak = 0, dots = "", cur = parseD(t);
@@ -6595,10 +6595,10 @@ CONFIG.web = true;
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps fd52da43f24d for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps 323616a5770e for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "fd52da43f24d", shown = false, last = 0;
+  var V = "323616a5770e", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;

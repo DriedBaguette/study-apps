@@ -865,7 +865,7 @@ function tbl(head, rows) {
 var CONFIG = { key: "calc124-v1", title: "Calc 1 Companion", sub: "STMATH 124 · UW Bothell", dated: true, blockWord: "", course: "STMATH 124",
   noAI: true, // the syllabus counts any use of AI tools on course work as misconduct, so no "Ask Gemini to check" here
   starText: "the rest of the course builds on this", file: "calc124-companion",
-  planLede: "Built from your STMATH 124 syllabus and WAMAP list. Each section has a short lesson and practice, dated the day before its homework is due, grouped by the exam it’s on. Homework can’t be extended past the night before its exam. Chapter 2 is at the end for review." };
+  planLede: "Built from your STMATH 124 syllabus and WAMAP list. Each section has a short lesson and practice, dated the day before its homework is due, grouped by the exam it’s on. Homework can’t be extended past the night before its exam. Chapter 2 (Midterm 1) is done and stays listed for review." };
 
 var KA_LIM = KA + "cs1-limits-and-continuity", KA_DER = KA + "cs1-derivatives-definition-and-basic-rules", KA_ADV = KA + "cs1-derivatives-chain-rule-and-other-advanced-topics",
   KA_APP = KA + "cs1-applications-of-derivatives", KA_ANA = KA + "cs1-analyzing-functions";
@@ -877,12 +877,19 @@ function fx(s) { return '<span class="m"><i>f</i>(<i>x</i>) = ' + MI(s) + "</spa
 
 // phases end at the hard deadlines: the night before each exam, after which no late pass works
 var PHASES = [
+  { id: 5, title: "Midterm 1", sub: "Chapter 2: limits", due: "2026-10-22", blocks: ["L"] },
   { id: 1, title: "Midterm 2", sub: "3.1–3.7", due: "2026-11-12", blocks: ["M2"] },
   { id: 2, title: "Midterm 3", sub: "3.8–3.11, 4.1, 4.3", due: "2026-12-03", blocks: ["M3"] },
-  { id: 3, title: "The final", sub: "4.4–4.7, then everything", due: "2026-12-16", blocks: ["FX"] },
-  { id: 4, title: "Review: Chapter 2", sub: "Limits", blocks: ["L"] }
+  { id: 3, title: "The final", sub: "4.4–4.7, then everything", due: "2026-12-16", blocks: ["FX"] }
 ];
 var HW = [
+  { id: "Intro", title: "Intro to WAMAP", due: "2026-10-05", after: "2.1", phase: 5 },
+  { id: "2.1", title: "The Idea of Limits", due: "2026-10-07", after: "2.1", phase: 5 },
+  { id: "2.2", title: "Definitions of Limits", due: "2026-10-09", after: "2.2", phase: 5 },
+  { id: "2.3", title: "Techniques for Computing Limits", due: "2026-10-12", after: "2.3", phase: 5 },
+  { id: "2.4", title: "Infinite Limits", due: "2026-10-16", after: "2.4", phase: 5 },
+  { id: "2.5", title: "Limits at Infinity", due: "2026-10-18", after: "2.5", phase: 5 },
+  { id: "2.6", title: "Continuity", due: "2026-10-19", after: "2.6", phase: 5 },
   { id: "3.1", title: "Introducing the Derivative", due: "2026-10-27", after: "3.1", phase: 1 },
   { id: "3.2", title: "The Derivative as a Function", due: "2026-10-26", after: "3.2", phase: 1 },
   { id: "3.3", title: "Rules of Differentiation", due: "2026-10-28", after: "3.3", phase: 1 },
@@ -906,7 +913,7 @@ var BLOCKS = {
   M2: { title: "Up to Midterm 2", goal: "Midterm 2 is Friday Nov 13 at the start of class (80 minutes) and covers 3.1–3.7. Quiz 2 is Friday Nov 6. " + EXAM_RULES },
   M3: { title: "Up to Midterm 3", goal: "Midterm 3 is Friday Dec 4 at the start of class and covers 3.8–3.11, 4.1 and 4.3. Your lowest midterm is dropped. " + EXAM_RULES },
   FX: { title: "Up to the final", goal: "Quiz 3 is Friday Dec 11. The final is Thursday Dec 17, 11:00 AM–1:00 PM in DISC 061, and covers everything. HW 4.6 is optional (it’s skipped in class). " + EXAM_RULES },
-  L: { title: "Limits (review)", goal: "Chapter 2 homework is done. Come back here before the final: limits show up again in 3.1, 3.2 and 4.7." }
+  L: { title: "Chapter 2: limits", past: true, goal: "Quiz 1 (Oct 16) and Midterm 1 (Oct 23) are done, and so is this homework. Come back here before the final: limits show up again in 3.1, 3.2 and 4.7." }
 };
 // the optional review sets in this WAMAP course, matched to the sections that use them
 var WAMAP = {
@@ -923,6 +930,8 @@ var WAMAP = {
 };
 // from the syllabus: quizzes and midterms are at the start of class on Fridays (Section A 8:45 AM, Section B 11:45 AM)
 var EXAMS = [
+  { id: "Q1", title: "Quiz 1", covers: "early Chapter 2; see Canvas", date: "2026-10-16", time: "start of class", wt: "5% of your grade", phase: 5 },
+  { id: "X1", title: "Midterm 1", covers: "2.1–2.6", date: "2026-10-23", time: "start of class, 80 min", wt: "15% (lowest midterm dropped)", phase: 5 },
   { id: "Q2", title: "Quiz 2", covers: "recent sections; see Canvas", date: "2026-11-06", time: "start of class", wt: "5% of your grade", phase: 1 },
   { id: "X2", title: "Midterm 2", covers: "3.1–3.7", date: "2026-11-13", time: "start of class, 80 min", wt: "15% (lowest midterm dropped)", phase: 1, prep: "R2" },
   { id: "X3", title: "Midterm 3", covers: "3.8–3.11, 4.1, 4.3", date: "2026-12-04", time: "start of class, 80 min", wt: "15% (lowest midterm dropped)", phase: 2, prep: "R3" },
@@ -1076,13 +1085,13 @@ outline("4.6", "FX", "2026-12-08", "Linear approximation and differentials (opti
 outline("4.7", "FX", "2026-12-10", "L’Hôpital’s rule", ["0/0 and ∞/∞ forms", "Rewriting 0·∞ and ∞ − ∞", "Exponent forms with logs"], [["Paul: L’Hospital’s Rule", P1 + "LHospitalsRule.aspx"], ["Khan: Applications of derivatives", KA_APP]]),
 outline("RF", "FX", "2026-12-16", "Final exam review", ["Cumulative practice exam", "Limits, derivative rules, applications"], [["Paul: Calculus I notes", P1]], true),
 
-/* ================= Chapter 2 review (outlines, no date) ================= */
-outline("2.1", "L", null, "The idea of limits", ["Average and instantaneous velocity", "Tangent lines as limits of secant lines"], [["Paul: Tangent Lines and Rates of Change", P1 + "Tangents_Rates.aspx"], ["Khan: Limits and continuity", KA_LIM]]),
-outline("2.2", "L", null, "Definitions of limits", ["Limits from tables and graphs", "One-sided limits", "When a limit doesn’t exist"], [["Paul: The Limit", P1 + "TheLimit.aspx"], ["Paul: One-Sided Limits", P1 + "OneSidedLimits.aspx"], ["Khan: Limits and continuity", KA_LIM]]),
-outline("2.3", "L", null, "Techniques for computing limits", ["Limit laws and direct substitution", "Factoring and canceling 0/0", "Conjugates", "The squeeze theorem"], [["Paul: Computing Limits", P1 + "ComputingLimits.aspx"], ["Khan: Limits and continuity", KA_LIM]], true),
-outline("2.4", "L", null, "Infinite limits", ["Limits that grow without bound", "Vertical asymptotes"], [["Paul: Infinite Limits", P1 + "InfiniteLimits.aspx"], ["Khan: Limits and continuity", KA_LIM]]),
-outline("2.5", "L", null, "Limits at infinity", ["Horizontal asymptotes", "Rational functions: compare the degrees", "End behavior"], [["Paul: Limits at Infinity, Part I", P1 + "LimitsAtInfinityI.aspx"], ["Khan: Limits and continuity", KA_LIM]]),
-outline("2.6", "L", null, "Continuity", ["The three-part definition", "Types of discontinuity", "Making a piecewise function continuous", "The Intermediate Value Theorem"], [["Paul: Continuity", P1 + "Continuity.aspx"], ["Khan: Limits and continuity", KA_LIM]])
+/* ================= Chapter 2 (done; outlines, kept last so the next step is current work) ================= */
+outline("2.1", "L", "2026-10-06", "The idea of limits", ["Average and instantaneous velocity", "Tangent lines as limits of secant lines"], [["Paul: Tangent Lines and Rates of Change", P1 + "Tangents_Rates.aspx"], ["Khan: Limits and continuity", KA_LIM]]),
+outline("2.2", "L", "2026-10-08", "Definitions of limits", ["Limits from tables and graphs", "One-sided limits", "When a limit doesn’t exist"], [["Paul: The Limit", P1 + "TheLimit.aspx"], ["Paul: One-Sided Limits", P1 + "OneSidedLimits.aspx"], ["Khan: Limits and continuity", KA_LIM]]),
+outline("2.3", "L", "2026-10-11", "Techniques for computing limits", ["Limit laws and direct substitution", "Factoring and canceling 0/0", "Conjugates", "The squeeze theorem"], [["Paul: Computing Limits", P1 + "ComputingLimits.aspx"], ["Khan: Limits and continuity", KA_LIM]], true),
+outline("2.4", "L", "2026-10-15", "Infinite limits", ["Limits that grow without bound", "Vertical asymptotes"], [["Paul: Infinite Limits", P1 + "InfiniteLimits.aspx"], ["Khan: Limits and continuity", KA_LIM]]),
+outline("2.5", "L", "2026-10-17", "Limits at infinity", ["Horizontal asymptotes", "Rational functions: compare the degrees", "End behavior"], [["Paul: Limits at Infinity, Part I", P1 + "LimitsAtInfinityI.aspx"], ["Khan: Limits and continuity", KA_LIM]]),
+outline("2.6", "L", "2026-10-18", "Continuity", ["The three-part definition", "Types of discontinuity", "Making a piecewise function continuous", "The Intermediate Value Theorem"], [["Paul: Continuity", P1 + "Continuity.aspx"], ["Khan: Limits and continuity", KA_LIM]])
 ];
 
 var FLASH = {
@@ -2797,7 +2806,7 @@ CONFIG.web = true;
   function touched(s) { return partsRead(s) > 0 || (s.probs || []).some(function (p) { return S.ans[p.pid]; }) || !!S.quiz[s.id]; }
   function status(s) {
     if (S.done[s.id]) return "done";
-    if (s.date && s.date < today()) return "behind";
+    if (s.date && s.date < today() && !BLOCKS[s.block].past) return "behind"; // a past block (its exam is over) is review, not overdue
     if (touched(s)) return "active";
     if (s.date === today()) return "today";
     return "todo";
@@ -2921,7 +2930,7 @@ CONFIG.web = true;
     var ds = new Date();
     h += '<div><div class="eyebrow">' + DOW[ds.getDay()] + ", " + MON[ds.getMonth()] + " " + ds.getDate() + '</div><h1>One thing at a time.</h1><p class="lede">Here’s your next step. You don’t have to plan the rest of the day, just this.</p></div>';
     if (s) {
-      var st = nextStep(s), behind = SESSIONS.filter(function (x) { return !S.done[x.id] && x.date < t; }).length;
+      var st = nextStep(s), behind = SESSIONS.filter(function (x) { return !S.done[x.id] && x.date < t && !BLOCKS[x.block].past; }).length;
       h += '<section class="card next"><div class="eyebrow">Next step' + (!s.date ? "" : s.date > t ? " · ahead of schedule" : behind > 1 ? " · " + behind + " sessions behind" : "") + '</div>' +
         '<div class="big">' + s.id + " · " + s.title + "</div>" +
         '<div class="where">' + st.label + (s.date ? " · planned for " + fmtD(s.date, true) : "") + "</div>" +
@@ -2944,7 +2953,7 @@ CONFIG.web = true;
     for (var i = 0; i < 7; i++) {
       var dd = new Date(monday); dd.setDate(monday.getDate() + i); var k = ymd(dd);
       var ss = SESSIONS.filter(function (x) { return x.date === k; })[0];
-      var cls = ss ? (S.done[ss.id] ? "done" : k < t ? "behind" : "todo") : "", exd = EXS.filter(function (e) { return e.date === k; })[0];
+      var cls = ss ? (S.done[ss.id] ? "done" : k < t && !BLOCKS[ss.block].past ? "behind" : "todo") : "", exd = EXS.filter(function (e) { return e.date === k; })[0];
       wk += '<a class="wd' + (k === t ? " is-today" : "") + '"' + (ss ? ' href="#/s/' + ss.id + '"' : "") + '><span class="wdn">' + DOW[dd.getDay()] + '</span><span class="wdd">' + dd.getDate() + "</span>" + (exd ? '<span class="wds exam" title="' + exd.title + " " + exd.time + '">Exam</span>' : ss ? '<span class="wds ' + cls + '">' + ss.id + "</span>" : '<span class="muted" style="font-size:11px">—</span>') + "</a>";
     }
     var streak = 0, dots = "", cur = parseD(t);
@@ -3721,10 +3730,10 @@ CONFIG.web = true;
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps fd52da43f24d for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps 323616a5770e for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "fd52da43f24d", shown = false, last = 0;
+  var V = "323616a5770e", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;
