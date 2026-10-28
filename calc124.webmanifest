@@ -1,0 +1,28 @@
+{
+ "id": "./calc124.html",
+ "name": "Calc 1 Companion",
+ "short_name": "Calc I",
+ "start_url": "./calc124.html",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#EEF2F7",
+ "theme_color": "#4E1AC2",
+ "icons": [
+  {
+   "src": "icons/calc124-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icons/calc124-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "icons/calc124-maskable.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Calc 1 Catch-Up</title>
+<title>Calc 1 Review with Calc 2</title>
 <link rel="manifest" href="calc.webmanifest">
 <meta name="theme-color" content="#C24E1A">
 <link rel="icon" type="image/png" href="icons/calc-192.png">
@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Calc 1">
+<meta name="apple-mobile-web-app-title" content="Calc 1 Review">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -845,7 +845,7 @@ function SIG(from, to, body) {
 
 if (typeof module !== "undefined") module.exports = { MathEngine: MathEngine, M: M, MI: MI, DI: DI, II: II, DD: DD, SIG: SIG, DDX: DDX };
 
-var CONFIG = { key: "calc-catchup-local-v1", title: "Calc 1 Catch-Up", sub: "Running alongside Calc 2", dated: true, blockWord: "Block", starText: "Calc 2 builds on this", file: "calc-catchup-app",
+var CONFIG = { key: "calc-catchup-local-v1", title: "Calc 1 Review with Calc 2", sub: "Running alongside Calc 2", dated: true, blockWord: "Block", starText: "Calc 2 builds on this", file: "calc-catchup-app",
   planLede: "You\u2019re in Calc 2 now, so this skips the full Calc 1 tour. Each block teaches only the Calc 1 and precalc you need for your next homework set, dated to land before its deadline." };
 /* ===== Course data ===== */
 var P1 = "https://tutorial.math.lamar.edu/classes/calci/";
@@ -5020,7 +5020,7 @@ CONFIG.web = true;
         (COARSE ? '<label class="row scr-finger" style="gap:6px;font-size:13px"><input type="checkbox" class="ck" data-act="scr-finger"> Finger draws</label>' : "") +
         '<span class="spacer"></span>' + (CONFIG.web && typeof Reader !== "undefined" && p.type !== "choice" ? '<button class="btn small" data-act="scr-read" data-pid="' + p.pid + '" title="Types what you boxed (or the last line you wrote) into the answer box">' + readLabel(p.pid) + "</button>" +
           (p.calc ? "" : '<button class="btn small ghost" data-act="scr-calc" data-pid="' + p.pid + '" title="Reads what you boxed (or the last line) into the calculator">→ Calculator</button>') : "") +
-        (p.quiz || p.calc ? "" : '<button class="btn small" data-act="scr-ask" data-pid="' + p.pid + '"' + (CONFIG.web ? "" : " hidden") + ">" + (CONFIG.web ? "Ask Gemini to check" : "Check my work") + "</button>") + "</div>" +
+        (p.quiz || p.calc || CONFIG.noAI ? "" : '<button class="btn small" data-act="scr-ask" data-pid="' + p.pid + '"' + (CONFIG.web ? "" : " hidden") + ">" + (CONFIG.web ? "Ask Gemini to check" : "Check my work") + "</button>") + "</div>" +
         '<div class="scr-canvas"><canvas></canvas></div><div class="scr-fb" hidden></div></div>' : "") + "</div>";
   }
   function inBox(strokes, b) { // strokes with most of their points inside the box
@@ -5208,7 +5208,7 @@ CONFIG.web = true;
   function padWrap(pid) { return document.querySelector('.scratch-embed[data-pid="' + pid + '"]'); }
   window.__padHost = {
     key: KEY,
-    info: function (pid) { var pp = PROB[pid] || {}; return { quiz: !!pp.quiz, choice: pp.type === "choice", read: CONFIG.web && typeof Reader !== "undefined" && pp.type !== "choice" }; },
+    info: function (pid) { var pp = PROB[pid] || {}; return { quiz: !!pp.quiz || !!CONFIG.noAI, choice: pp.type === "choice", read: CONFIG.web && typeof Reader !== "undefined" && pp.type !== "choice" }; },
     ready: function (pid, api) { var w = padWrap(pid); if (w) w.__api = api; },
     saved: function (pid) { delete SCR[pid]; if (CONFIG.web) { GH.scrDirty[pid] = 1; queueGH(); } mark(); },
     drawing: function (pid, on) {
@@ -5620,7 +5620,7 @@ CONFIG.web = true;
   function examLine(e) {
     if (!e) return "";
     var d = daysUntil(e.date), when = d > 1 ? "in " + d + " days" : d === 1 ? "tomorrow" : d === 0 ? "today" : "done";
-    return '<div class="exam-row' + (d >= 0 && d <= 3 ? " soon" : "") + '"><span class="exam-t"><b>' + e.title + "</b> (" + e.covers + ") \u00b7 " + fmtD(e.date, true) + ", " + e.time + " \u00b7 " + e.pts + " pts</span>" +
+    return '<div class="exam-row' + (d >= 0 && d <= 3 ? " soon" : "") + '"><span class="exam-t"><b>' + e.title + "</b> (" + e.covers + ") \u00b7 " + fmtD(e.date, true) + ", " + e.time + " \u00b7 " + (e.wt || e.pts + " pts") + "</span>" +
       '<span class="exam-a">' + (d >= 0 ? "<b>" + when + "</b>" : '<span class="muted">' + when + "</span>") + (e.prep && BY[e.prep] ? ' <a href="#/s/' + e.prep + '">practice test ' + (S.done[e.prep] ? "\u2713" : fmtD(BY[e.prep].date)) + "</a>" : "") + "</span></div>";
   }
   var BY = {}; SESSIONS.forEach(function (s, i) { s.idx = i; BY[s.id] = s; });
@@ -6193,7 +6193,7 @@ CONFIG.web = true;
     if (!s.parts) h += '<div class="empty" style="text-align:left"><b>This lesson isn’t written yet.</b> When you get close to ' + (s.date ? fmtD(s.date, true) : "it") + ", ask Claude to “write session " + s.id + "” and it’ll be added here with practice problems. Until then, the links below cover it.</div>";
     h += '<h2 style="font-size:17px;margin:18px 0 10px">In this session</h2><ul style="margin:0 0 6px;padding-left:20px">' + s.topics.map(function (t) { return "<li>" + t + "</li>"; }).join("") + "</ul>";
     h += '<h2 style="font-size:17px;margin:18px 0 10px">Resources</h2><div class="res">' + s.links.map(function (l) { return '<a href="' + l[1] + '" target="_blank" rel="noopener"><span>' + l[0] + "</span><span>↗</span></a>"; }).join("") + "</div>";
-    if (WAM[s.id]) h += '<h2 style="font-size:17px;margin:22px 0 6px">Extra practice on WAMAP</h2><p class="muted" style="margin:0 0 8px">Optional review sets already in your STMATH 125 WAMAP course. Same answer format as the homework.</p><ul class="wamap">' + WAM[s.id].map(function (w) { return "<li><span class=\"muted\">" + w[0] + " \u203a</span> " + w[1] + "</li>"; }).join("") + '</ul><a class="btn small" href="https://www.wamap.org" target="_blank" rel="noopener">Open WAMAP \u2197</a>';
+    if (WAM[s.id]) h += '<h2 style="font-size:17px;margin:22px 0 6px">Extra practice on WAMAP</h2><p class="muted" style="margin:0 0 8px">Optional review sets already in your ' + (CONFIG.course || "STMATH 125") + ' WAMAP course. Same answer format as the homework.</p><ul class="wamap">' + WAM[s.id].map(function (w) { return "<li><span class=\"muted\">" + w[0] + " \u203a</span> " + w[1] + "</li>"; }).join("") + '</ul><a class="btn small" href="https://www.wamap.org" target="_blank" rel="noopener">Open WAMAP \u2197</a>';
     h += '<h2 style="font-size:17px;margin:22px 0 10px">Your notes</h2><textarea class="notes" data-sid="' + s.id + '" placeholder="Anything that confused you, questions for class, or a rule in your own words.">' + esc(S.notes[s.id] || "") + "</textarea>";
     return h;
   }
@@ -6453,7 +6453,7 @@ CONFIG.web = true;
       var fr = new FileReader();
       fr.onload = function () {
         try { var d = JSON.parse(fr.result); if (!d || d.v !== 1 || typeof d.done !== "object") throw 0; S = mergeState(S, d); save(); applyTheme(); toast("Progress imported and combined with what was already here."); render(); }
-        catch (err) { toast("That file isn’t a Calc Catch-Up backup. Choose the .json file you exported."); }
+        catch (err) { toast("That file isn’t a backup from this app. Choose the .json file you exported."); }
       };
       fr.readAsText(t.files[0]);
     }
@@ -6595,10 +6595,10 @@ CONFIG.web = true;
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
 // Web build only: notice when a newer version has been published while the app is open (Home Screen
-// apps stay open for days), and offer a Reload button. build.py swaps 7a16c34743d2 for the build's hash
+// apps stay open for days), and offer a Reload button. build.py swaps fd52da43f24d for the build's hash
 // and writes the same hash to version.json. Progress saves as you go, so reloading loses nothing.
 (function () {
-  var V = "7a16c34743d2", shown = false, last = 0;
+  var V = "fd52da43f24d", shown = false, last = 0;
   if (window.parent !== window) return; // a problem's Scratch Pad frame: the app around it shows the button
   function check() {
     if (shown || Date.now() - last < 60000 || navigator.onLine === false) return;

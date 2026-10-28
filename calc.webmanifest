@@ -1,7 +1,7 @@
 {
  "id": "./calc.html",
- "name": "Calc 1 Catch-Up",
- "short_name": "Calc 1",
+ "name": "Calc 1 Review with Calc 2",
+ "short_name": "Calc 1 Review",
  "start_url": "./calc.html",
  "scope": "./",
  "display": "standalone",
